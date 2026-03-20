@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { GlassButton } from '@/components/ui/GlassButton';
 import { GlassInput } from '@/components/ui/GlassInput';
-import { Folder, Plus, Trash2, X, Loader2, BookOpen, Search } from 'lucide-react';
+import { Folder, Plus, Trash2, X, Loader2, BookOpen, Search, HelpCircle } from 'lucide-react';
 import { Close, UploadFile, EditNote, Edit, Save, Delete } from '@mui/icons-material';
 import NovelEditor from '@/components/ui/NovelEditor';
 import { Project, KB } from './context-modal/types';
@@ -39,6 +39,7 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
   const [loadingContent, setLoadingContent] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen) fetchData();
@@ -296,9 +297,12 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
             exit={{ opacity: 0, y: 20 }}
             className="w-full max-w-4xl bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
-            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
-              <h2 className="text-2xl font-bold text-white tracking-tight">Agent Context</h2>
+            <div className="p-6 border-b border-primary/20 flex justify-between items-center bg-primary/5">
+              <h2 className="text-2xl font-bold text-primary tracking-tight">Knowledge</h2>
               <div className="flex items-center gap-2">
+                <button onClick={() => setIsTutorialOpen(true)} className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-all">
+                  <HelpCircle size={24} />
+                </button>
                 <button onClick={() => setIsSearchModalOpen(true)} className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-all">
                   <Search size={24} />
                 </button>
@@ -396,6 +400,35 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
                 </motion.div>
               </div>
             )}
+
+            {/* Tutorial Modal */}
+            <AnimatePresence>
+              {isTutorialOpen && (
+                <div className="fixed inset-0 z-80 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="w-full max-w-lg bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
+                  >
+                    <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+                      <h3 className="text-lg font-light text-white">How it Works</h3>
+                      <button onClick={() => setIsTutorialOpen(false)} className="text-white/50 hover:text-white">
+                        <X size={20} />
+                      </button>
+                    </div>
+                    <div className="p-6 space-y-4 text-white/70 text-sm leading-relaxed">
+                      <p><strong>Projects</strong> help you organize your work. You can create different projects for different tasks or clients. Projects are <strong>re-usable</strong> across different agents.</p>
+                      <p><strong>Knowledge Bases</strong> are where you store your documents. You can upload files or paste markdown content into a Knowledge Base, which your agent can then use to answer your questions. Knowledge Bases are also <strong>re-usable</strong> and can be linked to multiple projects.</p>
+                      <p>To get started, create a project, then create a Knowledge Base and add your documents to it.</p>
+                    </div>
+                    <div className="p-6 bg-white/5 border-t border-white/5 flex justify-end">
+                      <GlassButton onClick={() => setIsTutorialOpen(false)}>Got it</GlassButton>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
 
             {/* Novel Editor Modal */}
             <AnimatePresence>

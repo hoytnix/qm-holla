@@ -19,7 +19,7 @@ export const ProjectList = ({ projects, currentProject, onSelect, onDelete, onCr
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2"><Folder className="text-indigo-400" size={20}/> Projects</h3>
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2" title="Projects are re-usable across different agents."><Folder className="text-indigo-400" size={20}/> Projects</h3>
         {!isCreating && <button onClick={() => setIsCreating(true)} className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">New</button>}
       </div>
       {isCreating ? (

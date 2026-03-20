@@ -332,7 +332,7 @@ export default function UserApp() {
                         {groupConvs.map(c => (
                           <div 
                             key={c.id} 
-                            className={`flex items-center justify-between p-2 rounded-lg text-xs ${conversationId === c.id ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                            className={`flex items-center justify-between p-2 rounded-lg text-xs ${conversationId === c.id ? 'bg-primary/20 text-primary' : 'hover:bg-white/5'}`}
                           >
                             {editingId === c.id ? (
                               <input 

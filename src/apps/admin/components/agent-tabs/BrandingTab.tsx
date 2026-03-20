@@ -115,6 +115,12 @@ export default function BrandingTab({ agent, updateAgent }: BrandingTabProps) {
             value={config.font_family || ''}
             onChange={(e) => updateConfig('font_family', e.target.value)}
         />
+        {config.font_family && (
+            <div className="p-4 rounded-xl border border-white/10 bg-black/20" style={{ fontFamily: config.font_family }}>
+                <p className="text-white">Preview: {config.font_family}</p>
+                <p className="text-white/70">The quick brown fox jumps over the lazy dog.</p>
+            </div>
+        )}
 
         <div className="md:col-span-2 space-y-4">
             <GlassInput

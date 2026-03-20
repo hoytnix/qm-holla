@@ -19,7 +19,7 @@ export const KBList = ({ kbs, onDelete, onCreate, onSelect, currentProject }: KB
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2"><BookOpen className="text-emerald-400" size={20}/> Knowledge Bases</h3>
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2" title="Knowledge Bases are re-usable and can be linked to multiple projects."><BookOpen className="text-emerald-400" size={20}/> Knowledge Bases</h3>
         {!isCreating && <button onClick={() => setIsCreating(true)} className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors">New</button>}
       </div>
       {isCreating ? (

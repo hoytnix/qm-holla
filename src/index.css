@@ -3,8 +3,9 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--user-font, "Inter", ui-sans-serif, system-ui, sans-serif);
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-primary: var(--user-primary, #6366f1);
 }
 
 body {
