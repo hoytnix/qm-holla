@@ -13,7 +13,7 @@ import { GlassButton } from '@/components/ui/GlassButton';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FolderOpen, Coins, MoreVertical, Menu, X as Close, ChevronDown, ChevronRight } from 'lucide-react';
+import { FolderOpen, Coins, MoreVertical, Menu, X as Close, ChevronDown, ChevronRight, Home } from 'lucide-react';
 import { db, Conversation } from './lib/db';
 
 export default function UserApp() {
@@ -242,13 +242,15 @@ export default function UserApp() {
 
             {/* Mobile Credits (visible only on mobile header row) */}
             {session && (
-              <button 
-                onClick={() => setIsTopUpModalOpen(true)}
-                className="flex md:hidden items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <Coins size={14} className="text-yellow-500" />
-                <span className="text-xs font-mono text-white/80">{credits}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setIsTopUpModalOpen(true)}
+                  className="flex md:hidden items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <Coins size={14} className="text-yellow-500" />
+                  <span className="text-xs font-mono text-white/80">{credits}</span>
+                </button>
+              </div>
             )}
           </div>
 
@@ -256,13 +258,18 @@ export default function UserApp() {
             {session && (
               <>
                 {/* Desktop Credits */}
-                <button 
-                  onClick={() => setIsTopUpModalOpen(true)}
-                  className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  <Coins size={14} className="text-yellow-500" />
-                  <span className="text-xs font-mono text-white/80">{credits}</span>
-                </button>
+                <div className="hidden md:flex items-center gap-2">
+                  <Link to="/chat" className="text-white/50 hover:text-white transition-colors p-1.5">
+                    <Home size={16} />
+                  </Link>
+                  <button 
+                    onClick={() => setIsTopUpModalOpen(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <Coins size={14} className="text-yellow-500" />
+                    <span className="text-xs font-mono text-white/80">{credits}</span>
+                  </button>
+                </div>
               </>
             )}
 

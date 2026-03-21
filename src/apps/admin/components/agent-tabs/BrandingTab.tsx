@@ -162,6 +162,35 @@ export default function BrandingTab({ agent, updateAgent }: BrandingTabProps) {
 
         <div className="md:col-span-2 space-y-4">
             <div className="space-y-1">
+                <label className="text-xs font-medium text-white/70 uppercase tracking-wider ml-1">App Icon URL</label>
+                <div className="flex flex-col md:flex-row gap-2">
+                    <input
+                        type="text"
+                        placeholder="https://..."
+                        value={config.app_icon || ''}
+                        onChange={(e) => updateConfig('app_icon', e.target.value)}
+                        className="flex-1 rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/30 backdrop-blur-sm transition-all"
+                    />
+                    <input
+                        type="file"
+                        onChange={(e) => handleFileUpload(e, 'app_icon')}
+                        className="text-xs text-white/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20"
+                    />
+                </div>
+            </div>
+            {config.app_icon && (
+                <div className="h-24 w-24 rounded-xl border border-white/10 overflow-hidden relative">
+                    <img 
+                        src={config.app_icon} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+            )}
+        </div>
+
+        <div className="md:col-span-2 space-y-4">
+            <div className="space-y-1">
                 <label className="text-xs font-medium text-white/70 uppercase tracking-wider ml-1">Cover Photo URL</label>
                 <div className="flex flex-col md:flex-row gap-2">
                     <input

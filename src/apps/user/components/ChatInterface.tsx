@@ -7,6 +7,8 @@ import { db, Message } from '../lib/db';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { Paperclip, Send, Sparkles, ChevronDown, Bot, Zap, BrainCircuit } from 'lucide-react';
+import { Person } from '@mui/icons-material';
+import md5 from 'md5';
 
 // Define the schema for the structured response
 const responseSchema = z.object({
@@ -35,6 +37,18 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
+  const [agentData, setAgentData] = useState<any>(null);
+
+  useEffect(() => {
+    async function fetchAgent() {
+      const { data } = await supabase.from('agents').select('name, branding_config').eq('id', agentId).single();
+      if (data) {
+        setAgentData(data);
+      }
+    }
+    fetchAgent();
+  }, [agentId]);
+
   const [availableModels, setAvailableModels] = useState<any[]>([]);
   const [selectedModel, setSelectedModel] = useState('');
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
@@ -162,6 +176,10 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
     scrollToBottom();
   }, [messages, object]);
 
+  const gravatarUrl = session?.user?.email 
+    ? `https://www.gravatar.com/avatar/${md5(session.user.email.trim().toLowerCase())}?d=mp`
+    : '';
+
   const handleSendMessage = async (content: string) => {
     if (!content.trim() && !isLoading) return;
 
@@ -264,8 +282,17 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
               key={msg.id || `msg-${idx}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-3`}
             >
+              {msg.role === 'assistant' && (
+                <div className="flex-shrink-0 mt-1">
+                  {agentData?.branding_config?.app_icon ? (
+                    <img src={agentData.branding_config.app_icon} alt={agentData.name} className="w-8 h-8 rounded-lg shadow-md" />
+                  ) : (
+                    <Bot className="w-8 h-8 text-indigo-400" />
+                  )}
+                </div>
+              )}
               <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-white/5 backdrop-blur-md border-white/10' : 'bg-black/40 backdrop-blur-xl border-white/5'} border rounded-2xl p-5 shadow-lg relative overflow-hidden group`}>
                 {/* Decorative gradient for assistant */}
                 {msg.role === 'assistant' && (
@@ -276,9 +303,9 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
                 {msg.role === 'assistant' && msg.thoughts && msg.thoughts.length > 0 && (
                   <div className="mb-4 space-y-2">
                     <details className="group/thoughts">
-                      <summary className="cursor-pointer text-[10px] text-white/30 uppercase tracking-widest hover:text-white/50 transition-colors list-none flex items-center gap-2 select-none">
+                        <summary className="cursor-pointer text-[10px] text-white/30 uppercase tracking-widest hover:text-white/50 transition-colors list-none flex items-center gap-2 select-none">
                         <Zap className="w-3 h-3 text-yellow-500/50 group-open/thoughts:text-yellow-500 transition-colors" />
-                        Cognitive Trace
+                        {agentData?.name || 'Cognitive Trace'}
                       </summary>
                       <div className="mt-3 pl-3 border-l border-white/5 space-y-2">
                         {msg.thoughts.map((thought, tIdx) => (
@@ -312,6 +339,17 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
                   </div>
                 )}
               </div>
+              {msg.role === 'user' && (
+                <div className="flex-shrink-0 mt-1">
+                  {gravatarUrl ? (
+                    <img src={gravatarUrl} alt="User" className="w-8 h-8 rounded-lg shadow-md object-cover" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                      <Person className="w-5 h-5 text-white/50" />
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           ))}
 

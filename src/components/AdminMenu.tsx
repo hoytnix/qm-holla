@@ -48,16 +48,6 @@ export function AdminMenu({ isOpen, onClose, onLogout }: AdminMenuProps) {
                 </span>
               </Link>
             ))}
-            
-            <button
-              onClick={onLogout}
-              className="group relative overflow-hidden rounded-2xl border border-red-500/20 bg-red-500/5 p-5 hover:bg-red-500/10 transition-all duration-500 flex flex-col items-center justify-center gap-2 aspect-square"
-            >
-              <LogOut className="w-10 h-10 text-red-400/50 group-hover:text-red-400 transition-colors duration-500" />
-              <span className="text-lg font-light tracking-widest uppercase text-red-400/70 group-hover:text-red-400 transition-colors duration-500">
-                Logout
-              </span>
-            </button>
           </div>
         </motion.div>
       )}
