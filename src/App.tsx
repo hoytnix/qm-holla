@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import SanctuaryLayout from '@/apps/admin/layouts/SanctuaryLayout';
 import Login from '@/apps/admin/pages/auth/Login';
 import Register from '@/apps/admin/pages/auth/Register';
+import Forbidden from '@/apps/admin/pages/auth/Forbidden';
 import AgentList from '@/apps/admin/pages/agents/AgentList';
 import AgentDetail from '@/apps/admin/pages/agents/AgentDetail';
 import ChatAgentList from '@/apps/user/pages/ChatAgentList';
@@ -47,7 +48,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (loading) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>;
 
-  if (role !== 'admin') return <Navigate to="/chat" replace />;
+  if (role !== 'admin') return <Navigate to="/forbidden" replace />;
   return <>{children}</>;
 }
 
@@ -92,6 +93,7 @@ export default function App() {
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forbidden" element={<Forbidden />} />
 
           {/* User App Route (Public/Hybrid) */}
           <Route path="/chat/:agentId" element={<UserApp />} />

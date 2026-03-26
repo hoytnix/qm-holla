@@ -150,7 +150,8 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
           ...contextData,
           user_query: processedInstructions,
           project_id: currentProject?.id,
-          custom_instructions: '',
+          custom_instructions: processedInstructions,
+          messages: [],
           token: session?.access_token
         }
       });
@@ -211,7 +212,8 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
         ...contextData,
         user_query: content,
         project_id: currentProject?.id,
-        custom_instructions: newMessages.length === 1 ? processedInstructions : '',
+        custom_instructions: processedInstructions,
+        messages: messages.map(m => ({ role: m.role, content: m.content })),
         token: session?.access_token
       }
     });

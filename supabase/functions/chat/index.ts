@@ -57,18 +57,7 @@ serve(async (req) => {
     const projectId = inputs?.project_id;
     const customInstructions = inputs?.custom_instructions || "";
     const conversationId = inputs?.conversation_id;
-
-    let instructions = customInstructions;
-    if (conversationId) {
-      const { count } = await userSupabaseClient
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('conversation_id', conversationId);
-      
-      if (count && count > 0) {
-        instructions = "";
-      }
-    }
+    const chatMessages = inputs?.messages || [];
 
     if (!agentId) {
       return new Response(JSON.stringify({ error: "Missing agentId" }), { status: 400, headers: corsHeaders });
@@ -171,6 +160,19 @@ serve(async (req) => {
     }
 
     // 2. Generate Response
+    const systemPrompt = `${customInstructions}
+      
+      ## Context from Knowledge Base:
+      ${kbContext || "No relevant information found in knowledge base."}
+      
+      ## Additional Context: ${JSON.stringify({ ...inputs, messages: undefined, token: undefined })}`;
+
+    const coreMessages = [
+      { role: 'system', content: systemPrompt },
+      ...chatMessages.map((m: any) => ({ role: m.role, content: m.content })),
+      { role: 'user', content: userQuery }
+    ];
+
     const result = await streamObject({
       model: openrouter(modelName),
       schema: z.object({
@@ -178,16 +180,7 @@ serve(async (req) => {
         message: z.string().describe("The response to the user."),
         suggested_actions: z.array(z.string()).describe("Follow-up actions, if any."),
       }),
-      prompt: `${instructions}
-      
-      ## Context from Knowledge Base:
-      ${kbContext || "No relevant information found in knowledge base."}
-      
-      ## Additional Context: ${JSON.stringify(inputs)}
-      
-      ## Prompt
-      
-      ${userQuery}`,
+      messages: coreMessages,
     });
 
     return result.toTextStreamResponse({
