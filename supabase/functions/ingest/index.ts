@@ -2,7 +2,7 @@ console.log("--- Ingest Function Module Loading ---");
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { createOpenAI } from "https://esm.sh/@ai-sdk/openai@0.0.66";
-import { embed } from "https://esm.sh/ai@3.4.33";
+import { embed, generateText } from "https://esm.sh/ai@3.4.33";
 
 const openrouter = createOpenAI({
   baseURL: "https://openrouter.ai/api/v1",
@@ -127,9 +127,41 @@ serve(async (req) => {
         continue;
       }
 
-      console.log(`File downloaded successfully. Extracting text...`);
-      const text = await fileData.text(); 
-      console.log(`Extracted ${text.length} characters.`);
+      const fileName = path.split("/").pop() || "";
+      const ext = fileName.split('.').pop()?.toLowerCase();
+      const isImage = ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext || '');
+
+      let text = "";
+
+      if (isImage) {
+        console.log(`Image detected (${fileName}). Generating description...`);
+        const uint8Array = new Uint8Array(await fileData.arrayBuffer());
+        let mimeType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+
+        try {
+          const { text: imageDescription } = await generateText({
+            model: openrouter("anthropic/claude-3.5-sonnet"),
+            messages: [
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: "Describe this image in detail so that a text-based AI can understand everything about it. Include any text, objects, people, colors, and the overall scene." },
+                  { type: "image", image: uint8Array, mimeType: mimeType }
+                ]
+              }
+            ]
+          });
+          text = `[Image Description of ${fileName}]:\n${imageDescription}`;
+          console.log(`Generated description: ${text.substring(0, 100)}...`);
+        } catch (imgErr) {
+          console.error("Failed to generate image description:", imgErr);
+          continue; // Skip this file if we can't describe it
+        }
+      } else {
+        console.log(`File downloaded successfully. Extracting text...`);
+        text = await fileData.text(); 
+        console.log(`Extracted ${text.length} characters.`);
+      }
 
       // Create Attachment Record
       console.log(`Creating attachment record for ${path}...`);
@@ -138,7 +170,7 @@ serve(async (req) => {
         .insert({
             kb_id: kbId,
             file_path: path,
-            file_name: path.split("/").pop()
+            file_name: fileName
         })
         .select()
         .single();

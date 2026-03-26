@@ -45,6 +45,15 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
     if (isOpen) fetchData();
   }, [isOpen]);
 
+  useEffect(() => {
+    if (selectedKb) {
+      const updatedKb = kbs.find(k => k.id === selectedKb.id);
+      if (updatedKb) {
+        setSelectedKb(updatedKb);
+      }
+    }
+  }, [kbs]);
+
   const fetchData = async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
