@@ -36,6 +36,7 @@ export default function UserApp() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
   const [currentProject, setCurrentProject] = useState<any>(null);
+  const [projects, setProjects] = useState<any[]>([]);
   const [credits, setCredits] = useState<number>(0);
   const [conversationId, setConversationId] = useState<string>(initialConvId || crypto.randomUUID());
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -56,7 +57,12 @@ export default function UserApp() {
       const { data } = await supabase.from('agents').select('id, name');
       if (data) setAllAgents(data);
     }
+    async function fetchAllProjects() {
+      const { data } = await supabase.from('projects').select('id, name');
+      if (data) setProjects(data);
+    }
     fetchAllAgents();
+    fetchAllProjects();
   }, []);
 
   const toggleGroup = (groupId: string) => {
@@ -115,8 +121,8 @@ export default function UserApp() {
   const fetchConversations = async () => {
     const convs = await db.conversations.toArray();
     if (convs.length === 0) {
-      const newId = crypto.randomUUID();
-      await db.conversations.add({ id: newId, name: 'New Conversation', pinned: false, created_at: new Date(), agent_id: agentId });
+                      const newId = crypto.randomUUID();
+      await db.conversations.add({ id: newId, name: 'New Conversation', pinned: false, created_at: new Date(), agent_id: agentId, project_id: currentProject?.id });
       setConversationId(newId);
       setSearchParams({ c: newId }, { replace: true });
       fetchConversations();
@@ -319,8 +325,8 @@ export default function UserApp() {
                     .sort((a, b) => Number(b.pinned) - Number(a.pinned))
                     .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
                     .reduce((acc, c) => {
-                      const agent = allAgents.find(a => a.id === c.agent_id);
-                      const key = agent ? agent.name : 'Unknown App';
+                      const project = c.project_id ? projects.find(p => p.id === c.project_id) : null;
+                      const key = project ? project.name : 'Chats (no project)';
                       if (!acc[key]) acc[key] = [];
                       acc[key].push(c);
                       return acc;
@@ -336,56 +342,60 @@ export default function UserApp() {
                     </button>
                     {!collapsedGroups[groupId] && (
                       <div className="space-y-1">
-                        {groupConvs.map(c => (
-                          <div 
-                            key={c.id} 
-                            className={`flex items-center justify-between p-2 rounded-lg text-xs ${conversationId === c.id ? 'bg-primary/20 text-primary' : 'hover:bg-white/5 text-branding'}`}
-                          >
-                            {editingId === c.id ? (
-                              <input 
-                                value={editName}
-                                onChange={(e) => setEditName(e.target.value)}
-                                onBlur={() => {
-                                  handleRename(c.id, editName);
-                                  setEditingId(null);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
+                        {groupConvs.map(c => {
+                          const agent = allAgents.find(a => a.id === c.agent_id);
+                          return (
+                            <div 
+                              key={c.id} 
+                              className={`flex items-center justify-between p-2 rounded-lg text-xs ${conversationId === c.id ? 'bg-primary/20 text-primary' : 'hover:bg-white/5 text-branding'}`}
+                            >
+                              {editingId === c.id ? (
+                                <input 
+                                  value={editName}
+                                  onChange={(e) => setEditName(e.target.value)}
+                                  onBlur={() => {
                                     handleRename(c.id, editName);
                                     setEditingId(null);
-                                  }
-                                }}
-                                className="flex-1 bg-white/10 border border-white/20 rounded p-1 text-xs text-branding"
-                                autoFocus
-                              />
-                            ) : (
-                              <button 
-                                onClick={() => handleSelectConversation(c.id)}
-                                className="flex-1 text-left truncate"
-                              >
-                                {c.name}
-                              </button>
-                            )}
-                            <div className="relative">
-                              <button type="button" onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)} className="text-branding/30 hover:text-branding">
-                                <MoreVertical size={16} />
-                              </button>
-                              {openMenuId === c.id && (
-                                <div className="absolute right-0 mt-1 w-32 bg-zinc-900 border border-white/10 rounded-lg p-1 z-20 shadow-xl">
-                                  <button type="button" onClick={() => { handleTogglePin(c.id, !c.pinned); setOpenMenuId(null); }} className="block w-full text-left px-2 py-1.5 text-xs hover:bg-white/5 text-branding/70 hover:text-branding">
-                                    {c.pinned ? 'Unpin' : 'Pin'}
-                                  </button>
-                                  <button type="button" onClick={() => { setEditingId(c.id); setEditName(c.name); setOpenMenuId(null); }} className="block w-full text-left px-2 py-1.5 text-xs hover:bg-white/5 text-branding/70 hover:text-branding">
-                                    Rename
-                                  </button>
-                                  <button type="button" onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} className="block w-full text-left px-2 py-1.5 text-xs hover:bg-white/5 text-red-400">
-                                    Delete
-                                  </button>
-                                </div>
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      handleRename(c.id, editName);
+                                      setEditingId(null);
+                                    }
+                                  }}
+                                  className="flex-1 bg-white/10 border border-white/20 rounded p-1 text-xs text-branding"
+                                  autoFocus
+                                />
+                              ) : (
+                                <button 
+                                  onClick={() => handleSelectConversation(c.id)}
+                                  className="flex-1 text-left truncate flex items-center gap-2"
+                                >
+                                  {agent && <span className="text-[10px] opacity-50">{agent.name} -</span>}
+                                  {c.name}
+                                </button>
                               )}
+                              <div className="relative">
+                                <button type="button" onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)} className="text-branding/30 hover:text-branding">
+                                  <MoreVertical size={16} />
+                                </button>
+                                {openMenuId === c.id && (
+                                  <div className="absolute right-0 mt-1 w-32 bg-zinc-900 border border-white/10 rounded-lg p-1 z-20 shadow-xl">
+                                    <button type="button" onClick={() => { handleTogglePin(c.id, !c.pinned); setOpenMenuId(null); }} className="block w-full text-left px-2 py-1.5 text-xs hover:bg-white/5 text-branding/70 hover:text-branding">
+                                      {c.pinned ? 'Unpin' : 'Pin'}
+                                    </button>
+                                    <button type="button" onClick={() => { setEditingId(c.id); setEditName(c.name); setOpenMenuId(null); }} className="block w-full text-left px-2 py-1.5 text-xs hover:bg-white/5 text-branding/70 hover:text-branding">
+                                      Rename
+                                    </button>
+                                    <button type="button" onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} className="block w-full text-left px-2 py-1.5 text-xs hover:bg-white/5 text-red-400">
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

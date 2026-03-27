@@ -139,7 +139,7 @@ export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting,
                                       key={p}
                                       type="button"
                                       onClick={() => handleChange(field.field_key, p)}
-                                      className="text-[9px] bg-white/10 hover:bg-white/20 text-white/60 px-2 py-0.5 rounded transition-colors"
+                                      className="text-xs bg-white/10 hover:bg-white/20 text-white/80 px-4 py-2 rounded-lg transition-colors"
                                     >
                                       {p}
                                     </button>
@@ -165,7 +165,7 @@ export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting,
                                       key={p}
                                       type="button"
                                       onClick={() => handleChange(field.field_key, p)}
-                                      className="text-[9px] bg-white/10 hover:bg-white/20 text-white/60 px-2 py-0.5 rounded transition-colors"
+                                      className="text-xs bg-white/10 hover:bg-white/20 text-white/80 px-4 py-2 rounded-lg transition-colors"
                                     >
                                       {p}
                                     </button>

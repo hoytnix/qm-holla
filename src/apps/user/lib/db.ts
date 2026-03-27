@@ -17,6 +17,7 @@ export interface Conversation {
   pinned: boolean;
   created_at: Date;
   agent_id?: string;
+  project_id?: string | null;
 }
 
 export class UserDatabase extends Dexie {
@@ -39,6 +40,9 @@ export class UserDatabase extends Dexie {
           await tx.table('conversations').update(conv.id, { agent_id: msg.agent_id });
         }
       }
+    });
+    this.version(4).stores({
+      conversations: 'id, name, pinned, created_at, agent_id, project_id'
     });
   }
 }
