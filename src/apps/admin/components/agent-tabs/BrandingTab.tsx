@@ -109,6 +109,25 @@ export default function BrandingTab({ agent, updateAgent }: BrandingTabProps) {
             onChange={(e) => updateConfig('primary_color', e.target.value)}
         />
         
+        <div className="space-y-1">
+            <label className="text-xs font-medium text-white/70 uppercase tracking-wider ml-1">Primary Font Color</label>
+            <div className="flex gap-2">
+                <input
+                    type="color"
+                    value={config.primary_font_color || '#ffffff'}
+                    onChange={(e) => updateConfig('primary_font_color', e.target.value)}
+                    className="h-10 w-20 rounded-xl border border-white/10 bg-black/20 p-1 cursor-pointer"
+                />
+                <input
+                    type="text"
+                    placeholder="#ffffff"
+                    value={config.primary_font_color || ''}
+                    onChange={(e) => updateConfig('primary_font_color', e.target.value)}
+                    className="flex-1 rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/30 backdrop-blur-sm transition-all"
+                />
+            </div>
+        </div>
+        
         <GlassInput
             label="Font Family (Google Fonts Name)"
             placeholder="Inter"
@@ -123,12 +142,24 @@ export default function BrandingTab({ agent, updateAgent }: BrandingTabProps) {
         )}
 
         <div className="md:col-span-2 space-y-4">
-            <GlassInput
-                label="Background Color (Hex)"
-                placeholder="#000000"
-                value={config.background_color || ''}
-                onChange={(e) => updateConfig('background_color', e.target.value)}
-            />
+            <div className="space-y-1">
+                <label className="text-xs font-medium text-white/70 uppercase tracking-wider ml-1">Background Color</label>
+                <div className="flex gap-2">
+                    <input
+                        type="color"
+                        value={config.background_color || '#000000'}
+                        onChange={(e) => updateConfig('background_color', e.target.value)}
+                        className="h-10 w-20 rounded-xl border border-white/10 bg-black/20 p-1 cursor-pointer"
+                    />
+                    <input
+                        type="text"
+                        placeholder="#000000"
+                        value={config.background_color || ''}
+                        onChange={(e) => updateConfig('background_color', e.target.value)}
+                        className="flex-1 rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/30 backdrop-blur-sm transition-all"
+                    />
+                </div>
+            </div>
             <div className="space-y-1">
                 <label className="text-xs font-medium text-white/70 uppercase tracking-wider ml-1">Background Image URL</label>
                 <div className="flex flex-col md:flex-row gap-2">

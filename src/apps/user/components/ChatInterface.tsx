@@ -291,27 +291,27 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
                   {agentData?.branding_config?.app_icon ? (
                     <img src={agentData.branding_config.app_icon} alt={agentData.name} className="w-8 h-8 rounded-lg shadow-md" />
                   ) : (
-                    <Bot className="w-8 h-8 text-indigo-400" />
+                    <Bot className="w-8 h-8 text-primary" />
                   )}
                 </div>
               )}
               <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-white/5 backdrop-blur-md border-white/10' : 'bg-black/40 backdrop-blur-xl border-white/5'} border rounded-2xl p-5 shadow-lg relative overflow-hidden group`}>
                 {/* Decorative gradient for assistant */}
                 {msg.role === 'assistant' && (
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500/50 via-blue-500/50 to-transparent opacity-50" />
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 via-primary/30 to-transparent opacity-50" />
                 )}
 
                 {/* Thoughts Accordion (Assistant Only) */}
                 {msg.role === 'assistant' && msg.thoughts && msg.thoughts.length > 0 && (
                   <div className="mb-4 space-y-2">
                     <details className="group/thoughts">
-                        <summary className="cursor-pointer text-[10px] text-white/30 uppercase tracking-widest hover:text-white/50 transition-colors list-none flex items-center gap-2 select-none">
-                        <Zap className="w-3 h-3 text-yellow-500/50 group-open/thoughts:text-yellow-500 transition-colors" />
+                        <summary className="cursor-pointer text-[10px] text-branding/30 uppercase tracking-widest hover:text-branding/50 transition-colors list-none flex items-center gap-2 select-none">
+                        <Zap className="w-3 h-3 text-primary/50 group-open/thoughts:text-primary transition-colors" />
                         {agentData?.name || 'Cognitive Trace'}
                       </summary>
                       <div className="mt-3 pl-3 border-l border-white/5 space-y-2">
                         {msg.thoughts.map((thought, tIdx) => (
-                          <p key={tIdx} className="text-xs text-white/40 italic font-mono leading-relaxed">
+                          <p key={tIdx} className="text-xs text-branding/40 italic font-mono leading-relaxed">
                             {thought}
                           </p>
                         ))}
@@ -321,7 +321,7 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
                 )}
 
                 {/* Message Content */}
-                <div className="text-sm leading-relaxed text-white/90">
+                <div className="text-sm leading-relaxed text-branding/90">
                   <MarkdownRenderer content={msg.content} />
                 </div>
 
@@ -332,9 +332,9 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
                       <button
                         key={aIdx}
                         onClick={() => handleSendMessage(action)}
-                        className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 text-xs text-white/60 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+                        className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 text-xs text-branding/60 hover:text-branding transition-all cursor-pointer flex items-center gap-1.5"
                       >
-                        <span className="w-1 h-1 rounded-full bg-purple-500/50" />
+                        <span className="w-1 h-1 rounded-full bg-primary" />
                         {action}
                       </button>
                     ))}
@@ -363,13 +363,13 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
               className="flex justify-start"
             >
               <div className="max-w-[85%] bg-black/40 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500/50 via-blue-500/50 to-transparent animate-pulse" />
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 via-primary/30 to-transparent animate-pulse" />
                 
                 {/* Streaming Thoughts */}
                 {object.thoughts && object.thoughts.length > 0 && (
                   <div className="mb-4 space-y-2">
-                    <div className="text-[10px] text-white/30 uppercase tracking-widest flex items-center gap-2">
-                      <Bot className="w-3 h-3 text-purple-500 animate-pulse" />
+                    <div className="text-[10px] text-branding/30 uppercase tracking-widest flex items-center gap-2">
+                      <Bot className="w-3 h-3 text-primary animate-pulse" />
                       Processing...
                     </div>
                     <div className="pl-3 border-l border-white/5 space-y-2">
@@ -378,7 +378,7 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
                           key={tIdx}
                           initial={{ opacity: 0, x: -5 }}
                           animate={{ opacity: 1, x: 0 }}
-                          className="text-xs text-white/40 italic font-mono leading-relaxed"
+                          className="text-xs text-branding/40 italic font-mono leading-relaxed"
                         >
                           {thought}
                         </motion.p>
@@ -388,7 +388,7 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
                 )}
 
                 {/* Streaming Message */}
-                <div className="text-sm leading-relaxed text-white/90">
+                <div className="text-sm leading-relaxed text-branding/90">
                   <MarkdownRenderer content={object.message || ''} />
                 </div>
               </div>
@@ -408,7 +408,7 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading || isLoading}
-              className="p-3 rounded-xl hover:bg-white/5 transition-colors text-white/40 hover:text-white flex-shrink-0"
+              className="p-3 rounded-xl hover:bg-white/5 transition-colors text-branding/40 hover:text-branding flex-shrink-0"
             >
               {isUploading ? (
                 <span className="animate-spin block w-5 h-5 border-2 border-white/20 border-t-white rounded-full" />
@@ -433,7 +433,7 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
               placeholder={isLoading ? "Agent is responding..." : "Type your message..."}
               disabled={isLoading}
               rows={1}
-              className="flex-1 bg-transparent border-none text-white placeholder-white/20 focus:ring-0 resize-none py-3 max-h-[200px] min-h-[44px] scrollbar-hide"
+              className="flex-1 bg-transparent border-none text-branding placeholder-branding/20 focus:ring-0 resize-none py-3 max-h-[200px] min-h-[44px] scrollbar-hide"
               style={{ lineHeight: '1.5' }}
             />
 
@@ -441,7 +441,7 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
             <button
               onClick={() => handleSendMessage(input)}
               disabled={!input.trim() || isLoading}
-              className="p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex-shrink-0 group"
+              className="p-3 rounded-xl bg-white/10 hover:bg-white/20 text-branding disabled:opacity-30 disabled:cursor-not-allowed transition-all flex-shrink-0 group"
             >
               <Send className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </button>
@@ -453,7 +453,7 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
               <button
                 onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
                 disabled={validModels.length === 0}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 text-[10px] text-white/50 hover:text-white/80 transition-all uppercase tracking-wider disabled:opacity-30"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 text-[10px] text-branding/50 hover:text-branding/80 transition-all uppercase tracking-wider disabled:opacity-30"
               >
                 <BrainCircuit className="w-3 h-3" />
                 <span>
@@ -482,12 +482,12 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
                           }}
                           className={`w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between group transition-colors ${
                             selectedModel === model.model_string 
-                              ? 'bg-white/10 text-white' 
-                              : 'text-white/50 hover:bg-white/5 hover:text-white'
+                              ? 'bg-white/10 text-branding' 
+                              : 'text-branding/50 hover:bg-white/5 hover:text-branding'
                           }`}
                         >
                           <span>{model.display_name || model.model_string}</span>
-                          {selectedModel === model.model_string && <Sparkles className="w-3 h-3 text-purple-400" />}
+                          {selectedModel === model.model_string && <Sparkles className="w-3 h-3 text-primary" />}
                         </button>
                       ))}
                     </div>
@@ -496,7 +496,7 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
               </AnimatePresence>
             </div>
 
-            <p className="text-[10px] text-white/20 uppercase tracking-widest">
+            <p className="text-[10px] text-branding/20 uppercase tracking-widest">
               Secured by Neural Link Encryption
             </p>
           </div>

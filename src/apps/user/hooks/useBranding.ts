@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 
 interface BrandingConfig {
   primary_color: string;
+  primary_font_color?: string;
   font_family: string;
   background_image?: string;
   background_color?: string;
@@ -59,18 +60,40 @@ export function useBranding(agentId: string | undefined) {
     // Reset branding first
     root.style.removeProperty('--user-primary');
     root.style.removeProperty('--user-font');
+    root.style.removeProperty('--user-font-color');
+    
+    // Remove dynamic font link if exists
+    const existingLink = document.getElementById('dynamic-font-link');
+    if (existingLink) {
+      existingLink.remove();
+    }
+
     document.body.style.backgroundImage = '';
     document.body.style.backgroundColor = '';
     document.body.style.backgroundSize = '';
     document.body.style.backgroundPosition = '';
     document.body.style.backgroundAttachment = '';
+    document.body.style.color = '';
 
     if (config.primary_color) {
       root.style.setProperty('--user-primary', config.primary_color);
     }
     
+    if (config.primary_font_color) {
+      root.style.setProperty('--user-font-color', config.primary_font_color);
+      document.body.style.color = config.primary_font_color;
+    }
+    
     if (config.font_family) {
       root.style.setProperty('--user-font', config.font_family);
+      
+      // Load font if it's a Google Font
+      const fontName = config.font_family.replace(/\s+/g, '+');
+      const link = document.createElement('link');
+      link.id = 'dynamic-font-link';
+      link.href = `https://fonts.googleapis.com/css2?family=${fontName}&display=swap`;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
     }
 
     if (config.background_image) {

@@ -5,6 +5,7 @@ import { GlassButton } from '@/components/ui/GlassButton';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, FolderOpen } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface DynamicFormProps {
   agentId: string;
@@ -20,8 +21,25 @@ interface DynamicFormProps {
 export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting, onSelectKnowledgeBase, selectedProjectName, allowedModels, defaultModel }: DynamicFormProps) {
   const { fields, loading, error } = useStructuredFields(agentId);
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [availableModels, setAvailableModels] = useState<any[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>(defaultModel || allowedModels?.[0] || '');
   const [isMinimized, setIsMinimized] = useState(false);
+
+  // Fetch all models from DB to get display names and IDs
+  useEffect(() => {
+    async function fetchModels() {
+      const { data } = await supabase.from('model_prices').select('*');
+      if (data) {
+        setAvailableModels(data);
+      }
+    }
+    fetchModels();
+  }, []);
+
+  // Filter available models based on allowedModels from agent
+  const validModels = availableModels.filter(m => 
+    allowedModels?.includes(m.model_string)
+  );
 
   // Initialize form data with defaults if needed
   useEffect(() => {
@@ -85,9 +103,9 @@ export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting,
                   onChange={(e) => setSelectedModel(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-white/30 transition-colors appearance-none"
                 >
-                  {allowedModels?.map((model) => (
-                    <option key={model} value={model} className="bg-zinc-900 text-white">
-                      {model}
+                  {validModels.map((model) => (
+                    <option key={model.model_string} value={model.model_string} className="bg-zinc-900 text-white">
+                      {model.display_name || model.model_string}
                     </option>
                   ))}
                 </select>

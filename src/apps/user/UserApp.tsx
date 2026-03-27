@@ -39,6 +39,7 @@ export default function UserApp() {
   const [credits, setCredits] = useState<number>(0);
   const [conversationId, setConversationId] = useState<string>(initialConvId || crypto.randomUUID());
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [allAgents, setAllAgents] = useState<any[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -49,6 +50,14 @@ export default function UserApp() {
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [selectedModel, setSelectedModel] = useState<string>('');
+
+  useEffect(() => {
+    async function fetchAllAgents() {
+      const { data } = await supabase.from('agents').select('id, name');
+      if (data) setAllAgents(data);
+    }
+    fetchAllAgents();
+  }, []);
 
   const toggleGroup = (groupId: string) => {
     setCollapsedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
@@ -175,7 +184,7 @@ export default function UserApp() {
 
   if (brandingLoading || fieldsLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+      <div className="min-h-screen flex items-center justify-center bg-black text-branding">
         <div className="animate-pulse tracking-widest text-xs uppercase opacity-50">
           Initializing Neural Link...
         </div>
@@ -196,7 +205,7 @@ export default function UserApp() {
   const showForm = !isFormSubmitted;
 
   return (
-    <div className="min-h-screen relative overflow-hidden font-sans text-white flex flex-col">
+    <div className="min-h-screen relative overflow-hidden font-sans text-branding flex flex-col">
       {/* Background Overlay for readability if image is present */}
       <div className="absolute inset-0 bg-black/30 pointer-events-none z-0" />
 
@@ -236,7 +245,7 @@ export default function UserApp() {
             </button>
             <div className="flex items-center space-x-4">
               <div>
-                <h1 className="text-lg font-light tracking-wide">{agent?.name || 'Unknown Agent'}</h1>
+                <h1 className="text-lg font-light tracking-wide text-branding">{agent?.name || 'Unknown Agent'}</h1>
               </div>
             </div>
 
@@ -248,7 +257,7 @@ export default function UserApp() {
                   className="flex md:hidden items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <Coins size={14} className="text-yellow-500" />
-                  <span className="text-xs font-mono text-white/80">{credits}</span>
+                  <span className="text-xs font-mono text-branding/80">{credits}</span>
                 </button>
               </div>
             )}
@@ -259,7 +268,7 @@ export default function UserApp() {
               <>
                 {/* Desktop Credits */}
                 <div className="hidden md:flex items-center gap-2">
-                  <Link to="/chat" className="text-white/50 hover:text-white transition-colors p-1.5">
+                  <Link to="/chat" className="text-branding/50 hover:text-branding transition-colors p-1.5">
                     <Home size={16} />
                   </Link>
                   <button 
@@ -267,7 +276,7 @@ export default function UserApp() {
                     className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer"
                   >
                     <Coins size={14} className="text-yellow-500" />
-                    <span className="text-xs font-mono text-white/80">{credits}</span>
+                    <span className="text-xs font-mono text-branding/80">{credits}</span>
                   </button>
                 </div>
               </>
@@ -296,22 +305,12 @@ export default function UserApp() {
                 <GlassButton onClick={() => setIsContextOpen(true)} className="w-full justify-center gap-2" variant="secondary">
                   <FolderOpen size={16} /> Knowledge
                 </GlassButton>
-                <GlassButton onClick={async () => {
-                  const newId = crypto.randomUUID();
-                  await db.conversations.add({ id: newId, name: 'New Conversation', pinned: false, created_at: new Date(), agent_id: agentId });
-                  setConversationId(newId);
-                  setSearchParams({ c: newId }, { replace: true });
-                  setIsFormSubmitted(false);
-                  fetchConversations();
-                }} className="w-full">
-                  New Conversation
-                </GlassButton>
                 <input 
                   type="text" 
                   placeholder="Search conversations..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-branding"
                 />
               </div>
               <div className="space-y-4 overflow-y-auto custom-scrollbar flex-1 pb-4">
@@ -320,7 +319,8 @@ export default function UserApp() {
                     .sort((a, b) => Number(b.pinned) - Number(a.pinned))
                     .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
                     .reduce((acc, c) => {
-                      const key = c.agent_id || 'Unknown App';
+                      const agent = allAgents.find(a => a.id === c.agent_id);
+                      const key = agent ? agent.name : 'Unknown App';
                       if (!acc[key]) acc[key] = [];
                       acc[key].push(c);
                       return acc;
@@ -329,17 +329,17 @@ export default function UserApp() {
                   <div key={groupId} className="space-y-1">
                     <button
                       onClick={() => toggleGroup(groupId)}
-                      className="flex items-center gap-2 w-full text-left text-[10px] font-medium text-white/40 uppercase tracking-wider px-2 py-1 hover:text-white/60 transition-colors"
+                      className="flex items-center gap-2 w-full text-left text-[10px] font-medium text-branding/40 uppercase tracking-wider px-2 py-1 hover:text-branding/60 transition-colors"
                     >
                       {collapsedGroups[groupId] ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-                      App ID: {groupId.slice(0, 8)}...
+                      {groupId}
                     </button>
                     {!collapsedGroups[groupId] && (
                       <div className="space-y-1">
                         {groupConvs.map(c => (
                           <div 
                             key={c.id} 
-                            className={`flex items-center justify-between p-2 rounded-lg text-xs ${conversationId === c.id ? 'bg-primary/20 text-primary' : 'hover:bg-white/5'}`}
+                            className={`flex items-center justify-between p-2 rounded-lg text-xs ${conversationId === c.id ? 'bg-primary/20 text-primary' : 'hover:bg-white/5 text-branding'}`}
                           >
                             {editingId === c.id ? (
                               <input 
@@ -355,7 +355,7 @@ export default function UserApp() {
                                     setEditingId(null);
                                   }
                                 }}
-                                className="flex-1 bg-white/10 border border-white/20 rounded p-1 text-xs text-white"
+                                className="flex-1 bg-white/10 border border-white/20 rounded p-1 text-xs text-branding"
                                 autoFocus
                               />
                             ) : (
@@ -367,15 +367,15 @@ export default function UserApp() {
                               </button>
                             )}
                             <div className="relative">
-                              <button type="button" onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)} className="text-white/30 hover:text-white">
+                              <button type="button" onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)} className="text-branding/30 hover:text-branding">
                                 <MoreVertical size={16} />
                               </button>
                               {openMenuId === c.id && (
                                 <div className="absolute right-0 mt-1 w-32 bg-zinc-900 border border-white/10 rounded-lg p-1 z-20 shadow-xl">
-                                  <button type="button" onClick={() => { handleTogglePin(c.id, !c.pinned); setOpenMenuId(null); }} className="block w-full text-left px-2 py-1.5 text-xs hover:bg-white/5 text-white/70 hover:text-white">
+                                  <button type="button" onClick={() => { handleTogglePin(c.id, !c.pinned); setOpenMenuId(null); }} className="block w-full text-left px-2 py-1.5 text-xs hover:bg-white/5 text-branding/70 hover:text-branding">
                                     {c.pinned ? 'Unpin' : 'Pin'}
                                   </button>
-                                  <button type="button" onClick={() => { setEditingId(c.id); setEditName(c.name); setOpenMenuId(null); }} className="block w-full text-left px-2 py-1.5 text-xs hover:bg-white/5 text-white/70 hover:text-white">
+                                  <button type="button" onClick={() => { setEditingId(c.id); setEditName(c.name); setOpenMenuId(null); }} className="block w-full text-left px-2 py-1.5 text-xs hover:bg-white/5 text-branding/70 hover:text-branding">
                                     Rename
                                   </button>
                                   <button type="button" onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} className="block w-full text-left px-2 py-1.5 text-xs hover:bg-white/5 text-red-400">
@@ -406,15 +406,18 @@ export default function UserApp() {
                   <div className="w-16 h-16 mx-auto rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 flex items-center justify-center mb-6">
                     <span className="text-2xl opacity-50">✨</span>
                   </div>
-                  <h2 className="text-2xl font-light">
+                  <h2 className="text-2xl font-light text-branding">
                     Welcome to {agent?.name || 'the Interface'}
                   </h2>
                   {agent?.description && (
-                    <p className="text-white/60 text-sm leading-relaxed mt-2 italic">
+                    <p 
+                      className="text-sm leading-relaxed mt-2 italic"
+                      style={{ color: agent.branding_config.primary_font_color ? `${agent.branding_config.primary_font_color}99` : 'rgba(255, 255, 255, 0.6)' }}
+                    >
                       {agent.description}
                     </p>
                   )}
-                  <p className="text-white/40 text-sm leading-relaxed mt-4">
+                  <p className="text-branding/40 text-sm leading-relaxed mt-4">
                     This is a secure channel. All communications are encrypted and stored locally.
                     Please authenticate to begin the session.
                   </p>

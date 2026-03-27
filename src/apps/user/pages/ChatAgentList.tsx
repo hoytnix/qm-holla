@@ -8,9 +8,13 @@ import { useAuth } from '@/lib/auth';
 interface Agent {
   id: string;
   name: string;
+  description?: string;
   branding_config: {
-    description?: string;
-    icon?: string;
+    primary_color?: string;
+    primary_font_color?: string;
+    font_family?: string;
+    background_color?: string;
+    app_icon?: string;
   };
 }
 
@@ -27,7 +31,7 @@ export default function ChatAgentList() {
     try {
       const { data, error } = await supabase
         .from('agents')
-        .select('id, name, branding_config')
+        .select('id, name, description, branding_config')
         .eq('is_published', true);
       
       if (error) throw error;
@@ -54,12 +58,29 @@ export default function ChatAgentList() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {agents.map((agent) => (
-            <GlassCard key={agent.id} className="p-6">
-              <h2 className="text-xl font-medium mb-2">{agent.name}</h2>
-              <p className="text-white/60 mb-4">{agent.branding_config.description || 'No description available.'}</p>
+            <GlassCard 
+              key={agent.id} 
+              className="p-6 flex flex-col gap-4 border-white/10"
+              style={{ 
+                backgroundColor: agent.branding_config.background_color || 'rgba(255, 255, 255, 0.05)',
+                fontFamily: agent.branding_config.font_family || 'inherit',
+                color: agent.branding_config.primary_font_color || '#fff'
+              }}
+            >
+              <div className="flex items-center gap-4">
+                {agent.branding_config.app_icon && (
+                  <img src={agent.branding_config.app_icon} alt={agent.name} className="w-12 h-12 rounded-xl object-cover" />
+                )}
+                <h2 className="text-xl font-medium">{agent.name}</h2>
+              </div>
+              <p className="text-white/60 text-sm flex-1">{agent.description || 'No description available.'}</p>
               <Link 
                 to={`/chat/${agent.id}`}
-                className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="inline-block px-4 py-2 rounded-lg transition-colors text-center font-medium"
+                style={{ 
+                  backgroundColor: agent.branding_config.primary_color || '#6366f1',
+                  color: agent.branding_config.primary_font_color || '#fff'
+                }}
               >
                 Start Chat
               </Link>
