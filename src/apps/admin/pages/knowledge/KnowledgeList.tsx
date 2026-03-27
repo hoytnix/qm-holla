@@ -28,9 +28,16 @@ export default function KnowledgeList() {
 
   const fetchKbs = async () => {
     setLoading(true);
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+        setLoading(false);
+        return;
+    }
+
     const { data, error } = await supabase
       .from('user_kbs')
-      .select('*, kb_attachments(*)');
+      .select('*, kb_attachments(*)')
+      .eq('user_id', userData.user.id);
     if (error) console.error('Error fetching KBs:', error);
     else setKbs(data || []);
     setLoading(false);

@@ -339,9 +339,9 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
                       <button
                         key={aIdx}
                         onClick={() => handleSendMessage(action)}
-                        className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 text-xs text-branding/60 hover:text-branding transition-all cursor-pointer flex items-center gap-1.5"
+                        className="px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 text-3xl text-branding/60 hover:text-branding transition-all cursor-pointer flex items-center gap-2"
                       >
-                        <span className="w-1 h-1 rounded-full bg-primary" />
+                        <span className="w-3 h-3 rounded-full bg-primary" />
                         {action}
                       </button>
                     ))}

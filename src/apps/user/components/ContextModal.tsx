@@ -61,7 +61,7 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
 
     const [projectsRes, kbsRes] = await Promise.all([
       supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('user_kbs').select('*, kb_attachments(*)').order('created_at', { ascending: false })
+      supabase.from('user_kbs').select('*, kb_attachments(*)').eq('user_id', user.id).order('created_at', { ascending: false })
     ]);
 
     if (projectsRes.data) setProjects(projectsRes.data);
