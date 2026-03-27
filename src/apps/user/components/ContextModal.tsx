@@ -322,7 +322,7 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-              <ProjectList projects={projects} currentProject={currentProject} onSelect={(p: Project) => setSelectedProject(p)} onDelete={handleDeleteProject} onCreate={handleCreateProject} />
+              <ProjectList projects={projects} currentProject={currentProject} onSelect={(p: Project) => { setSelectedProject(p); onSelectProject(p); }} onDelete={handleDeleteProject} onCreate={handleCreateProject} />
               <KBList kbs={kbs} onDelete={handleDeleteKb} onCreate={handleCreateKb} onSelect={(kb: KB) => setSelectedKb(kb)} currentProject={currentProject} />
             </div>
 

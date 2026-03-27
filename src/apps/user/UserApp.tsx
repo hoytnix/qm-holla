@@ -325,7 +325,9 @@ export default function UserApp() {
                     .sort((a, b) => Number(b.pinned) - Number(a.pinned))
                     .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
                     .reduce((acc, c) => {
+                      console.log('Conversation:', c.name, 'project_id:', c.project_id);
                       const project = c.project_id ? projects.find(p => p.id === c.project_id) : null;
+                      console.log('Project found:', project);
                       const key = project ? project.name : 'Chats (no project)';
                       if (!acc[key]) acc[key] = [];
                       acc[key].push(c);
@@ -463,11 +465,13 @@ export default function UserApp() {
                       agentId={agentId!} 
                       agentDescription={agent?.description}
                       onSubmit={async (data) => {
+                        console.log('onSubmit called, currentProject:', currentProject);
                         const { selectedModel, ...formData } = data;
                         setSelectedModel(selectedModel);
                         const existingConv = await db.conversations.get(conversationId);
                         if (!existingConv) {
-                          const newConv = { id: conversationId, name: agent?.name || 'New Conversation', pinned: false, created_at: new Date(), agent_id: agentId };
+                          const newConv = { id: conversationId, name: agent?.name || 'New Conversation', pinned: false, created_at: new Date(), agent_id: agentId, project_id: currentProject?.id };
+                          console.log('Creating new conversation:', newConv);
                           await db.conversations.put(newConv);
                           setConversations(prev => [...prev, newConv]);
                         }
