@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Link } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import md5 from 'md5';
 
 interface Agent {
   id: string;
@@ -21,7 +22,11 @@ interface Agent {
 export default function ChatAgentList() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
-  const { signOut } = useAuth();
+  const { session, signOut } = useAuth();
+
+  const gravatarUrl = session?.user?.email 
+    ? `https://www.gravatar.com/avatar/${md5(session.user.email.toLowerCase().trim())}?d=mp`
+    : null;
 
   useEffect(() => {
     fetchAgents();
@@ -45,13 +50,25 @@ export default function ChatAgentList() {
 
   return (
     <div className="min-h-screen bg-black text-white p-8 relative">
-      <button 
-        onClick={signOut}
-        className="absolute top-8 right-8 text-white/60 hover:text-white transition-colors"
-        title="Logout"
-      >
-        <LogOut size={24} />
-      </button>
+      <div className="absolute top-8 right-8 flex items-center gap-4">
+        {gravatarUrl && (
+          <Link to="/settings" className="flex items-center">
+            <img 
+              src={gravatarUrl} 
+              alt="Profile" 
+              className="w-8 h-8 rounded-full border border-white/10 hover:border-white/30 transition-colors"
+              referrerPolicy="no-referrer"
+            />
+          </Link>
+        )}
+        <button 
+          onClick={signOut}
+          className="text-white/60 hover:text-white transition-colors"
+          title="Logout"
+        >
+          <LogOut size={24} />
+        </button>
+      </div>
       <h1 className="text-4xl font-light tracking-tight mb-8">Available Agents</h1>
       {loading ? (
         <div className="text-white/30">Loading agents...</div>

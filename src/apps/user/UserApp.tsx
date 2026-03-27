@@ -13,8 +13,9 @@ import { GlassButton } from '@/components/ui/GlassButton';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FolderOpen, Coins, MoreVertical, Menu, X as Close, ChevronDown, ChevronRight, Home } from 'lucide-react';
+import { FolderOpen, Coins, MoreVertical, Menu, X as Close, ChevronDown, ChevronRight, Home, Settings } from 'lucide-react';
 import { db, Conversation } from './lib/db';
+import md5 from 'md5';
 
 export default function UserApp() {
   const { agentId } = useParams<{ agentId: string }>();
@@ -52,9 +53,13 @@ export default function UserApp() {
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [selectedModel, setSelectedModel] = useState<string>('');
 
+  const gravatarUrl = session?.user?.email 
+    ? `https://www.gravatar.com/avatar/${md5(session.user.email.toLowerCase().trim())}?d=mp`
+    : null;
+
   useEffect(() => {
     async function fetchAllAgents() {
-      const { data } = await supabase.from('agents').select('id, name');
+      const { data } = await supabase.from('agents').select('id, name, branding_config');
       if (data) setAllAgents(data);
     }
     async function fetchAllProjects() {
@@ -265,6 +270,16 @@ export default function UserApp() {
                   <Coins size={14} className="text-yellow-500" />
                   <span className="text-xs font-mono text-branding/80">{credits}</span>
                 </button>
+                {gravatarUrl && (
+                  <Link to="/settings" className="flex md:hidden items-center">
+                    <img 
+                      src={gravatarUrl} 
+                      alt="Profile" 
+                      className="w-7 h-7 rounded-full border border-white/10 hover:border-white/30 transition-colors"
+                      referrerPolicy="no-referrer"
+                    />
+                  </Link>
+                )}
               </div>
             )}
           </div>
@@ -273,7 +288,7 @@ export default function UserApp() {
             {session && (
               <>
                 {/* Desktop Credits */}
-                <div className="hidden md:flex items-center gap-2">
+                <div className="hidden md:flex items-center gap-3">
                   <Link to="/chat" className="text-branding/50 hover:text-branding transition-colors p-1.5">
                     <Home size={16} />
                   </Link>
@@ -284,6 +299,16 @@ export default function UserApp() {
                     <Coins size={14} className="text-yellow-500" />
                     <span className="text-xs font-mono text-branding/80">{credits}</span>
                   </button>
+                  {gravatarUrl && (
+                    <Link to="/settings" className="flex items-center">
+                      <img 
+                        src={gravatarUrl} 
+                        alt="Profile" 
+                        className="w-8 h-8 rounded-full border border-white/10 hover:border-white/30 transition-colors"
+                        referrerPolicy="no-referrer"
+                      />
+                    </Link>
+                  )}
                 </div>
               </>
             )}
@@ -373,8 +398,20 @@ export default function UserApp() {
                                   onClick={() => handleSelectConversation(c.id)}
                                   className="flex-1 text-left truncate flex items-center gap-2"
                                 >
-                                  {agent && <span className="text-[10px] opacity-50">{agent.name} -</span>}
-                                  {c.name}
+                                  {agent && (
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      {agent.branding_config?.app_icon && (
+                                        <img 
+                                          src={agent.branding_config.app_icon} 
+                                          alt="" 
+                                          className="w-4 h-4 rounded-sm object-cover opacity-70"
+                                          referrerPolicy="no-referrer"
+                                        />
+                                      )}
+                                      <span className="text-[10px] opacity-50 truncate">{agent.name} -</span>
+                                    </div>
+                                  )}
+                                  <span className="truncate">{c.name}</span>
                                 </button>
                               )}
                               <div className="relative">
@@ -513,11 +550,25 @@ export default function UserApp() {
         {/* Modals */}
         <ContextModal 
           isOpen={isContextOpen}
-          onClose={() => setIsContextOpen(false)}
+          onClose={() => {
+            setIsContextOpen(false);
+            // Refetch projects in case any were added/deleted
+            const fetchAllProjects = async () => {
+              const { data } = await supabase.from('projects').select('id, name');
+              if (data) setProjects(data);
+            };
+            fetchAllProjects();
+          }}
           currentProject={currentProject}
           onSelectProject={(project) => {
             setCurrentProject(project);
             setIsContextOpen(false);
+            // Also refetch projects here
+            const fetchAllProjects = async () => {
+              const { data } = await supabase.from('projects').select('id, name');
+              if (data) setProjects(data);
+            };
+            fetchAllProjects();
           }}
         />
 

@@ -78,6 +78,7 @@ function DashboardRedirect() {
 }
 
 import UserApp from '@/apps/user/UserApp';
+import BaseLayout from '@/components/layouts/BaseLayout';
 
 import Economics from '@/apps/admin/pages/economics/Economics';
 import Settings from '@/apps/admin/pages/settings/Settings';
@@ -110,6 +111,8 @@ export default function App() {
               <Route path="/knowledge" element={<KnowledgeList />} />
               <Route path="/economics" element={<Economics />} />
               <Route path="/ledger" element={<Ledger />} />
+            </Route>
+            <Route element={<BaseLayout />}>
               <Route path="/settings" element={<Settings />} />
             </Route>
           </Route>
