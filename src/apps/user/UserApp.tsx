@@ -485,6 +485,8 @@ export default function UserApp() {
                         currentProject={currentProject}
                         agentSystemPrompt={agent?.system_prompt_template}
                         onCreditUpdate={fetchCredits}
+                        brandingConfig={agent?.branding_config}
+                        agentName={agent?.name}
                       />
                     </div>
                   </div>

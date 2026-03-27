@@ -10,7 +10,8 @@ import NovelEditor from '@/apps/admin/components/NovelEditor';
 import KnowledgeTab from '@/apps/admin/components/agent-tabs/KnowledgeTab';
 import ModelConfigTab from '@/apps/admin/components/agent-tabs/ModelConfigTab';
 import BrandingTab from '@/apps/admin/components/agent-tabs/BrandingTab';
-import { MessageSquare, Globe, EyeOff, Trash2, Save, Link as LinkIcon } from 'lucide-react';
+import RepliesTab from '@/apps/admin/components/agent-tabs/RepliesTab';
+import { MessageSquare, Globe, EyeOff, Trash2, Save, Link as LinkIcon, MessageCircle } from 'lucide-react';
 
 export default function AgentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -82,6 +83,7 @@ export default function AgentDetail() {
     { id: 'knowledge', label: 'Knowledge' },
     { id: 'model', label: 'Models' },
     { id: 'branding', label: 'Branding' },
+    { id: 'replies', label: 'Replies' },
     { id: 'schema', label: 'Forms' },
   ];
 
@@ -238,6 +240,9 @@ export default function AgentDetail() {
 
         {activeTab === 'branding' && (
           <BrandingTab agent={agent} updateAgent={updateAgent} />
+        )}
+        {activeTab === 'replies' && (
+          <RepliesTab agent={agent} updateAgent={updateAgent} />
         )}
       </div>
     </div>

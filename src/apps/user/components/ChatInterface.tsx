@@ -26,29 +26,26 @@ interface ChatInterfaceProps {
   currentProject?: any;
   agentSystemPrompt?: string;
   onCreditUpdate?: () => void;
+  brandingConfig?: any;
+  agentName?: string;
 }
 
-export function ChatInterface({ agentId, conversationId, contextData, allowedModels, defaultModel, currentProject, agentSystemPrompt, onCreditUpdate }: ChatInterfaceProps) {
+export function ChatInterface({ agentId, conversationId, contextData, allowedModels, defaultModel, currentProject, agentSystemPrompt, onCreditUpdate, brandingConfig, agentName }: ChatInterfaceProps) {
   const { session } = useAuth();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<Message[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-  const [agentData, setAgentData] = useState<any>(null);
-
   useEffect(() => {
-    async function fetchAgent() {
-      const { data } = await supabase.from('agents').select('name, branding_config').eq('id', agentId).single();
-      if (data) {
-        setAgentData(data);
-      }
-    }
-    fetchAgent();
-  }, [agentId]);
-
+    messagesRef.current = messages;
+  }, [messages]);
+  
+  const agentData = { name: agentName, branding_config: brandingConfig };
+  
   const [availableModels, setAvailableModels] = useState<any[]>([]);
   const [selectedModel, setSelectedModel] = useState('');
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
@@ -105,25 +102,32 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
     },
     schema: responseSchema,
     onFinish: async ({ object }) => {
-      if (object) {
-        // Save assistant message to Dexie
-        const assistantMsg: Message = {
-          role: 'assistant',
-          content: object.message || '',
-          thoughts: object.thoughts,
-          suggested_actions: object.suggested_actions,
-          created_at: new Date(),
-          agent_id: agentId,
-          conversation_id: conversationId,
-        };
-        await db.messages.add(assistantMsg);
-        setMessages((prev) => [...prev, assistantMsg]);
-        
-        // Trigger credit update
-        if (onCreditUpdate) {
-            onCreditUpdate();
+        if (object) {
+            const isFirstAssistantMessage = messagesRef.current.filter(m => m.role === 'assistant').length === 0;
+            const customReplies = agentData?.branding_config?.initial_suggested_replies || [];
+            
+            const suggestedActions = (isFirstAssistantMessage && customReplies.length > 0)
+                ? customReplies
+                : (object.suggested_actions || []);
+
+            // Save assistant message to Dexie
+            const assistantMsg: Message = {
+                role: 'assistant',
+                content: object.message || '',
+                thoughts: object.thoughts,
+                suggested_actions: suggestedActions,
+                created_at: new Date(),
+                agent_id: agentId,
+                conversation_id: conversationId,
+            };
+            await db.messages.add(assistantMsg);
+            setMessages((prev) => [...prev, assistantMsg]);
+            
+            // Trigger credit update
+            if (onCreditUpdate) {
+                onCreditUpdate();
+            }
         }
-      }
     },
     onError: (err) => {
       console.error('Chat error:', err);
@@ -138,6 +142,9 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
       // Perform template substitution on custom_instructions
       let baseInstructions = [agentSystemPrompt, currentProject?.custom_instructions].filter(Boolean).join('\n\n');
       let processedInstructions = baseInstructions + '\n\nDo not send any greeting. Respond only to the prompt provided.';
+      if (messages.length > 0) {
+        processedInstructions += '\n\nAlways provide 3 suggested actions.';
+      }
       Object.entries(contextData).forEach(([key, value]) => {
           const regex = new RegExp(`{{${key}}}`, 'g');
           processedInstructions = processedInstructions.replace(regex, String(value));
@@ -199,7 +206,7 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
 
     // Trigger AI generation
     let baseInstructions = [agentSystemPrompt, currentProject?.custom_instructions].filter(Boolean).join('\n\n');
-    let processedInstructions = baseInstructions;
+    let processedInstructions = baseInstructions + '\n\nDo not send any greeting. Respond only to the prompt provided. Always provide 3 suggested actions.';
     Object.entries(contextData).forEach(([key, value]) => {
         const regex = new RegExp(`{{${key}}}`, 'g');
         processedInstructions = processedInstructions.replace(regex, String(value));
