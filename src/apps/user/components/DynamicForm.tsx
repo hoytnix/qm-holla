@@ -16,9 +16,10 @@ interface DynamicFormProps {
   selectedProjectName?: string;
   allowedModels?: string[];
   defaultModel?: string;
+  brandingBackgroundColor?: string;
 }
 
-export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting, onSelectKnowledgeBase, selectedProjectName, allowedModels, defaultModel }: DynamicFormProps) {
+export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting, onSelectKnowledgeBase, selectedProjectName, allowedModels, defaultModel, brandingBackgroundColor }: DynamicFormProps) {
   const { fields, loading, error } = useStructuredFields(agentId);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [availableModels, setAvailableModels] = useState<any[]>([]);
@@ -66,11 +67,14 @@ export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting,
 
   return (
     <div className="w-full">
-      <div className="p-4 md:p-6 border-b border-white/5 bg-white/5">
+      <div 
+        className="p-4 md:p-6 border-b border-branding/5"
+        style={{ backgroundColor: brandingBackgroundColor || '#09090b' }}
+      >
         <div className="max-w-4xl mx-auto">
           {agentDescription && (
             <div className="mb-8 text-center">
-              <p className="text-white/80 text-lg font-light leading-relaxed">
+              <p className="text-branding/80 text-lg font-light leading-relaxed">
                 {agentDescription}
               </p>
             </div>
@@ -78,7 +82,7 @@ export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting,
           
           {onSelectKnowledgeBase && (
             <div className="mb-6 flex justify-center">
-              <GlassButton onClick={onSelectKnowledgeBase} className="gap-2" variant="secondary">
+              <GlassButton onClick={onSelectKnowledgeBase} className="gap-2 text-white" variant="primary">
                 <FolderOpen size={16} /> {selectedProjectName ? `Knowledge Base: ${selectedProjectName}` : 'Select Knowledge Base'}
               </GlassButton>
             </div>
@@ -88,23 +92,23 @@ export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting,
             <>
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIsMinimized(!isMinimized)}>
-                  <h3 className="text-[10px] font-medium text-white/40 uppercase tracking-[0.2em]">
+                  <h3 className="text-[10px] font-medium text-branding/40 uppercase tracking-[0.2em]">
                     Enter Details
                   </h3>
-                  {isMinimized ? <ChevronDown size={14} className="text-white/40" /> : <ChevronUp size={14} className="text-white/40" />}
+                  {isMinimized ? <ChevronDown size={14} className="text-branding/40" /> : <ChevronUp size={14} className="text-branding/40" />}
                 </div>
-                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+                <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--color-primary),0.5)]" />
               </div>
 
               <div className="mb-6 space-y-1">
-                <label className="text-[10px] text-white/40 uppercase tracking-wider ml-1">Model</label>
+                <label className="text-[10px] text-branding/40 uppercase tracking-wider ml-1">Model</label>
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-white/30 transition-colors appearance-none"
+                  className="w-full bg-zinc-900 border border-branding/10 rounded-lg p-2.5 text-xs text-zinc-400 focus:outline-none focus:border-branding/30 transition-colors appearance-none"
                 >
                   {validModels.map((model) => (
-                    <option key={model.model_string} value={model.model_string} className="bg-zinc-900 text-white">
+                    <option key={model.model_string} value={model.model_string} className="bg-zinc-900 text-branding">
                       {model.display_name || model.model_string}
                     </option>
                   ))}
@@ -130,7 +134,7 @@ export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting,
                                 value={formData[field.field_key] || ''}
                                 onChange={(e) => handleChange(field.field_key, e.target.value)}
                                 placeholder={`Enter ${field.label.toLowerCase()}...`}
-                                className="bg-white/5 border-white/10 focus:border-white/30 transition-colors text-xs"
+                                className="bg-zinc-900 border-branding/10 focus:border-branding/30 transition-colors text-xs text-zinc-400"
                               />
                               {field.placeholders && field.placeholders.length > 0 && (
                                 <div className="flex gap-1 flex-wrap">
@@ -139,7 +143,7 @@ export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting,
                                       key={p}
                                       type="button"
                                       onClick={() => handleChange(field.field_key, p)}
-                                      className="text-xs bg-white/10 hover:bg-white/20 text-white/80 px-4 py-2 rounded-lg transition-colors"
+                                      className="text-xs bg-branding/10 hover:bg-branding/20 text-branding px-4 py-2 rounded-lg transition-colors"
                                     >
                                       {p}
                                     </button>
@@ -155,7 +159,7 @@ export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting,
                               <textarea
                                 value={formData[field.field_key] || ''}
                                 onChange={(e) => handleChange(field.field_key, e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-xs text-white placeholder-white/20 focus:outline-none focus:border-white/30 transition-colors min-h-[60px] resize-none"
+                                className="w-full bg-zinc-900 border border-branding/10 rounded-lg p-3 text-xs text-zinc-400 placeholder-branding/20 focus:outline-none focus:border-branding/30 transition-colors min-h-[60px] resize-none"
                                 placeholder={`Enter ${field.label.toLowerCase()}...`}
                               />
                               {field.placeholders && field.placeholders.length > 0 && (
@@ -165,7 +169,7 @@ export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting,
                                       key={p}
                                       type="button"
                                       onClick={() => handleChange(field.field_key, p)}
-                                      className="text-xs bg-white/10 hover:bg-white/20 text-white/80 px-4 py-2 rounded-lg transition-colors"
+                                      className="text-xs bg-branding/10 hover:bg-branding/20 text-branding px-4 py-2 rounded-lg transition-colors"
                                     >
                                       {p}
                                     </button>
@@ -181,7 +185,7 @@ export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting,
                               <select
                                 value={formData[field.field_key] || ''}
                                 onChange={(e) => handleChange(field.field_key, e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-white/30 transition-colors appearance-none"
+                                className="w-full bg-zinc-900 border border-branding/10 rounded-lg p-2.5 text-xs text-zinc-400 focus:outline-none focus:border-branding/30 transition-colors appearance-none"
                               >
                                 <option value="" disabled>Select {field.label}</option>
                                 {field.options?.map((opt: string) => (
@@ -192,13 +196,13 @@ export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting,
                               </select>
                             </div>
                           ) : field.ui_type === 'toggle' ? (
-                            <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-lg border border-white/10">
+                            <div className="flex items-center justify-between p-2.5 bg-zinc-900 rounded-lg border border-white/10">
                               <span className="text-xs text-white/60">{field.label}</span>
                               <button
                                 type="button"
                                 onClick={() => handleChange(field.field_key, !formData[field.field_key])}
                                 className={`w-8 h-4 rounded-full relative transition-colors ${
-                                  formData[field.field_key] ? 'bg-indigo-500/50' : 'bg-white/10'
+                                  formData[field.field_key] ? 'bg-primary' : 'bg-zinc-800'
                                 }`}
                               >
                                 <span
@@ -218,7 +222,7 @@ export function DynamicForm({ agentId, agentDescription, onSubmit, isSubmitting,
             </>
           )}
           <div className="mt-6 flex justify-end">
-            <GlassButton onClick={handleSubmit} disabled={isSubmitting}>
+            <GlassButton onClick={handleSubmit} disabled={isSubmitting} className="text-white">
               {isSubmitting ? 'Initializing...' : 'Start Chat'}
             </GlassButton>
           </div>

@@ -299,14 +299,14 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             className="w-full max-w-4xl bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
-            <div className="p-6 border-b border-primary/20 flex justify-between items-center bg-primary/5">
+            <div className="p-6 border-b border-primary/20 flex justify-between items-center bg-zinc-900">
               <h2 className="text-2xl font-bold text-primary tracking-tight">Knowledge</h2>
               <div className="flex items-center gap-2">
                 <button onClick={() => setIsTutorialOpen(true)} className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-all">
@@ -364,13 +364,13 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
 
             {/* Paste Markdown Modal */}
             {pastingKbId && (
-              <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+              <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-black/90">
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className="w-full max-w-2xl bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
                 >
-                  <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+                  <div className="p-6 border-b border-white/5 flex justify-between items-center bg-zinc-900">
                     <h3 className="text-lg font-light text-white">Paste Markdown Content</h3>
                     <button onClick={() => setPastingKbId(null)} className="text-white/50 hover:text-white">
                       <Close />
@@ -388,14 +388,14 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
                         Markdown Content
                       </label>
                       <textarea
-                        className="w-full h-64 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/30 backdrop-blur-sm transition-all font-mono text-sm resize-none"
+                        className="w-full h-64 rounded-xl border border-white/10 bg-zinc-900 px-4 py-3 text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/30 transition-all font-mono text-sm resize-none"
                         placeholder="# Enter your markdown here..."
                         value={pastedText}
                         onChange={(e) => setPastedText(e.target.value)}
                       />
                     </div>
                   </div>
-                  <div className="p-6 bg-white/5 border-t border-white/5 flex justify-end gap-4">
+                  <div className="p-6 bg-zinc-900 border-t border-white/5 flex justify-end gap-4">
                     <GlassButton variant="secondary" onClick={() => setPastingKbId(null)}>
                       Cancel
                     </GlassButton>
@@ -413,14 +413,14 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
             {/* Tutorial Modal */}
             <AnimatePresence>
               {isTutorialOpen && (
-                <div className="fixed inset-0 z-80 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div className="fixed inset-0 z-80 flex items-center justify-center p-4 bg-black/90">
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     className="w-full max-w-lg bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
                   >
-                    <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+                    <div className="p-6 border-b border-white/5 flex justify-between items-center bg-zinc-900">
                       <h3 className="text-lg font-light text-white">How it Works</h3>
                       <button onClick={() => setIsTutorialOpen(false)} className="text-white/50 hover:text-white">
                         <X size={20} />
@@ -431,7 +431,7 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
                       <p><strong>Knowledge Bases</strong> are where you store your documents. You can upload files or paste markdown content into a Knowledge Base, which your agent can then use to answer your questions. Knowledge Bases are also <strong>re-usable</strong> and can be linked to multiple projects.</p>
                       <p>To get started, create a project, then create a Knowledge Base and add your documents to it.</p>
                     </div>
-                    <div className="p-6 bg-white/5 border-t border-white/5 flex justify-end">
+                    <div className="p-6 bg-zinc-900 border-t border-white/5 flex justify-end">
                       <GlassButton onClick={() => setIsTutorialOpen(false)}>Got it</GlassButton>
                     </div>
                   </motion.div>
@@ -442,14 +442,14 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
             {/* Novel Editor Modal */}
             <AnimatePresence>
               {editingAttachment && (
-                  <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                  <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-black/95">
                       <motion.div
                           initial={{ opacity: 0, y: 50, scale: 0.9 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 50, scale: 0.9 }}
                           className="w-full max-w-5xl h-[85vh] bg-zinc-900 border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
                       >
-                          <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+                          <div className="p-6 border-b border-white/5 flex justify-between items-center bg-zinc-900">
                               <div className="flex items-center gap-4">
                                   <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                                       <EditNote className="text-emerald-400" />
@@ -478,7 +478,7 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
                               </div>
                           </div>
                           
-                          <div className="flex-1 overflow-y-auto bg-black/20 custom-scrollbar">
+                          <div className="flex-1 overflow-y-auto bg-zinc-950 custom-scrollbar">
                               <div className="max-w-4xl mx-auto py-12 px-6">
                                   {loadingContent ? (
                                       <div className="flex flex-col items-center justify-center h-64 space-y-4">
@@ -498,7 +498,7 @@ export function ContextModal({ isOpen, onClose, currentProject, onSelectProject 
               )}
             </AnimatePresence>
             {loading && (
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
+              <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
                 <Loader2 className="animate-spin text-indigo-500" size={48} />
               </div>
             )}

@@ -23,7 +23,7 @@ export function TopUpModal({ isOpen, onClose, currentCredits }: TopUpModalProps)
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
@@ -52,7 +52,7 @@ export function TopUpModal({ isOpen, onClose, currentCredits }: TopUpModalProps)
               {packages.map((pkg, idx) => (
                 <button
                   key={idx}
-                  className="w-full flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors group"
+                  className="w-full flex items-center justify-between p-4 rounded-xl border border-white/10 bg-zinc-800 hover:bg-zinc-700 transition-colors group"
                 >
                   <div className="flex items-center gap-3">
                     <Coins className="text-yellow-500/70 group-hover:text-yellow-500 transition-colors" size={20} />

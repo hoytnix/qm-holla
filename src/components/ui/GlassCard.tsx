@@ -13,7 +13,7 @@ export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
       <motion.div
         ref={ref}
         className={cn(
-          'relative overflow-hidden rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-lg',
+          'relative overflow-hidden rounded-2xl border border-white/20 bg-zinc-900 shadow-lg',
           className
         )}
         {...props}

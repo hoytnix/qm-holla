@@ -10,10 +10,10 @@ interface GlassButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
 export const GlassButton = React.forwardRef<HTMLButtonElement, GlassButtonProps>(
   ({ className, variant = 'primary', size = 'md', ...props }, ref) => {
     const variants = {
-      primary: 'bg-primary/40 hover:bg-primary/60 text-primary border-primary/40',
-      secondary: 'bg-black/20 hover:bg-black/30 text-white border-white/10',
+      primary: 'bg-[var(--user-primary)] hover:opacity-90 text-branding border-[var(--user-primary)]',
+      secondary: 'bg-zinc-800 hover:bg-zinc-700 text-white border-white/10',
       ghost: 'bg-transparent hover:bg-white/10 text-white border-transparent',
-      danger: 'bg-red-500/20 hover:bg-red-500/30 text-red-200 border-red-500/20',
+      danger: 'bg-red-600 hover:bg-red-700 text-white border-red-600',
     };
 
     const sizes = {
@@ -27,7 +27,7 @@ export const GlassButton = React.forwardRef<HTMLButtonElement, GlassButtonProps>
       <button
         ref={ref}
         className={cn(
-          'inline-flex items-center justify-center rounded-xl border backdrop-blur-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium',
+          'inline-flex items-center justify-center rounded-xl border transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium [text-shadow:0_1px_2px_rgba(255,255,255,0.8)]',
           variants[variant],
           sizes[size],
           className

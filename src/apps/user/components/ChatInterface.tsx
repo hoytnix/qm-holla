@@ -302,7 +302,7 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
                   )}
                 </div>
               )}
-              <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-white/5 backdrop-blur-md border-white/10' : 'bg-black/40 backdrop-blur-xl border-white/5'} border rounded-2xl p-5 shadow-lg relative overflow-hidden group`}>
+              <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-zinc-900 border-white/10' : 'bg-zinc-950 border-white/5'} border rounded-2xl p-5 shadow-lg relative overflow-hidden group`}>
                 {/* Decorative gradient for assistant */}
                 {msg.role === 'assistant' && (
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 via-primary/30 to-transparent opacity-50" />
@@ -369,7 +369,7 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
               animate={{ opacity: 1 }}
               className="flex justify-start"
             >
-              <div className="max-w-[85%] bg-black/40 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+              <div className="max-w-[85%] bg-zinc-950 border border-white/5 rounded-2xl p-5 shadow-lg relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 via-primary/30 to-transparent animate-pulse" />
                 
                 {/* Streaming Thoughts */}
@@ -407,7 +407,7 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
       </div>
 
       {/* Input Area */}
-      <div className="p-4 md:p-6 bg-gradient-to-t from-black via-black/90 to-transparent z-10">
+      <div className="p-4 md:p-6 bg-black z-10">
         <div className="relative max-w-4xl mx-auto space-y-3">
           <div className="relative flex items-end gap-3 bg-[#0a0a0a] border border-white/10 rounded-2xl p-2 shadow-2xl ring-1 ring-white/5">
             {/* File Upload Button */}
@@ -477,7 +477,7 @@ export function ChatInterface({ agentId, conversationId, contextData, allowedMod
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute left-0 bottom-full mb-2 w-56 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl z-50"
+                    className="absolute left-0 bottom-full mb-2 w-56 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
                   >
                     <div className="p-1">
                       {validModels.map((model) => (

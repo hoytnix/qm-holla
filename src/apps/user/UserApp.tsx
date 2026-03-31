@@ -217,9 +217,6 @@ export default function UserApp() {
 
   return (
     <div className="min-h-screen relative overflow-hidden font-sans text-branding flex flex-col">
-      {/* Background Overlay for readability if image is present */}
-      <div className="absolute inset-0 bg-black/30 pointer-events-none z-0" />
-
       {/* Admin Menu Trigger */}
       {isAdmin && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-4">
@@ -249,7 +246,10 @@ export default function UserApp() {
       <div className="relative z-10 flex flex-col h-screen w-full">
         
         {/* Header / Top Bar */}
-        <header className="flex flex-col sm:flex-row items-center justify-between p-4 md:p-6 border-b border-white/5 bg-black/20 backdrop-blur-sm gap-4">
+        <header 
+          className="flex flex-col sm:flex-row items-center justify-between p-4 md:p-6 border-b border-white/5 gap-4"
+          style={{ backgroundColor: agent?.branding_config?.background_color || '#000000' }}
+        >
           <div className="flex items-center justify-between w-full sm:w-auto space-x-4">
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-white/10 rounded-lg">
               <span className="text-xl">☰</span>
@@ -331,7 +331,10 @@ export default function UserApp() {
         <div className="flex-1 flex overflow-hidden relative">
           {/* Sidebar */}
           {isSidebarOpen && (
-            <div className="w-64 bg-black/40 border-r border-white/5 p-4 space-y-4 flex flex-col h-full overflow-hidden">
+            <div 
+              className="w-64 border-r border-white/5 p-4 space-y-4 flex flex-col h-full overflow-hidden"
+              style={{ backgroundColor: agent?.branding_config?.background_color || '#18181b' }}
+            >
               <div className="space-y-4 flex-shrink-0">
                 <GlassButton onClick={() => setIsContextOpen(true)} className="w-full justify-center gap-2" variant="secondary">
                   <FolderOpen size={16} /> Knowledge
@@ -444,7 +447,10 @@ export default function UserApp() {
           )}
 
           {/* Chat Interface - Centered Column */}
-          <main className="flex-1 bg-black/10 backdrop-blur-sm flex flex-col border-x border-white/5">
+          <main 
+            className="flex-1 flex flex-col border-x border-white/5"
+            style={{ backgroundColor: agent?.branding_config?.background_color || '#09090b' }}
+          >
             {!session ? (
               <div className="flex-1 flex items-center justify-center p-4">
                 <motion.div 
@@ -452,7 +458,7 @@ export default function UserApp() {
                   animate={{ opacity: 1, y: 0 }}
                   className="text-center space-y-4 max-w-md"
                 >
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 flex items-center justify-center mb-6">
+                  <div className="w-16 h-16 mx-auto rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center mb-6">
                     <span className="text-2xl opacity-50">✨</span>
                   </div>
                   <h2 className="text-2xl font-light text-branding">
@@ -521,6 +527,7 @@ export default function UserApp() {
                       selectedProjectName={currentProject?.name}
                       allowedModels={agent?.allowed_models}
                       defaultModel={agent?.default_model}
+                      brandingBackgroundColor={agent?.branding_config?.background_color}
                     />
                   </div>
                 ) : (

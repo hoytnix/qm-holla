@@ -18,8 +18,8 @@ export const GlassInput = React.forwardRef<HTMLInputElement, GlassInputProps>(
         <input
           ref={ref}
           className={cn(
-            'w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/30 backdrop-blur-sm transition-all',
-            error && 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20',
+            'w-full rounded-xl border border-white/10 bg-zinc-900 px-4 py-2 text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/30 transition-all',
+            error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
             className
           )}
           {...props}
