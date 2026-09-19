@@ -19,9 +19,16 @@
       2. **Helm Chat button** (`MessageSquare` link navigating to `/chat`), strictly **icons-only**.
   - **Canvas Core Middle Viewport**:
     - Top and bottom navbars firmly establish boundaries, leaving the entire middle viewport free for the current page and radial knowledge canvas to paint smoothly.
-    - Main layout styled with `pb-16 md:pb-0` to guarantee zero overlap with the bottom quick navbar on mobile.
+    - Global layout styled with `pt-16 md:pt-0 pb-20 md:pb-0` in `app/layout.tsx` to prevent the top of any page from being hidden beneath the fixed top navbar and the bottom from colliding with the quick navbar.
 
 ## Recent Changes
+- **Streamlined Topnav & Radial Canvas Controls (`components/layout/Navbar.tsx`, `components/canvas/RadialGraph.tsx`)**:
+  - Removed all redundant buttons containing text from the topnav header (center navigation links, quick theme name toggle button, and morning planning brief trigger), keeping the topnav strictly minimalist with icons and the active company identifier.
+  - Removed the redundant "Add Node" button from the floating canvas controls in `RadialGraph.tsx`, retaining clean zoom and transform controls.
+- **Fixed Top & Bottom Navigation Margins (`app/layout.tsx`, `app/chat/page.tsx`)**:
+  - Added `pt-16 md:pt-0` to the root body in `app/layout.tsx` so top content across all pages begins cleanly below the 64px fixed header.
+  - Increased bottom padding to `pb-20 md:pb-0` to guarantee ample clearance over the bottom quick navbar.
+  - Updated `app/chat/page.tsx` with responsive height (`min-h-0 md:h-[calc(100vh-4rem)]`) for fluid scrolling on mobile.
 - **Project Documentation & Polsia FLOSS Positioning (`README.md`)**:
   - Authored comprehensive documentation highlighting Quarkmeme as a 100% FLOSS browser-native alternative to Polsia.
   - Detailed zero cloud database bills invariant, client-side OPFS SQLite WASM architecture, 7-universe crew hierarchy, isolated character memory banks, and setup guide.

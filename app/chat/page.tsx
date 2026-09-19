@@ -201,7 +201,7 @@ function ChatContent() {
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
       <Navbar />
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col h-[calc(100vh-4rem)]">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 flex flex-col min-h-0 md:h-[calc(100vh-4rem)]">
         {/* Chat Control Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/10">
           <div className="flex items-center gap-3">

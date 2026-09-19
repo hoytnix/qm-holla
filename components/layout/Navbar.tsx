@@ -4,51 +4,18 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Compass,
-  Users,
   MessageSquare,
-  Database,
-  Sun,
-  SlidersHorizontal,
   Menu,
-  Sparkles,
-  Flame,
-  Coffee,
-  Crown,
-  Shield,
-  Zap,
   Building2,
   ChevronDown,
   Check,
   Plus,
   Mic,
-  LucideIcon,
 } from 'lucide-react';
 import { MorningPlanningModal } from '@/components/planning/MorningPlanningModal';
 import { ThemeSelectionModal } from '@/components/settings/ThemeSelectionModal';
 import { VoiceHelmSheet } from '@/components/voice/VoiceHelmSheet';
 import { useSettings } from '@/lib/settings/settings-context';
-import { AppTheme } from '@/lib/settings/themes';
-
-const NAV_ITEMS = [
-  { href: '/', label: 'Canvas', icon: Compass },
-  { href: '/chat', label: 'Helm Chat', icon: MessageSquare },
-  { href: '/crew', label: 'Crew Directory', icon: Users },
-  { href: '/vault', label: 'Vault & Lore', icon: Database },
-  { href: '/settings', label: 'Settings', icon: SlidersHorizontal },
-  { href: '/menu', label: 'Menu', icon: Menu },
-];
-
-const THEME_ICONS: Record<AppTheme, LucideIcon> = {
-  'one-piece': Compass,
-  'naruto': Flame,
-  'the-office': Coffee,
-  'game-of-thrones': Crown,
-  'ncis': Shield,
-  'pokemon': Zap,
-  'frieren': Sparkles,
-  'custom': Sparkles,
-};
 
 interface NavbarProps {
   onOpenMorningPlanning?: () => void;
@@ -65,16 +32,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning, onOpenVoi
   const companyDropdownRef = React.useRef<HTMLDivElement>(null);
 
   const {
-    isConfigured,
-    currentTheme,
     themeConfig,
     companies,
     activeCompany,
     switchCompany,
     openCompanyModal,
   } = useSettings();
-
-  const ThemeIcon = THEME_ICONS[currentTheme] || Compass;
 
   // Close company dropdown when clicking outside
   useEffect(() => {
@@ -218,63 +181,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning, onOpenVoi
             </div>
           </div>
 
-          {/* Desktop-only Center Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1 bg-slate-900/60 p-1 rounded-xl border border-white/5">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              const isSettingsItem = item.href === '/settings';
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    isActive
-                      ? 'bg-amber-600/90 text-white shadow-md shadow-amber-600/30 font-semibold'
-                      : 'text-slate-300 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Icon width={16} height={16} className="shrink-0" />
-                  <span>{item.label}</span>
-                  {isSettingsItem && !isConfigured && (
-                    <span
-                      className="w-2 h-2 rounded-full bg-amber-400 animate-pulse ml-0.5 shadow-[0_0_8px_rgba(251,191,36,0.6)]"
-                      title="API Key Unconfigured"
-                    />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-
           {/* Right Cluster: Floating to the right (Speak With Ceo button [voice chat icon only] -> Helm Chat button [icon only]) */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Desktop-only quick theme toggle */}
-            <button
-              type="button"
-              onClick={() => setIsThemeModalOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-white/10 hover:border-amber-500/40 text-slate-300 hover:text-white text-xs font-mono transition-all"
-              title="Switch Universe Theme"
-            >
-              <ThemeIcon width={14} height={14} className={themeConfig.accentColor} />
-              <span className="font-semibold">{themeConfig.name}</span>
-            </button>
-
-            {/* Desktop-only Morning Planning trigger */}
-            <button
-              onClick={handleOpenModal}
-              title="Morning Planning"
-              className="hidden sm:flex relative items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-bold shadow-lg shadow-red-600/25 border border-red-400/30 transition-all active:scale-95"
-            >
-              {!hasReviewedToday && (
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
-                </span>
-              )}
-              <Sun width={15} height={15} className="text-amber-200 shrink-0" />
-              <span className="whitespace-nowrap font-mono text-[11px]">Brief</span>
-            </button>
 
             {/* Speak With Ceo Button (Voice chat, Icons only) */}
             <button

@@ -3,13 +3,17 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Streamlined Minimalist Topnav & Radial Graph Controls:
+  - Removed all redundant buttons containing text from [`components/layout/Navbar.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/Navbar.tsx): eliminated center `NAV_ITEMS` text links, quick universe theme name trigger, and morning planning text brief button.
+  - Retained clean icons-only layout: leftmost Menu button, Company Profile Switcher icon button with company name, and rightmost icons-only Speak With CEO (Voice Chat) and Helm Chat buttons.
+  - Removed redundant "Add Node" button from [`components/canvas/RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx) upper-right floating canvas controls, preserving clean zoom/reset actions.
 - [x] Comprehensive Documentation & Polsia FLOSS Positioning:
   - Authored a documentation suite in [`README.md`](file:///home/oloty/Dev/qm-holla/README.md) spotlighting Quarkmeme as a FLOSS, browser-native alternative to Polsia.
   - Detailed the comparison matrix (proprietary vs FLOSS, cloud lock-in vs client-side OPFS SQLite, recurring database subscriptions vs $0/mo bills, server threads vs isolated character memory banks).
   - Documented ASCII system architecture, hierarchical multi-agent crew (Level 0-2), Grand Line radial canvas, 7-universe crew engine, and local developer setup with pnpm.
-- [x] Mobile Navigation Theme Architecture:
+- [x] Mobile Navigation Theme Architecture & Viewport Clearance:
   - Created [`components/layout/BottomNav.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/BottomNav.tsx) providing a fixed quick navbar at the bottom of mobile viewports (`inset-x-0 bottom-0 z-40 md:hidden`) for thumb reach, strictly icons-only (no text) with tabs for Canvas (`/`), Chat (`/chat`), Crew (`/crew`), Vault (`/vault`), and Settings (`/settings`).
-  - Integrated persistent `BottomNav` into [`app/layout.tsx`](file:///home/oloty/Dev/qm-holla/app/layout.tsx) with body bottom padding (`pb-16 md:pb-0`) ensuring fluid viewport scrolling.
+  - Configured global viewport clearance in [`app/layout.tsx`](file:///home/oloty/Dev/qm-holla/app/layout.tsx) with `pt-16 md:pt-0` and `pb-20 md:pb-0`, preventing top content on all pages from hiding under the fixed top navbar and ensuring bottom clearance over the quick navbar.
   - Refactored [`components/layout/Navbar.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/Navbar.tsx) with fixed top positioning (`fixed md:sticky top-0 inset-x-0 z-50`):
     - Left-to-right cluster: Menu button first (links to `/menu`), then Profile Icon button (`Building2`) triggering the interactive Company Profile Switcher, then active Profile Company Name.
     - Right-to-left cluster (floating to the right): Speak With Ceo button (voice chat trigger launching `VoiceHelmSheet`, strictly icons-only) and Helm Chat button (`MessageSquare` link, strictly icons-only).

@@ -445,16 +445,8 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
         </div>
       )}
 
-      {/* Floating Canvas Controls & Dynamic Add Node Trigger (Upper Right) */}
+      {/* Floating Canvas Controls (Upper Right) */}
       <div className="absolute top-14 right-4 z-40 flex items-center gap-1.5 bg-slate-900/90 border border-white/10 backdrop-blur-xl p-1.5 rounded-2xl shadow-xl">
-        <button
-          onClick={() => setIsCreatingNode(true)}
-          title="Add Dynamic Node to Canvas"
-          className="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition-all active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
-        >
-          <Plus width={15} height={15} />
-          <span className="hidden sm:inline">Add Node</span>
-        </button>
         <button
           onClick={zoomOut}
           title="Zoom Out"
