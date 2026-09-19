@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { GlassButton } from '@/components/ui/GlassButton';
-import { useSettings, LLMProvider } from '@/lib/settings/settings-context';
+import { useSettings, LLMProvider, DEFAULT_GLOBAL_SYSTEM_PROMPT } from '@/lib/settings/settings-context';
 import {
   Sparkles,
   Bot,
@@ -22,6 +22,9 @@ import {
   ShieldCheck,
   Zap,
   Gauge,
+  Terminal,
+  FileText,
+  RotateCcw,
 } from 'lucide-react';
 
 import { GOOGLE_AI_STUDIO_MODELS } from '@/lib/ai/models';
@@ -389,6 +392,46 @@ export default function SettingsPage() {
               <p className="text-[11px] text-slate-500">
                 Paces automated crew delegations and tool calls to remain safely within provider rate limits (default: 4 RPM for Gemini free tier).
               </p>
+            </div>
+
+            {/* Global System-Level Prompt */}
+            <div className="space-y-3 pt-4 border-t border-white/5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 flex items-center gap-2">
+                    <Terminal width={16} height={16} className="text-amber-400" />
+                    <span>Global System-Level Prompt & Directives</span>
+                  </label>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Automatically injected into Captain Luffy, specialist division leads, autonomous subagent tasks, and all LLM requests.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => updateConfig({ systemPrompt: DEFAULT_GLOBAL_SYSTEM_PROMPT })}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                    title="Reset to default sovereign instructions"
+                  >
+                    <RotateCcw width={13} height={13} />
+                    <span>Reset Default</span>
+                  </button>
+                  <span className="text-[11px] text-slate-500 font-mono">
+                    {config.systemPrompt ? config.systemPrompt.length : 0} chars
+                  </span>
+                </div>
+              </div>
+
+              <div className="relative">
+                <textarea
+                  rows={6}
+                  value={config.systemPrompt ?? DEFAULT_GLOBAL_SYSTEM_PROMPT}
+                  onChange={(e) => updateConfig({ systemPrompt: e.target.value })}
+                  placeholder="Enter system-level guidelines, core constraints, or domain operating principles..."
+                  className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-white/10 text-xs sm:text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/30 font-mono leading-relaxed resize-y min-h-[140px]"
+                />
+              </div>
             </div>
 
             {/* Actions: Test Transmission & Save Settings */}

@@ -3,6 +3,11 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Global System-Level Prompt in Settings & Multi-Agent Engines:
+  - Added `systemPrompt` to `LLMConfig`, `DEFAULT_GLOBAL_SYSTEM_PROMPT`, and `DEFAULT_CONFIG` in [`lib/settings/settings-context.tsx`](file:///home/oloty/Dev/qm-holla/lib/settings/settings-context.tsx) with browser-secured OPFS SQLite (`llm_system_prompt`) and local cache hydration.
+  - Added responsive textarea control to [`app/settings/page.tsx`](file:///home/oloty/Dev/qm-holla/app/settings/page.tsx) with live character counter, reset-to-default action, and vector icons.
+  - Wired [`lib/ai/orchestrator.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/orchestrator.ts) to inject the global system prompt into `assembleContext` as top-level framing ahead of agent prompts and local FTS5 BM25 knowledge retrieval.
+  - Wired [`lib/ai/subagent-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/subagent-engine.ts) and [`app/chat/page.tsx`](file:///home/oloty/Dev/qm-holla/app/chat/page.tsx) to automatically inject the configured global prompt into all LLM calls and autonomous subagent executions.
 - [x] Notion-Style Full-Page Rich Markdown Editor for Vault Docs:
   - Created [`components/vault/MarkdownToolbar.tsx`](file:///home/oloty/Dev/qm-holla/components/vault/MarkdownToolbar.tsx) with Notion-style formatting buttons (Headings, bold, italic, strikethrough, inline code, task checklists, callouts, tables, code blocks, dividers, links), word & reading time metrics, and split/preview/edit view toggles.
   - Created [`components/vault/RichMarkdownRenderer.tsx`](file:///home/oloty/Dev/qm-holla/components/vault/RichMarkdownRenderer.tsx) featuring responsive typography, interactive task checkboxes that toggle state directly in source markdown, syntax code snippets with copy button, GitHub/Notion callout alerts (`[!NOTE]`, `[!WARNING]`, `[!TIP]`), and markdown tables.

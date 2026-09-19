@@ -13,6 +13,7 @@ export interface LLMConfig {
   temperature: number;
   maxTokens: number;
   requestsPerMinute: number;
+  systemPrompt: string;
 }
 
 export interface SettingsContextValue {
@@ -25,6 +26,13 @@ export interface SettingsContextValue {
   exportVaultData: () => Promise<string>;
 }
 
+export const DEFAULT_GLOBAL_SYSTEM_PROMPT = `You are an elite autonomous AI operating inside Quarkmeme, a sovereign, local-first multi-agent operating system.
+Your guidelines:
+1. Ground your reasoning strictly in the provided local knowledge context and user directives.
+2. Deliver direct, actionable, structured insights and high-craft deliverables.
+3. Respect multi-agent domain boundaries and maintain seamless inter-agent collaboration.
+4. Protect user sovereignty, local data privacy, and zero-telemetry guarantees.`.trim();
+
 export const DEFAULT_CONFIG: LLMConfig = {
   provider: 'gemini',
   apiKey: '',
@@ -33,6 +41,7 @@ export const DEFAULT_CONFIG: LLMConfig = {
   temperature: 0.7,
   maxTokens: 2048,
   requestsPerMinute: 4,
+  systemPrompt: DEFAULT_GLOBAL_SYSTEM_PROMPT,
 };
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(undefined);
@@ -79,6 +88,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (settings['llm_temperature']) loaded.temperature = parseFloat(settings['llm_temperature']);
           if (settings['llm_max_tokens']) loaded.maxTokens = parseInt(settings['llm_max_tokens'], 10);
           if (settings['llm_rpm']) loaded.requestsPerMinute = parseInt(settings['llm_rpm'], 10);
+          if (settings['llm_system_prompt'] !== undefined) loaded.systemPrompt = settings['llm_system_prompt'];
 
           setConfig((prev) => {
             const merged = { ...prev, ...loaded };
@@ -124,6 +134,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (partial.temperature !== undefined) await db.setSetting('llm_temperature', String(partial.temperature));
       if (partial.maxTokens !== undefined) await db.setSetting('llm_max_tokens', String(partial.maxTokens));
       if (partial.requestsPerMinute !== undefined) await db.setSetting('llm_rpm', String(partial.requestsPerMinute));
+      if (partial.systemPrompt !== undefined) await db.setSetting('llm_system_prompt', partial.systemPrompt);
     } catch (err) {
       console.warn('Failed to persist settings to OPFS SQLite:', err);
     }

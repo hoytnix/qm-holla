@@ -98,7 +98,7 @@ function ChatContent() {
     try {
       // 2. Multi-Agent Context Assembly & Orchestration Routing
       const target = selectedAgentId === 'auto' ? undefined : selectedAgentId;
-      const orchestration = await assembleContext(userText, target);
+      const orchestration = await assembleContext(userText, target, config.systemPrompt);
 
       setActiveTrace(orchestration.delegationPath);
 

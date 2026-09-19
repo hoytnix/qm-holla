@@ -143,8 +143,8 @@ class SubagentExecutionEngine {
     }
 
     try {
-      // 2. Assemble context & prompt
-      const context = await assembleContext(task.title, agent?.id);
+      // 2. Assemble context & prompt with global system prompt
+      const context = await assembleContext(task.title, agent?.id, config.systemPrompt);
       const prompt = `You are ${agent?.name || 'an autonomous specialist'}, assigned the following task for project '${task.project_id}':
 Task Title: "${task.title}"
 

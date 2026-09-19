@@ -110,11 +110,12 @@ export async function resolveSharedContext(
 
 /**
  * Assembles contextual prompt with FTS5 search retrieval, inter-agent shared memory,
- * and separation of duties enforcement.
+ * global system prompt directives, and separation of duties enforcement.
  */
 export async function assembleContext(
   userPrompt: string,
-  targetAgentId?: string
+  targetAgentId?: string,
+  customGlobalPrompt?: string
 ): Promise<OrchestrationResult> {
   const agents = await db.getAgents();
 
@@ -151,10 +152,28 @@ export async function assembleContext(
     }
   }
 
+  // Resolve global system prompt if not explicitly passed
+  let globalPrompt = customGlobalPrompt;
+  if (globalPrompt === undefined && db.getSetting) {
+    try {
+      const persisted = await db.getSetting('llm_system_prompt');
+      if (persisted && persisted.trim()) {
+        globalPrompt = persisted.trim();
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
   // Resolve inter-agent shared memory
   const sharedDocs = await resolveSharedContext(targetAgent.id, userPrompt);
 
   // Build composite system prompt
+  let globalBlock = '';
+  if (globalPrompt && globalPrompt.trim()) {
+    globalBlock = `--- GLOBAL SYSTEM DIRECTIVES & SOVEREIGN OPERATING RULES ---\n${globalPrompt.trim()}\n--- END GLOBAL SYSTEM DIRECTIVES ---\n\n`;
+  }
+
   let contextBlock = '';
   if (combinedExcerpts.length > 0) {
     contextBlock += `\n\n--- LOCAL KNOWLEDGE VAULT RETRIEVAL (OPFS SQLite FTS5) ---\n` +
@@ -178,7 +197,7 @@ You are operating within a sovereign multi-agent crew.
 Respect domain boundaries: Each division lead governs their domain. Reference sibling research or specifications for context, but do NOT rewrite or contradict their core specs without explicit user delegation.
 `;
 
-  const systemInstruction = `${targetAgent.system_prompt}${contextBlock}${separationOfDuties}\n\nMaintain character and resolve user queries efficiently. Always stay grounded in provided knowledge where applicable.`;
+  const systemInstruction = `${globalBlock}${targetAgent.system_prompt}${contextBlock}${separationOfDuties}\n\nMaintain character and resolve user queries efficiently. Always stay grounded in provided knowledge where applicable.`;
 
   return {
     targetAgent,
