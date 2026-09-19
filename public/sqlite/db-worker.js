@@ -492,11 +492,17 @@ async function initSqlite() {
   if (isInitialized) return;
 
   try {
+    console.log('[db-worker] Initializing SQLite worker environment:', {
+      crossOriginIsolated: self.crossOriginIsolated,
+      hasSharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined',
+      hasStorage: typeof navigator !== 'undefined' && Boolean(navigator.storage?.getDirectory)
+    });
+
     // Relative import resolves against /sqlite/db-worker.js -> /sqlite/sqlite3.js
     importScripts('sqlite3.js');
 
     if (typeof sqlite3InitModule !== 'function') {
-      throw new Error('sqlite3InitModule is not defined in sqlite3.js');
+      throw new Error('sqlite3InitModule not found in sqlite3.js');
     }
 
     const sqlite3 = await sqlite3InitModule({
@@ -504,25 +510,33 @@ async function initSqlite() {
       printErr: console.error,
     });
 
-    if ('opfs' in sqlite3) {
+    // Check for OPFS availability
+    if ('opfs' in sqlite3 && sqlite3.oo1 && sqlite3.oo1.OpfsDb) {
       try {
         db = new sqlite3.oo1.OpfsDb('/quarkmeme.db');
-        console.log('OPFS SQLite DB mounted successfully: /quarkmeme.db');
+        console.log('[db-worker] OPFS SQLite DB mounted successfully: /quarkmeme.db');
       } catch (opfsErr) {
-        console.warn('OpfsDb mount failed, falling back to in-memory DB:', opfsErr);
+        console.warn('[db-worker] OpfsDb constructor failed, using memory DB:', opfsErr);
         db = new sqlite3.oo1.DB();
       }
     } else {
-      console.warn('OPFS not supported, falling back to in-memory DB');
+      console.warn('[db-worker] OPFS not installed on sqlite3 object, using memory fallback.', {
+        hasOpfs: 'opfs' in sqlite3,
+        crossOriginIsolated: self.crossOriginIsolated
+      });
       db = new sqlite3.oo1.DB();
     }
 
     runBootstrapMigrations(db);
 
     isInitialized = true;
-    self.postMessage({ type: 'INIT_SUCCESS', success: true, opfs: Boolean('opfs' in sqlite3) });
+    self.postMessage({
+      type: 'INIT_SUCCESS',
+      success: true,
+      opfs: Boolean('opfs' in sqlite3 && sqlite3.oo1 && sqlite3.oo1.OpfsDb)
+    });
   } catch (err) {
-    console.error('Fatal SQLite initialization error in db-worker.js:', err);
+    console.error('[db-worker] Fatal initialization error:', err);
     try {
       if (typeof sqlite3 !== 'undefined' && sqlite3 && sqlite3.oo1 && sqlite3.oo1.DB) {
         db = new sqlite3.oo1.DB();

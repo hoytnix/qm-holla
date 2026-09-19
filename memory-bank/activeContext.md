@@ -54,6 +54,11 @@
   - Replaced Webpack worker dynamic instantiation in [`lib/db/opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts) with direct static `new Worker('/sqlite/db-worker.js')`, preventing Next.js bundler rewriting of worker dependencies.
   - Configured `Cross-Origin-Resource-Policy: cross-origin` across `/*` and `/sqlite/*` in both [`public/_headers`](file:///home/oloty/Dev/qm-holla/public/_headers) and [`netlify.toml`](file:///home/oloty/Dev/qm-holla/netlify.toml) so nested worker threads and OPFS async proxy worker loading are never blocked under COEP.
   - Verified clean TypeScript validation (`npx tsc --noEmit`) and production build compilation (`pnpm build`).
+- **Restore Official SQLite OPFS Proxy & Root Netlify Headers**:
+  - Restored clean, official uncorrupted `sqlite3-opfs-async-proxy.js` directly from `@sqlite.org/sqlite-wasm` into [`public/sqlite/sqlite3-opfs-async-proxy.js`](file:///home/oloty/Dev/qm-holla/public/sqlite/sqlite3-opfs-async-proxy.js).
+  - Placed `_headers` at the repository root [`/_headers`](file:///home/oloty/Dev/qm-holla/_headers) alongside fallback [`public/_headers`](file:///home/oloty/Dev/qm-holla/public/_headers) to guarantee COOP/COEP isolation and cross-origin resource policy on Netlify deployments.
+  - Enhanced [`public/sqlite/db-worker.js`](file:///home/oloty/Dev/qm-holla/public/sqlite/db-worker.js) initialization with isolation metrics logging (`crossOriginIsolated`, `SharedArrayBuffer`, `navigator.storage`) and `sqlite3.oo1.OpfsDb` detection.
+  - Verified production build (`pnpm build`) compiles 9/9 static routes cleanly.
 
 ## Invariants Maintained
 1. Local-First OPFS SQLite storage guarantee (zero external database dependencies, credentials stored in client OPFS).
