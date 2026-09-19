@@ -194,7 +194,18 @@ class OpfsDatabase implements IQuarkDatabase {
     if (!this.usingFallback && this.worker) {
       try {
         const rows = await this.query<AgentRecord>('SELECT * FROM agents ORDER BY created_at ASC');
-        if (rows && rows.length > 0) return rows;
+        if (rows && rows.length > 0) {
+          return rows.map((r) => {
+            if (typeof r.tools === 'string') {
+              try {
+                return { ...r, tools: JSON.parse(r.tools) };
+              } catch {
+                return { ...r, tools: null };
+              }
+            }
+            return r;
+          });
+        }
       } catch (err) {
         console.warn('Worker getAgents failed, falling back to memory/defaults:', err);
       }
@@ -209,7 +220,18 @@ class OpfsDatabase implements IQuarkDatabase {
     if (!this.usingFallback && this.worker) {
       try {
         const rows = await this.query<AgentRecord>('SELECT * FROM agents WHERE id = ? LIMIT 1', [id]);
-        return rows[0] || null;
+        if (rows[0]) {
+          const r = rows[0];
+          if (typeof r.tools === 'string') {
+            try {
+              return { ...r, tools: JSON.parse(r.tools) };
+            } catch {
+              return { ...r, tools: null };
+            }
+          }
+          return r;
+        }
+        return null;
       } catch (err) {
         console.warn('Worker getAgentById failed, falling back to memory:', err);
       }
@@ -223,8 +245,8 @@ class OpfsDatabase implements IQuarkDatabase {
   async saveAgent(agent: AgentRecord): Promise<void> {
     if (this.worker) {
       await this.run(
-        `INSERT OR REPLACE INTO agents (id, name, role_title, avatar_url, system_prompt, routing_description, parent_agent_id, model)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO agents (id, name, role_title, avatar_url, system_prompt, routing_description, parent_agent_id, model, tools)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           agent.id,
           agent.name,
@@ -234,6 +256,7 @@ class OpfsDatabase implements IQuarkDatabase {
           agent.routing_description || null,
           agent.parent_agent_id || null,
           agent.model || null,
+          agent.tools ? JSON.stringify(agent.tools) : null,
         ]
       );
     } else {
@@ -687,8 +710,8 @@ class OpfsDatabase implements IQuarkDatabase {
   async saveMessage(message: MessageRecord): Promise<void> {
     if (this.worker) {
       await this.run(
-        `INSERT INTO messages (id, thread_id, sender_type, agent_id, content, delegation_trace)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO messages (id, thread_id, sender_type, agent_id, content, delegation_trace, grounding_metadata, code_execution)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           message.id,
           message.thread_id,
@@ -696,6 +719,8 @@ class OpfsDatabase implements IQuarkDatabase {
           message.agent_id || null,
           message.content,
           message.delegation_trace || null,
+          message.grounding_metadata || null,
+          message.code_execution || null,
         ]
       );
       return;

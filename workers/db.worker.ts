@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS agents (
   routing_description TEXT,
   parent_agent_id TEXT REFERENCES agents(id),
   model TEXT,
+  tools TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -76,6 +77,8 @@ CREATE TABLE IF NOT EXISTS messages (
   agent_id TEXT REFERENCES agents(id),
   content TEXT NOT NULL,
   delegation_trace TEXT,
+  grounding_metadata TEXT,
+  code_execution TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -383,6 +386,15 @@ function runBootstrapMigrations(database: any) {
 
   try {
     database.exec('ALTER TABLE agents ADD COLUMN model TEXT');
+  } catch (_) {}
+  try {
+    database.exec('ALTER TABLE agents ADD COLUMN tools TEXT');
+  } catch (_) {}
+  try {
+    database.exec('ALTER TABLE messages ADD COLUMN grounding_metadata TEXT');
+  } catch (_) {}
+  try {
+    database.exec('ALTER TABLE messages ADD COLUMN code_execution TEXT');
   } catch (_) {}
 
   // Seed settings default if not present

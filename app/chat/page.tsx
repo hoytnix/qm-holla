@@ -24,8 +24,162 @@ import {
   Crown,
   AlertTriangle,
   SlidersHorizontal,
+  Search,
+  Globe,
+  ExternalLink,
+  Terminal,
+  Code2,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle,
 } from 'lucide-react';
 import { AgentIcon } from '@/components/ui/AgentIcon';
+import {
+  readChatStream,
+  GroundingMetadata,
+  CodeExecutionBlock,
+} from '@/lib/ai/tools';
+
+interface ChatMessage extends MessageRecord {
+  groundingMetadata?: GroundingMetadata | null;
+  codeExecutionBlocks?: CodeExecutionBlock[];
+}
+
+function CodeExecutionDisplay({ block }: { block: CodeExecutionBlock }) {
+  const [isOpen, setIsOpen] = useState(true);
+  const isSuccess = block.outcome === 'OUTCOME_OK' || !block.outcome || block.outcome.includes('OK');
+
+  return (
+    <div className="my-2 rounded-xl border border-white/10 bg-slate-950/70 overflow-hidden text-xs">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-3 py-2 flex items-center justify-between bg-slate-900/90 hover:bg-slate-800/80 transition-colors border-b border-white/5"
+      >
+        <div className="flex items-center gap-2">
+          <Terminal className="w-3.5 h-3.5 text-amber-400 shrink-0" width={14} height={14} />
+          <span className="font-mono font-semibold text-slate-200">
+            Code Execution ({block.language || 'Python'})
+          </span>
+          {block.outcome && (
+            <span
+              className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                isSuccess
+                  ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-rose-950/60 text-rose-400 border border-rose-500/30'
+              }`}
+            >
+              {isSuccess ? 'Executed' : block.outcome}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 text-slate-400">
+          <span className="text-[10px] hidden sm:inline">{isOpen ? 'Collapse' : 'Expand'}</span>
+          {isOpen ? (
+            <ChevronUp className="w-3.5 h-3.5" width={14} height={14} />
+          ) : (
+            <ChevronDown className="w-3.5 h-3.5" width={14} height={14} />
+          )}
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="p-3 space-y-2 font-mono text-[11px]">
+          {block.code && (
+            <div className="space-y-1">
+              <div className="text-[10px] text-slate-400 font-sans font-medium flex items-center gap-1.5">
+                <Code2 className="w-3 h-3 text-cyan-400 shrink-0" width={12} height={12} />
+                <span>Executable Script:</span>
+              </div>
+              <pre className="p-2.5 rounded-lg bg-black/60 border border-white/5 text-cyan-200 overflow-x-auto whitespace-pre-wrap leading-relaxed font-mono">
+                <code>{block.code}</code>
+              </pre>
+            </div>
+          )}
+
+          {block.output && (
+            <div className="space-y-1">
+              <div className="text-[10px] text-slate-400 font-sans font-medium flex items-center gap-1.5">
+                <CheckCircle className="w-3 h-3 text-emerald-400 shrink-0" width={12} height={12} />
+                <span>Console Output:</span>
+              </div>
+              <pre className="p-2.5 rounded-lg bg-black/90 border border-white/5 text-emerald-300 overflow-x-auto whitespace-pre-wrap leading-relaxed font-mono">
+                <code>{block.output}</code>
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GroundingDisplay({ metadata }: { metadata: GroundingMetadata }) {
+  const sources = (metadata.groundingChunks || [])
+    .map((c) => c.web)
+    .filter((w): w is NonNullable<typeof w> => Boolean(w && w.uri));
+
+  const uniqueSources = Array.from(new Map(sources.map((s) => [s.uri, s])).values());
+  const queries = metadata.webSearchQueries || [];
+
+  if (uniqueSources.length === 0 && queries.length === 0) return null;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-white/10 space-y-2 text-xs">
+      {queries.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+          <Search className="w-3.5 h-3.5 text-cyan-400 shrink-0" width={14} height={14} />
+          <span className="font-semibold text-slate-300">Grounding Searches:</span>
+          {queries.map((q, idx) => (
+            <span
+              key={idx}
+              className="px-2 py-0.5 rounded-md bg-cyan-950/40 border border-cyan-500/20 text-cyan-300 font-mono text-[10px]"
+            >
+              {q}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {uniqueSources.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-300">
+            <Globe className="w-3.5 h-3.5 text-emerald-400 shrink-0" width={14} height={14} />
+            <span>Web Sources ({uniqueSources.length}):</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {uniqueSources.map((source, idx) => {
+              let domain = '';
+              try {
+                if (source.uri) domain = new URL(source.uri).hostname.replace('www.', '');
+              } catch {}
+
+              return (
+                <a
+                  key={idx}
+                  href={source.uri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-slate-950/60 border border-white/10 hover:border-emerald-500/40 hover:bg-emerald-950/20 transition-all text-xs group"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[9px] font-mono text-slate-400 shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span className="truncate text-slate-300 group-hover:text-emerald-300 font-medium">
+                      {source.title || domain || source.uri}
+                    </span>
+                  </div>
+                  <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-emerald-400 shrink-0" width={12} height={12} />
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ChatContent() {
   const searchParams = useSearchParams();
@@ -35,7 +189,7 @@ function ChatContent() {
 
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>('auto');
-  const [messages, setMessages] = useState<MessageRecord[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputPrompt, setInputPrompt] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeTrace, setActiveTrace] = useState<string[]>([]);
@@ -62,7 +216,26 @@ function ChatContent() {
       }
 
       const history = await db.getMessages(threadId);
-      setMessages(history);
+      const parsed: ChatMessage[] = history.map((m) => {
+        let groundingMetadata: GroundingMetadata | null = null;
+        let codeExecutionBlocks: CodeExecutionBlock[] = [];
+        if (m.grounding_metadata) {
+          try {
+            groundingMetadata = JSON.parse(m.grounding_metadata);
+          } catch {}
+        }
+        if (m.code_execution) {
+          try {
+            codeExecutionBlocks = JSON.parse(m.code_execution);
+          } catch {}
+        }
+        return {
+          ...m,
+          groundingMetadata,
+          codeExecutionBlocks,
+        };
+      });
+      setMessages(parsed);
     }
     init();
   }, [requestedAgentId]);
@@ -116,13 +289,18 @@ function ChatContent() {
 
       // 3. Initiate Streaming Request to Next.js route handler with ephemeral headers
       const assistantMsgId = `msg-${Date.now().toString(36)}-a`;
-      const assistantMsg: MessageRecord = {
+      let currentGrounding: GroundingMetadata | null = null;
+      let currentCodeBlocks: CodeExecutionBlock[] = [];
+
+      const assistantMsg: ChatMessage = {
         id: assistantMsgId,
         thread_id: threadId,
         sender_type: 'agent',
         agent_id: orchestration.targetAgent.id,
         content: '',
         delegation_trace: JSON.stringify(orchestration.delegationPath),
+        groundingMetadata: null,
+        codeExecutionBlocks: [],
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
@@ -136,6 +314,8 @@ function ChatContent() {
       if (activeModel) headers['x-llm-model'] = activeModel;
       if (config.baseUrl) headers['x-llm-base-url'] = config.baseUrl;
 
+      const activeTools = orchestration.tools || orchestration.targetAgent.tools;
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers,
@@ -145,6 +325,7 @@ function ChatContent() {
             content: m.content,
           })),
           systemPrompt: orchestration.systemInstruction,
+          tools: activeTools,
         }),
       });
 
@@ -154,26 +335,109 @@ function ChatContent() {
       }
 
       const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
       let accumulated = '';
 
       if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          accumulated += chunk;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsgId ? { ...m, content: accumulated } : m
-            )
-          );
-        }
+        accumulated = await readChatStream(reader, (event) => {
+          if (event.type === 'text') {
+            accumulated += event.content;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId ? { ...m, content: accumulated } : m
+              )
+            );
+          } else if (event.type === 'executable_code') {
+            const codePart = event.executableCode;
+            const existingIdx = codePart.id
+              ? currentCodeBlocks.findIndex((b) => b.id === codePart.id)
+              : -1;
+            if (existingIdx >= 0) {
+              currentCodeBlocks[existingIdx] = {
+                ...currentCodeBlocks[existingIdx],
+                code: codePart.code || '',
+                language: codePart.language || 'python',
+              };
+            } else {
+              currentCodeBlocks = [
+                ...currentCodeBlocks,
+                {
+                  id: codePart.id,
+                  code: codePart.code || '',
+                  language: codePart.language || 'python',
+                },
+              ];
+            }
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId
+                  ? { ...m, codeExecutionBlocks: [...currentCodeBlocks] }
+                  : m
+              )
+            );
+          } else if (event.type === 'code_execution_result') {
+            const resPart = event.codeExecutionResult;
+            const existingIdx = resPart.id
+              ? currentCodeBlocks.findIndex((b) => b.id === resPart.id)
+              : currentCodeBlocks.length - 1;
+            if (existingIdx >= 0) {
+              currentCodeBlocks[existingIdx] = {
+                ...currentCodeBlocks[existingIdx],
+                outcome: resPart.outcome,
+                output: resPart.output,
+              };
+            } else {
+              currentCodeBlocks = [
+                ...currentCodeBlocks,
+                {
+                  id: resPart.id,
+                  code: '',
+                  outcome: resPart.outcome,
+                  output: resPart.output,
+                },
+              ];
+            }
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId
+                  ? { ...m, codeExecutionBlocks: [...currentCodeBlocks] }
+                  : m
+              )
+            );
+          } else if (event.type === 'grounding_metadata') {
+            currentGrounding = {
+              ...currentGrounding,
+              ...event.groundingMetadata,
+              webSearchQueries: [
+                ...new Set([
+                  ...(currentGrounding?.webSearchQueries || []),
+                  ...(event.groundingMetadata.webSearchQueries || []),
+                ]),
+              ],
+              groundingChunks: [
+                ...(currentGrounding?.groundingChunks || []),
+                ...(event.groundingMetadata.groundingChunks || []),
+              ],
+            };
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId
+                  ? { ...m, groundingMetadata: currentGrounding }
+                  : m
+              )
+            );
+          }
+        });
       }
 
-      // 4. Save completed agent response into SQLite
+      // 4. Save completed agent response into SQLite with grounding and code execution
       assistantMsg.content = accumulated;
+      assistantMsg.grounding_metadata = currentGrounding
+        ? JSON.stringify(currentGrounding)
+        : null;
+      assistantMsg.code_execution =
+        currentCodeBlocks.length > 0
+          ? JSON.stringify(currentCodeBlocks)
+          : null;
       await db.saveMessage(assistantMsg);
     } catch (err: any) {
       console.error('Chat execution failed:', err);
@@ -226,9 +490,33 @@ function ChatContent() {
             </div>
 
             {selectedAgent && selectedAgentId !== 'auto' && (
-              <span className="hidden sm:inline-block text-[11px] text-indigo-300 font-mono">
-                Direct: {selectedAgent.role_title}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:inline-block text-[11px] text-indigo-300 font-mono">
+                  Direct: {selectedAgent.role_title}
+                </span>
+                {selectedAgent.tools && (
+                  <div className="flex items-center gap-1">
+                    {selectedAgent.tools.googleSearch && (
+                      <span
+                        title="Google Search Grounding enabled"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-[10px] font-mono"
+                      >
+                        <Search className="w-2.5 h-2.5" width={10} height={10} />
+                        <span>Search</span>
+                      </span>
+                    )}
+                    {selectedAgent.tools.codeExecution && (
+                      <span
+                        title="Code Execution enabled"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-950/60 border border-amber-500/30 text-amber-300 text-[10px] font-mono"
+                      >
+                        <Terminal className="w-2.5 h-2.5" width={10} height={10} />
+                        <span>Code</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -338,7 +626,23 @@ function ChatContent() {
                           : 'bg-slate-900/80 border border-white/10 text-slate-200 rounded-bl-xs'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap font-sans">{m.content}</p>
+                      {m.content && <p className="whitespace-pre-wrap font-sans">{m.content}</p>}
+
+                      {!isUser && (
+                        <>
+                          {m.codeExecutionBlocks && m.codeExecutionBlocks.length > 0 && (
+                            <div className="space-y-2 mt-2">
+                              {m.codeExecutionBlocks.map((block, idx) => (
+                                <CodeExecutionDisplay key={block.id || idx} block={block} />
+                              ))}
+                            </div>
+                          )}
+
+                          {m.groundingMetadata && (
+                            <GroundingDisplay metadata={m.groundingMetadata} />
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
 

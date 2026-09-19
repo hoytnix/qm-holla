@@ -1,3 +1,8 @@
+export interface AgentToolsConfig {
+  googleSearch?: boolean;
+  codeExecution?: boolean;
+}
+
 export interface AgentRecord {
   id: string;
   name: string;
@@ -7,6 +12,7 @@ export interface AgentRecord {
   routing_description?: string | null;
   parent_agent_id?: string | null;
   model?: string | null;
+  tools?: AgentToolsConfig | null;
   created_at?: string;
 }
 
@@ -75,6 +81,8 @@ export interface MessageRecord {
   agent_id?: string | null;
   content: string;
   delegation_trace?: string | null; // JSON string
+  grounding_metadata?: string | null; // JSON string of GroundingMetadata
+  code_execution?: string | null; // JSON string of CodeExecutionBlock[]
   company_id?: string | null;
   created_at?: string;
 }

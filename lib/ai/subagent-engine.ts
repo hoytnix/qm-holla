@@ -3,6 +3,7 @@ import { AgentRecord, TaskRecord, DocumentRecord } from '@/lib/db/adapter';
 import { LLMConfig } from '@/lib/settings/settings-context';
 import { assembleContext } from '@/lib/ai/orchestrator';
 import { syncAgentMemoryBankAfterTask } from '@/lib/crew/agent-memory';
+import { readChatStream } from '@/lib/ai/tools';
 
 export interface ExecutionEvent {
   id: string;
@@ -174,6 +175,7 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
             body: JSON.stringify({
               messages: [{ role: 'user', content: prompt }],
               systemPrompt: context.systemInstruction,
+              tools: context.tools || agent.tools,
               temperature: config.temperature,
               maxTokens: config.maxTokens,
             }),
@@ -181,13 +183,8 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
 
           if (res.ok) {
             const reader = res.body?.getReader();
-            const decoder = new TextDecoder();
             if (reader) {
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                generatedOutput += decoder.decode(value, { stream: true });
-              }
+              generatedOutput = await readChatStream(reader, () => {});
             }
           } else {
             const errorPayload = await res.json().catch(() => ({}));

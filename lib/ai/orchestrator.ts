@@ -1,5 +1,5 @@
 import { db } from '@/lib/db/opfs-adapter';
-import { AgentRecord, SearchResult, DocumentRecord } from '@/lib/db/adapter';
+import { AgentRecord, SearchResult, DocumentRecord, AgentToolsConfig } from '@/lib/db/adapter';
 import { loadAgentMemoryBank } from '@/lib/crew/agent-memory';
 
 export interface OrchestrationResult {
@@ -10,6 +10,7 @@ export interface OrchestrationResult {
   crossAgentNotes: DocumentRecord[];
   agentMemoryBank?: Record<string, DocumentRecord>;
   customModel?: string | null;
+  tools?: AgentToolsConfig | null;
 }
 
 export const CAPTAIN_SYSTEM_PROMPT = `
@@ -235,6 +236,7 @@ Respect domain boundaries: Each division lead governs their domain. Reference si
     crossAgentNotes: sharedDocs,
     agentMemoryBank: agentMemory,
     customModel: targetAgent.model || null,
+    tools: targetAgent.tools || null,
   };
 }
 

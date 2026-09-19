@@ -1,6 +1,25 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
+- Implemented **First-Class Gemini Built-In Tools Support (Google Search Grounding & Code Execution)**:
+  - **Tool Utilities (`lib/ai/tools.ts`)**:
+    - Defined types for `AgentToolsConfig`, `GroundingMetadata`, `GroundingChunkWeb`, `ExecutableCodePart`, `CodeExecutionResultPart`, and `CodeExecutionBlock`.
+    - Created `buildGeminiTools(toolsConfig)` formatting `{ googleSearch: {} }` and `{ codeExecution: {} }` for Google GenAI SDK.
+    - Implemented stream parsing utility `readChatStream` supporting both Server-Sent Events (SSE) metadata streams and plain text streams.
+  - **Extended Agent Definitions (`lib/db/adapter.ts`, `lib/crew/default-crew.ts`, `lib/crew/theme-mapper.ts`)**:
+    - Added `tools?: AgentToolsConfig | null` to `AgentRecord` and `grounding_metadata` / `code_execution` columns to `MessageRecord`.
+    - Configured default crew tools: enabled `googleSearch` on research/navigation agents (Robin, Nami) and `codeExecution` on engineering/calculation agents (Franky, Nami).
+    - Added `DEFAULT_ROLE_SLOT_TOOLS` across all 7 universe themes in `theme-mapper.ts`.
+    - Added non-destructive SQLite migrations across `schema.sql`, `workers/db.worker.ts`, `public/sqlite/sqlite-engine.js`, and `opfs-adapter.ts`.
+  - **LLM Dispatcher Wiring (`lib/ai/orchestrator.ts`, `app/api/chat/route.ts`, `lib/ai/subagent-engine.ts`)**:
+    - Injected resolved tools into `assembleContext` and forwarded to `/api/chat`.
+    - Injected `buildGeminiTools` into Gemini `generateContentStream` configuration.
+    - Extracted and forwarded `groundingMetadata` (citations, search links) and `executableCode`/`codeExecutionResult` parts in real-time SSE stream.
+  - **Enhanced Chat Display (`app/chat/page.tsx`)**:
+    - Rendered interactive web grounding citations with search query pills, source links with domain/title, and Lucide vector icons.
+    - Rendered collapsible code execution blocks with executable script and console output terminal.
+    - Added live tool status indicator badges (Search / Code) in the Helm Chat control toolbar.
+    - Persisted grounding citations and code execution blocks to OPFS SQLite for permanent history restoration.
 - Implemented **Mobile Navigation Theme Architecture**:
   - **Fixed Quick Navbar on Bottom (`components/layout/BottomNav.tsx`)**:
     - Thumb-friendly reach positioned fixed at the bottom on mobile devices (`inset-x-0 bottom-0 z-40 md:hidden`).

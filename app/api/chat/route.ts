@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { createOpenAI } from '@ai-sdk/openai';
 import { GoogleGenAI } from '@google/genai';
 import { streamText } from 'ai';
+import { buildGeminiTools, AgentToolsConfig } from '@/lib/ai/tools';
 
 export const runtime = 'nodejs';
 
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
       baseUrl: bodyBaseUrl,
       temperature,
       maxTokens,
+      tools: bodyTools,
     } = body;
 
     // Extract ephemeral credentials from incoming headers or fallback to body payload
@@ -65,6 +67,14 @@ export async function POST(req: NextRequest) {
     const headerApiKey = req.headers.get('x-llm-api-key');
     const headerBaseUrl = req.headers.get('x-llm-base-url');
     const headerModel = req.headers.get('x-llm-model');
+    const headerTools = req.headers.get('x-llm-tools');
+
+    let resolvedTools: AgentToolsConfig | null = bodyTools || null;
+    if (!resolvedTools && headerTools) {
+      try {
+        resolvedTools = JSON.parse(headerTools);
+      } catch {}
+    }
 
     const provider = headerProvider || bodyProvider || 'gemini';
     const apiKey =
@@ -138,6 +148,8 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      const geminiTools = buildGeminiTools(resolvedTools);
+
       const responseStream = await ai.models.generateContentStream({
         model: selectedModel,
         contents,
@@ -145,6 +157,7 @@ export async function POST(req: NextRequest) {
           ...(combinedSystem ? { systemInstruction: combinedSystem } : {}),
           ...(typeof temperature === 'number' ? { temperature } : {}),
           ...(typeof maxTokens === 'number' ? { maxOutputTokens: maxTokens } : {}),
+          ...(geminiTools.length > 0 ? { tools: geminiTools } : {}),
         },
       });
 
@@ -153,11 +166,85 @@ export async function POST(req: NextRequest) {
         async start(controller) {
           try {
             for await (const chunk of responseStream) {
-              const text = chunk.text;
-              if (text) {
-                controller.enqueue(encoder.encode(text));
+              const candidate = chunk.candidates?.[0];
+              const parts = candidate?.content?.parts;
+              let streamedSpecificParts = false;
+
+              if (parts && parts.length > 0) {
+                for (const part of parts) {
+                  if (part.executableCode) {
+                    streamedSpecificParts = true;
+                    controller.enqueue(
+                      encoder.encode(
+                        `data: ${JSON.stringify({
+                          type: 'executable_code',
+                          executableCode: {
+                            language: part.executableCode.language,
+                            code: part.executableCode.code,
+                            id: part.executableCode.id,
+                          },
+                        })}\n\n`
+                      )
+                    );
+                  }
+
+                  if (part.codeExecutionResult) {
+                    streamedSpecificParts = true;
+                    controller.enqueue(
+                      encoder.encode(
+                        `data: ${JSON.stringify({
+                          type: 'code_execution_result',
+                          codeExecutionResult: {
+                            outcome: part.codeExecutionResult.outcome,
+                            output: part.codeExecutionResult.output,
+                            id: part.codeExecutionResult.id,
+                          },
+                        })}\n\n`
+                      )
+                    );
+                  }
+
+                  if (part.text) {
+                    streamedSpecificParts = true;
+                    controller.enqueue(
+                      encoder.encode(
+                        `data: ${JSON.stringify({
+                          type: 'text',
+                          text: part.text,
+                        })}\n\n`
+                      )
+                    );
+                  }
+                }
+              }
+
+              // Fallback to chunk.text if parts weren't specifically streamed
+              if (!streamedSpecificParts && chunk.text) {
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({
+                      type: 'text',
+                      text: chunk.text,
+                    })}\n\n`
+                  )
+                );
+              }
+
+              // Forward grounding metadata (citations, web search queries, web sources)
+              const grounding = candidate?.groundingMetadata;
+              if (grounding) {
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({
+                      type: 'grounding_metadata',
+                      groundingMetadata: grounding,
+                    })}\n\n`
+                  )
+                );
               }
             }
+
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
             controller.close();
           } catch (streamErr: any) {
             console.error('Gemini streaming transmission error:', streamErr);
@@ -168,9 +255,10 @@ export async function POST(req: NextRequest) {
 
       return new Response(readable, {
         headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Type': 'text/event-stream; charset=utf-8',
           'Transfer-Encoding': 'chunked',
           'Cache-Control': 'no-cache, no-transform',
+          'Connection': 'keep-alive',
         },
       });
     }

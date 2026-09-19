@@ -390,6 +390,7 @@ function runBootstrapMigrations(database) {
       routing_description TEXT,
       parent_agent_id TEXT,
       model TEXT,
+      tools TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -447,6 +448,8 @@ function runBootstrapMigrations(database) {
       agent_id TEXT,
       content TEXT NOT NULL,
       delegation_trace TEXT,
+      grounding_metadata TEXT,
+      code_execution TEXT,
       company_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -469,6 +472,15 @@ function runBootstrapMigrations(database) {
   } catch (_) {}
   try {
     database.run('ALTER TABLE agents ADD COLUMN model TEXT');
+  } catch (_) {}
+  try {
+    database.run('ALTER TABLE agents ADD COLUMN tools TEXT');
+  } catch (_) {}
+  try {
+    database.run('ALTER TABLE messages ADD COLUMN grounding_metadata TEXT');
+  } catch (_) {}
+  try {
+    database.run('ALTER TABLE messages ADD COLUMN code_execution TEXT');
   } catch (_) {}
 
   // Default LLM configuration seed

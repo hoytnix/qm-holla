@@ -1,4 +1,4 @@
-import { AgentRecord } from '@/lib/db/adapter';
+import { AgentRecord, AgentToolsConfig } from '@/lib/db/adapter';
 import { AppTheme } from '@/lib/settings/themes';
 
 /**
@@ -24,12 +24,28 @@ export const ROLE_SLOTS: AgentRoleSlot[] = [
   'sniper-usopp',
 ];
 
+/**
+ * Default tool assignments for each role slot across all universes.
+ * Research & Navigation agents have Google Search grounding enabled.
+ * Systems & Calculation agents have Code Execution enabled.
+ */
+export const DEFAULT_ROLE_SLOT_TOOLS: Record<AgentRoleSlot, AgentToolsConfig> = {
+  'captain-core': { googleSearch: false, codeExecution: false },
+  'scholar-robin': { googleSearch: true, codeExecution: false },
+  'shipwright-franky': { googleSearch: false, codeExecution: true },
+  'navigator-nami': { googleSearch: true, codeExecution: true },
+  'doctor-chopper': { googleSearch: false, codeExecution: false },
+  'chef-sanji': { googleSearch: false, codeExecution: false },
+  'sniper-usopp': { googleSearch: false, codeExecution: false },
+};
+
 export interface CharacterMapping {
   characterName: string;
   roleTitle: string;
   avatarIcon: string;
   systemPrompt: string;
   routingDescription: string;
+  tools?: AgentToolsConfig;
 }
 
 /**
@@ -438,6 +454,7 @@ export function getThemedAgents(theme: AppTheme): AgentRecord[] | null {
       system_prompt: char.systemPrompt,
       routing_description: char.routingDescription,
       parent_agent_id: slot === 'captain-core' ? null : 'captain-core',
+      tools: char.tools || DEFAULT_ROLE_SLOT_TOOLS[slot],
     };
   });
 }

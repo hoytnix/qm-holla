@@ -3,6 +3,15 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] First-Class Gemini Built-In Tools Support (Google Search Grounding & Code Execution):
+  - Created [`lib/ai/tools.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/tools.ts) defining `AgentToolsConfig`, `GroundingMetadata`, `ExecutableCodePart`, `CodeExecutionResultPart`, and `buildGeminiTools()` helper for `@google/genai` API calls.
+  - Implemented `readChatStream()` utility supporting Server-Sent Events (SSE) metadata streams with fallback for plain text streams.
+  - Extended [`AgentRecord`](file:///home/oloty/Dev/qm-holla/lib/db/adapter.ts) schema and [`DEFAULT_STRAW_HAT_AGENTS`](file:///home/oloty/Dev/qm-holla/lib/crew/default-crew.ts) with `tools`: enabled `googleSearch` on research/navigation agents (Robin, Nami) and `codeExecution` on engineering/calculation agents (Franky, Nami) by default.
+  - Configured `DEFAULT_ROLE_SLOT_TOOLS` in [`lib/crew/theme-mapper.ts`](file:///home/oloty/Dev/qm-holla/lib/crew/theme-mapper.ts) across all 7 built-in universes.
+  - Added non-destructive SQLite database migrations across [`schema.sql`](file:///home/oloty/Dev/qm-holla/lib/db/schema.sql), [`workers/db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts), [`public/sqlite/sqlite-engine.js`](file:///home/oloty/Dev/qm-holla/public/sqlite/sqlite-engine.js), and [`lib/db/opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts) for `agents.tools`, `messages.grounding_metadata`, and `messages.code_execution`.
+  - Wired into [`lib/ai/orchestrator.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/orchestrator.ts) and [`app/api/chat/route.ts`](file:///home/oloty/Dev/qm-holla/app/api/chat/route.ts): injected resolved tools into `generateContentStream` configuration and streamed `groundingMetadata` and executable code/results via SSE.
+  - Enhanced [`app/chat/page.tsx`](file:///home/oloty/Dev/qm-holla/app/chat/page.tsx) with interactive grounding search queries, web source links with Lucide vector icons, and collapsible code execution blocks with formatted syntax and terminal output.
+  - Added live tool badges (Search/Code) in the chat toolbar and persisted citations/code blocks to OPFS SQLite.
 - [x] Streamlined Minimalist Topnav & Radial Graph Controls:
   - Removed all redundant buttons containing text from [`components/layout/Navbar.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/Navbar.tsx): eliminated center `NAV_ITEMS` text links, quick universe theme name trigger, and morning planning text brief button.
   - Retained clean icons-only layout: leftmost Menu button, Company Profile Switcher icon button with company name, and rightmost icons-only Speak With CEO (Voice Chat) and Helm Chat buttons.

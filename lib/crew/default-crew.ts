@@ -11,6 +11,10 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     routing_description: 'Handles top-level strategic queries, general orchestration, multi-agent coordination, and fleet leadership.',
     parent_agent_id: null,
     model: null,
+    tools: {
+      googleSearch: false,
+      codeExecution: false,
+    },
   },
   {
     id: 'scholar-robin',
@@ -21,6 +25,10 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     routing_description: 'Handles deep document analysis, synthesis, archival lore, and historical research queries.',
     parent_agent_id: 'captain-core',
     model: null,
+    tools: {
+      googleSearch: true,
+      codeExecution: false,
+    },
   },
   {
     id: 'shipwright-franky',
@@ -31,6 +39,10 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     routing_description: 'Handles software architecture, SQLite schema engineering, local storage, performance, and infrastructure construction.',
     parent_agent_id: 'captain-core',
     model: null,
+    tools: {
+      googleSearch: false,
+      codeExecution: true,
+    },
   },
   {
     id: 'navigator-nami',
@@ -41,6 +53,10 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     routing_description: 'Handles financial planning, treasury, resource management, budget allocations, and navigational roadmaps.',
     parent_agent_id: 'captain-core',
     model: null,
+    tools: {
+      googleSearch: true,
+      codeExecution: true,
+    },
   },
   {
     id: 'doctor-chopper',
@@ -51,6 +67,10 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     routing_description: 'Handles fleet health checks, system diagnostics, error recovery, operational wellness, and triage.',
     parent_agent_id: 'captain-core',
     model: null,
+    tools: {
+      googleSearch: false,
+      codeExecution: false,
+    },
   },
   {
     id: 'chef-sanji',
@@ -61,6 +81,10 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     routing_description: 'Handles workflow pipelines, operational logistics, task distribution, and process optimization.',
     parent_agent_id: 'captain-core',
     model: null,
+    tools: {
+      googleSearch: false,
+      codeExecution: false,
+    },
   },
   {
     id: 'sniper-usopp',
@@ -71,6 +95,10 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     routing_description: 'Handles marketing, storytelling, brand narrative, public relations, announcements, and user outreach.',
     parent_agent_id: 'captain-core',
     model: null,
+    tools: {
+      googleSearch: false,
+      codeExecution: false,
+    },
   },
 ];
 

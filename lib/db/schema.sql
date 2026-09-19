@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS agents (
   routing_description TEXT,
   parent_agent_id TEXT REFERENCES agents(id),
   model TEXT,
+  tools TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -91,6 +92,8 @@ CREATE TABLE IF NOT EXISTS messages (
   agent_id TEXT REFERENCES agents(id),
   content TEXT NOT NULL,
   delegation_trace TEXT, -- JSON payload of sub-agent hops
+  grounding_metadata TEXT, -- JSON string of search grounding sources & queries
+  code_execution TEXT, -- JSON string of executable code blocks and execution results
   company_id TEXT REFERENCES company_profiles(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
