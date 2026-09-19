@@ -159,75 +159,77 @@ export default function CanvasPage() {
     <div className="min-h-screen flex flex-col bg-[#030712] text-slate-100 selection:bg-amber-500/30 overflow-x-hidden">
       <Navbar onOpenMorningPlanning={() => setIsMorningPlanningOpen(true)} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col">
-        {/* Phase 3.2: Captain's Log Hero Dashboard */}
+      <main className="min-h-screen w-full flex-1 flex flex-col overflow-x-hidden pb-16">
         <CaptainsLog
           openCommitmentsCount={openCommitmentsCount}
           onOpenDailyBrief={() => setIsMorningPlanningOpen(true)}
         />
 
-        {/* Header & Voice Action Bar */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
-              <span>Grand Line Radial Canvas</span>
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-400 mt-0.5 max-w-xl">
-              Orbiting division specialists and leaf workspaces persisted in browser-secured OPFS SQLite.
-            </p>
+        <div className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 py-4 flex flex-col gap-6">
+          {/* Header & Voice Action Bar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
+                <span>Grand Line Radial Canvas</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-400 mt-0.5 max-w-xl">
+                Orbiting division specialists and leaf workspaces persisted in browser-secured local SQLite.
+              </p>
+            </div>
+
+            {/* Quick Actions Bar */}
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              {/* Phase 5 Voice Helm Button */}
+              <button
+                onClick={() => setIsVoiceHelmOpen(true)}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-lg shadow-amber-500/20 transition-all active:scale-95 min-h-[44px]"
+              >
+                <Mic width={16} height={16} />
+                <span>Speak with Luffy</span>
+              </button>
+
+              <Link href="/chat" className="flex-1 sm:flex-initial">
+                <GlassButton variant="secondary" className="w-full flex items-center justify-center gap-2 text-xs min-h-[44px]">
+                  <MessageSquare width={16} height={16} />
+                  <span>Helm Chat</span>
+                </GlassButton>
+              </Link>
+            </div>
           </div>
 
-          {/* Quick Actions Bar */}
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
-            {/* Phase 5 Voice Helm Button */}
-            <button
-              onClick={() => setIsVoiceHelmOpen(true)}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-lg shadow-amber-500/20 transition-all active:scale-95 min-h-[44px]"
-            >
-              <Mic width={16} height={16} />
-              <span>Speak with Luffy</span>
-            </button>
+          {/* Canvas & Inspection Split */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 flex-1 items-start">
+            {/* Central Interactive Radial Graph Viewport */}
+            <section className="lg:col-span-8 w-full relative h-[65vh] sm:h-[75vh] min-h-[420px] sm:min-h-[580px] rounded-2xl sm:rounded-3xl border border-white/10 overflow-hidden bg-[#020617]/60 shadow-2xl flex flex-col">
+              <div className="flex-1 w-full h-full relative overflow-hidden">
+                <RadialGraph
+                  agents={agents}
+                  projects={projects}
+                  tasks={tasks}
+                  documents={documents}
+                  onSelectAgent={(agent) => {
+                    setSelectedAgent(agent);
+                    const proj = projects.find((p) => p.agent_id === agent.id);
+                    if (proj) {
+                      setSelectedProject(proj);
+                    }
+                  }}
+                  selectedAgentId={selectedAgent?.id}
+                  selectedProjectId={selectedProject?.id}
+                  onSelectProject={handleSelectProject}
+                  expandedProjectId={expandedProjectId}
+                  onToggleExpandProject={handleToggleExpandProject}
+                  onToggleTask={handleToggleTask}
+                  onOpenDocument={handleOpenDocument}
+                />
+              </div>
 
-            <Link href="/chat" className="flex-1 sm:flex-initial">
-              <GlassButton variant="secondary" className="w-full flex items-center justify-center gap-2 text-xs min-h-[44px]">
-                <MessageSquare width={16} height={16} />
-                <span>Helm Chat</span>
-              </GlassButton>
-            </Link>
-          </div>
-        </div>
+              {/* Persistent Canvas Legend Footer */}
+              <CanvasLegend />
+            </section>
 
-        {/* Canvas & Inspection Split */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 flex-1 items-start">
-          {/* Central Interactive Radial Graph Viewport */}
-          <div className="lg:col-span-8 flex flex-col rounded-3xl border border-white/10 bg-slate-950/60 relative overflow-hidden shadow-2xl">
-            <RadialGraph
-              agents={agents}
-              projects={projects}
-              tasks={tasks}
-              documents={documents}
-              onSelectAgent={(agent) => {
-                setSelectedAgent(agent);
-                const proj = projects.find((p) => p.agent_id === agent.id);
-                if (proj) {
-                  setSelectedProject(proj);
-                }
-              }}
-              selectedAgentId={selectedAgent?.id}
-              selectedProjectId={selectedProject?.id}
-              onSelectProject={handleSelectProject}
-              expandedProjectId={expandedProjectId}
-              onToggleExpandProject={handleToggleExpandProject}
-              onToggleTask={handleToggleTask}
-              onOpenDocument={handleOpenDocument}
-            />
-
-            {/* Persistent Canvas Legend Footer */}
-            <CanvasLegend />
-          </div>
-
-          {/* Inspector Panel for Selected Agent / Division */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
+            {/* Inspector Panel for Selected Agent / Division */}
+            <div className="lg:col-span-4 flex flex-col gap-6">
             {selectedAgent ? (
               <GlassCard className="p-6 border-amber-500/30 bg-slate-900/70 shadow-xl">
                 <div className="flex items-start justify-between mb-4">
@@ -320,6 +322,7 @@ export default function CanvasPage() {
               </div>
             </GlassCard>
           </div>
+        </div>
         </div>
       </main>
 

@@ -3,8 +3,13 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    @apply antialiased scroll-smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
-    @apply bg-[#030712] text-slate-100 antialiased overflow-hidden select-none;
+    @apply bg-[#030712] text-slate-100 min-h-screen overflow-x-hidden overflow-y-auto;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }

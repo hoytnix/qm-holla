@@ -280,20 +280,26 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
       onWheel={handleWheel}
-      className="relative w-full h-[580px] sm:h-[640px] rounded-3xl bg-[#030712] border border-white/10 overflow-hidden select-none cursor-grab active:cursor-grabbing touch-none shadow-2xl"
+      className="relative w-full h-full min-h-[420px] sm:min-h-[580px] rounded-2xl sm:rounded-3xl bg-[#030712] border border-white/10 overflow-hidden select-none cursor-grab active:cursor-grabbing touch-none shadow-2xl"
     >
       {/* Subtle Background Radial Radar / Celestial Grid */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.08)_0%,transparent_70%)] pointer-events-none" />
 
-      {/* Subtle non-intrusive OPFS badge in top-right corner */}
+      {/* Floating Exploration / Scroll Guidance Handle */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 pointer-events-none px-3 py-1 rounded-full bg-slate-900/80 border border-white/10 backdrop-blur-md text-[10px] sm:text-xs text-slate-400 font-medium tracking-wide shadow-lg flex items-center gap-1.5 whitespace-nowrap">
+        <Sparkles width={12} height={12} className="text-amber-400 shrink-0" />
+        <span>Drag to explore universe · Scroll down for logs</span>
+      </div>
+
+      {/* Subtle non-intrusive DB storage badge in top-right corner */}
       {badgeState === 'hydrating' && (
         <div className="absolute top-3 right-3 z-50 text-xs px-2 py-1 rounded bg-slate-800/80 text-slate-400 border border-white/5">
-          OPFS Hydrating...
+          DB Hydrating...
         </div>
       )}
       {badgeState === 'active' && (
         <div className="absolute top-3 right-3 z-50 text-xs px-2 py-1 rounded bg-slate-800/80 text-emerald-400 border border-white/5 transition-opacity duration-700">
-          OPFS Active
+          DB Active
         </div>
       )}
 
@@ -342,7 +348,7 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
         <div className="relative w-[1000px] h-[1000px] flex items-center justify-center pointer-events-auto">
           {/* SVG Orbit Lines & Radar Rings */}
           <svg
-            className="absolute inset-0 w-full h-full pointer-events-none"
+            className="absolute inset-0 w-full h-full pointer-events-none touch-none overflow-hidden"
             viewBox="-500 -500 1000 1000"
           >
             <defs>

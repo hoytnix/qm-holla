@@ -3,6 +3,7 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Mobile Viewport Scrolling & Touch Isolation: Removed root viewport-locking `overflow-hidden` in [`app/globals.css`](file:///home/oloty/Dev/qm-holla/app/globals.css), configured responsive canvas height (`h-[65vh] sm:h-[75vh] min-h-[420px]`) and vertical layout flow in [`app/page.tsx`](file:///home/oloty/Dev/qm-holla/app/page.tsx), and isolated canvas drag gestures with `touch-none` and floating guidance in [`RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx).
 - [x] Robust IndexedDB-Backed SQLite WASM Migration: Installed `sql.js` and `idb-keyval`, copied `sql-wasm.wasm`, replaced `/public/sqlite/db-worker.js` with header-free debounced IDB worker, eliminated COOP/COEP isolation requirements, and updated `lib/db/opfs-adapter.ts`.
 - [x] BYOK & Model Provider Settings: Local SQLite `settings` table, `useSettings()` hook, dynamic ephemeral provider headers, `/settings` interface, OpenRouter/Gemini/OpenAI-compatible routing, and unconfigured alerts.
 - [x] Next.js App Router architecture and base pages (`/`, `/chat`, `/crew`, `/vault`, `/settings`, `/api/chat`).
