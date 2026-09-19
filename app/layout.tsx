@@ -4,8 +4,10 @@ import { SettingsProvider } from '@/lib/settings/settings-context';
 import { LlmSetupModal } from '@/components/settings/LlmSetupModal';
 import { CompanySetupModal } from '@/components/onboarding/CompanySetupModal';
 import { ThemeSelectionModal } from '@/components/settings/ThemeSelectionModal';
+import { BottomNav } from '@/components/layout/BottomNav';
 
 export const metadata: Metadata = {
+
   title: 'Quarkmeme - Local-First Multi-Agent Autonomous Canvas',
   description: 'Autonomous multi-agent canvas powered by client-side SQLite WASM with OPFS storage.',
   manifest: '/manifest.webmanifest',
@@ -31,9 +33,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500/30">
+      <body className="min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500/30 pb-16 md:pb-0">
         <SettingsProvider>
           {children}
+          <BottomNav />
           <LlmSetupModal />
           <CompanySetupModal />
           <ThemeSelectionModal />
@@ -42,3 +45,4 @@ export default function RootLayout({
     </html>
   );
 }
+

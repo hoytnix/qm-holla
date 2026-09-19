@@ -3,6 +3,13 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Mobile Navigation Theme Architecture:
+  - Created [`components/layout/BottomNav.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/BottomNav.tsx) providing a fixed quick navbar at the bottom of mobile viewports (`inset-x-0 bottom-0 z-40 md:hidden`) for thumb reach, strictly icons-only (no text) with tabs for Canvas (`/`), Chat (`/chat`), Crew (`/crew`), Vault (`/vault`), and Settings (`/settings`).
+  - Integrated persistent `BottomNav` into [`app/layout.tsx`](file:///home/oloty/Dev/qm-holla/app/layout.tsx) with body bottom padding (`pb-16 md:pb-0`) ensuring fluid viewport scrolling.
+  - Refactored [`components/layout/Navbar.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/Navbar.tsx) with fixed top positioning (`fixed md:sticky top-0 inset-x-0 z-50`):
+    - Left-to-right cluster: Menu button first (links to `/menu`), then Profile Icon button (`Building2`) triggering the interactive Company Profile Switcher, then active Profile Company Name.
+    - Right-to-left cluster (floating to the right): Speak With Ceo button (voice chat trigger launching `VoiceHelmSheet`, strictly icons-only) and Helm Chat button (`MessageSquare` link, strictly icons-only).
+  - Established clean top and bottom boundaries, leaving the middle viewport open for the radial canvas and page views.
 - [x] Standalone Menu Page & Pop-Out Drawer Retirement:
   - Created dedicated command center page at [`app/menu/page.tsx`](file:///home/oloty/Dev/qm-holla/app/menu/page.tsx) replacing the mobile pop-out drawer with a full-screen, responsive application hub.
   - Refactored [`components/layout/Navbar.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/Navbar.tsx) to point the mobile Menu button directly to `/menu` (with active highlighting) and added `Menu` to `NAV_ITEMS` for desktop navigation.
