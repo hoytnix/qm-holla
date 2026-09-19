@@ -39,6 +39,7 @@ interface ProjectWorkspaceDrawerProps {
   onNewTask?: () => void;
   onNewDocument?: () => void;
   onRunAutonomousTasks?: (taskIds: string[]) => void;
+  onStopAutonomousTasks?: () => void;
   isExecutingTasks?: boolean;
 }
 
@@ -57,6 +58,7 @@ export const ProjectWorkspaceDrawer: React.FC<ProjectWorkspaceDrawerProps> = ({
   onNewTask,
   onNewDocument,
   onRunAutonomousTasks,
+  onStopAutonomousTasks,
   isExecutingTasks,
 }) => {
   if (!isOpen || !project) return null;
@@ -135,26 +137,26 @@ export const ProjectWorkspaceDrawer: React.FC<ProjectWorkspaceDrawerProps> = ({
             )}
           </GlassButton>
 
-          {onRunAutonomousTasks && (
+          {isExecutingTasks && onStopAutonomousTasks ? (
+            <GlassButton
+              onClick={onStopAutonomousTasks}
+              variant="primary"
+              className="flex items-center justify-center gap-2 text-xs py-2.5 min-h-[44px] bg-red-600 hover:bg-red-500 border-red-400/40 text-white font-bold shadow-lg shadow-red-950/40 animate-pulse"
+            >
+              <Square width={14} height={14} className="fill-white" />
+              <span>Stop Subagents</span>
+            </GlassButton>
+          ) : onRunAutonomousTasks ? (
             <GlassButton
               onClick={() => onRunAutonomousTasks(pendingTasks.map((t) => t.id))}
               disabled={isExecutingTasks || pendingTasks.length === 0}
               variant="primary"
               className="flex items-center justify-center gap-2 text-xs py-2.5 min-h-[44px] bg-amber-600 hover:bg-amber-500 border-amber-400/40 text-white font-bold"
             >
-              {isExecutingTasks ? (
-                <>
-                  <Zap width={16} height={16} className="text-amber-300 animate-bounce" />
-                  <span>Subagent Running...</span>
-                </>
-              ) : (
-                <>
-                  <Play width={15} height={15} className="fill-white" />
-                  <span>Auto-Run Tasks ({pendingTasks.length})</span>
-                </>
-              )}
+              <Play width={15} height={15} className="fill-white" />
+              <span>Auto-Run Tasks ({pendingTasks.length})</span>
             </GlassButton>
-          )}
+          ) : null}
 
           <GlassButton
             onClick={onBackToUniverse}

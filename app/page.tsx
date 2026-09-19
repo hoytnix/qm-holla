@@ -29,6 +29,7 @@ import {
   Maximize2,
   Play,
   Zap,
+  Square,
 } from 'lucide-react';
 
 export default function CanvasPage() {
@@ -64,7 +65,7 @@ export default function CanvasPage() {
         setTasks((prev) =>
           prev.map((t) => (t.id === evt.taskId ? { ...t, status: 'in_progress' } : t))
         );
-      } else if (evt.type === 'completed' || evt.type === 'failed') {
+      } else if (evt.type === 'completed' || evt.type === 'failed' || evt.type === 'cancelled') {
         setIsExecutingTasks(subagentEngine.isBusy());
         // Reload tasks and documents to reflect latest SQLite state
         try {
@@ -374,18 +375,31 @@ export default function CanvasPage() {
                   </div>
                 </div>
 
-                <GlassButton
-                  onClick={async () => {
-                    setIsExecutingTasks(true);
-                    await subagentEngine.triggerAutonomousSweep(config);
-                  }}
-                  disabled={isExecutingTasks}
-                  variant="primary"
-                  className="text-[11px] py-1.5 px-3 bg-amber-600 hover:bg-amber-500 border-amber-400/40 text-white font-bold flex items-center gap-1.5"
-                >
-                  <Play width={12} height={12} className="fill-white" />
-                  <span>{isExecutingTasks ? 'Processing Fleet...' : 'Sweep Fleet'}</span>
-                </GlassButton>
+                {isExecutingTasks ? (
+                  <GlassButton
+                    onClick={async () => {
+                      await subagentEngine.stop();
+                      setIsExecutingTasks(false);
+                    }}
+                    variant="primary"
+                    className="text-[11px] py-1.5 px-3 bg-red-600 hover:bg-red-500 border-red-400/40 text-white font-bold flex items-center gap-1.5 shadow-lg shadow-red-950/40 animate-pulse"
+                  >
+                    <Square width={12} height={12} className="fill-white" />
+                    <span>Stop Fleet</span>
+                  </GlassButton>
+                ) : (
+                  <GlassButton
+                    onClick={async () => {
+                      setIsExecutingTasks(true);
+                      await subagentEngine.triggerAutonomousSweep(config);
+                    }}
+                    variant="primary"
+                    className="text-[11px] py-1.5 px-3 bg-amber-600 hover:bg-amber-500 border-amber-400/40 text-white font-bold flex items-center gap-1.5"
+                  >
+                    <Play width={12} height={12} className="fill-white" />
+                    <span>Sweep Fleet</span>
+                  </GlassButton>
+                )}
               </div>
 
               {/* Execution Events Stream */}
@@ -471,6 +485,10 @@ export default function CanvasPage() {
         onRunAutonomousTasks={(taskIds) => {
           subagentEngine.enqueueTasks(taskIds, config);
           setIsExecutingTasks(true);
+        }}
+        onStopAutonomousTasks={async () => {
+          await subagentEngine.stop();
+          setIsExecutingTasks(false);
         }}
         isExecutingTasks={isExecutingTasks}
       />

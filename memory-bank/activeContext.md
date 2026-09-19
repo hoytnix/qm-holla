@@ -1,6 +1,17 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
+- Implemented **Fleet Sweep Cancellation & Stop Controls for Autonomous Subagents**:
+  - **Cancellation Architecture (`lib/ai/subagent-engine.ts`)**:
+    - Added `currentAbortController: AbortController | null` and `activeTaskId: string | null` to track and abort inflight tasks.
+    - Added `stop()` method to `SubagentExecutionEngine` which clears queued tasks, clears pacing timers (`clearTimeout`), aborts the active fetch request signal, reverts interrupted tasks back to `'pending'` in OPFS SQLite, and emits a `'cancelled'` event.
+    - Handled `AbortError` in `executeTask()` cleanly without polluting logs with failure records.
+  - **Subagent Engine Card Controls (`app/page.tsx`)**:
+    - Replaced the disabled state during sweep execution with an interactive crimson `Stop Fleet` button with Lucide `Square` icon that halts execution immediately.
+    - Updated event listener to react to `cancelled` events, resetting execution state and refreshing SQLite data.
+  - **Project Workspace Drawer Controls (`components/canvas/ProjectWorkspaceDrawer.tsx` & `app/page.tsx`)**:
+    - Added `onStopAutonomousTasks` callback to `ProjectWorkspaceDrawer`.
+    - Rendered an active `Stop Subagents` button with a `Square` icon when autonomous tasks are executing within a project workspace drawer.
 - Implemented **Custom Gemini Web Markdowner Tool (`fetch_url_as_markdown`)**:
   - **Markdowner Tool Handler (`lib/ai/tools/web-markdown.ts`)**:
     - Defined Gemini function declaration `fetchUrlAsMarkdownDeclaration` with `url` and optional `llmFilter` parameters.

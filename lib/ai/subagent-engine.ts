@@ -11,7 +11,7 @@ export interface ExecutionEvent {
   agentId: string;
   agentName: string;
   taskTitle: string;
-  type: 'queued' | 'running' | 'completed' | 'failed' | 'artifact_created';
+  type: 'queued' | 'running' | 'completed' | 'failed' | 'artifact_created' | 'cancelled';
   detail: string;
   timestamp: string;
 }
@@ -24,10 +24,61 @@ class SubagentExecutionEngine {
   private listeners: Set<ExecutionListener> = new Set();
   private lastRunTime = 0;
   private queue: string[] = []; // Task IDs to process
+  private currentAbortController: AbortController | null = null;
+  private activeTaskId: string | null = null;
 
   public subscribe(listener: ExecutionListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  /**
+   * Immediately stops any active fleet sweep, clears remaining queued tasks,
+   * cancels any inflight LLM requests, and resets task state.
+   */
+  public async stop(): Promise<void> {
+    // 1. Clear queued tasks
+    this.queue = [];
+
+    // 2. Clear pacing timer if waiting between tasks
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+
+    // 3. Abort inflight fetch request if one is active
+    if (this.currentAbortController) {
+      this.currentAbortController.abort();
+      this.currentAbortController = null;
+    }
+
+    // 4. Revert active task status to pending in SQLite if it was in progress
+    const interruptedTaskId = this.activeTaskId;
+    if (interruptedTaskId) {
+      try {
+        await db.init();
+        if (db.updateTaskStatus) {
+          await db.updateTaskStatus(interruptedTaskId, 'pending');
+        }
+      } catch (err) {
+        console.warn('Failed to revert interrupted task status on stop:', err);
+      }
+    }
+
+    this.isProcessing = false;
+    this.activeTaskId = null;
+
+    // 5. Notify listeners of cancellation
+    this.notify({
+      id: `evt-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+      taskId: interruptedTaskId || 'fleet-sweep',
+      agentId: 'orchestrator',
+      agentName: 'Engine',
+      taskTitle: 'Fleet Sweep',
+      type: 'cancelled',
+      detail: 'Autonomous sweep stopped by user. Inflight requests aborted and remaining queue cleared.',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
   }
 
   private notify(event: ExecutionEvent) {
@@ -124,6 +175,9 @@ class SubagentExecutionEngine {
     const task = allTasks.find((t) => t.id === taskId);
     if (!task) return;
 
+    this.activeTaskId = task.id;
+    this.currentAbortController = new AbortController();
+
     const agents = await db.getAgents();
     const agent = agents.find((a) => a.id === task.agent_id);
     const agentName = agent ? agent.name.split(' ')[0] : 'Subagent';
@@ -172,6 +226,7 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
           const res = await fetch('/api/chat', {
             method: 'POST',
             headers,
+            signal: this.currentAbortController.signal,
             body: JSON.stringify({
               messages: [{ role: 'user', content: prompt }],
               systemPrompt: context.systemInstruction,
@@ -194,6 +249,9 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
             generatedOutput = this.generateLocalSynthesis(agent, task, fallbackReason);
           }
         } catch (fetchErr: any) {
+          if (fetchErr?.name === 'AbortError' || this.currentAbortController?.signal.aborted) {
+            throw fetchErr; // rethrow to be caught by outer catch for cancellation
+          }
           fallbackReason = fetchErr?.message || 'Network/Fetch error';
           console.warn(`Network error during subagent execution (${fallbackReason}), using local synthesis fallback`);
           usedFallback = true;
@@ -267,20 +325,31 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       });
     } catch (err: any) {
-      console.error(`Subagent task failed for ${task.id}:`, err);
-      if (db.updateTaskStatus) {
-        await db.updateTaskStatus(task.id, 'pending');
+      if (err?.name === 'AbortError' || this.currentAbortController?.signal.aborted) {
+        console.log(`Subagent task execution aborted for ${task.id}`);
+        if (db.updateTaskStatus) {
+          await db.updateTaskStatus(task.id, 'pending');
+        }
+        // stop() emits 'cancelled' event so we do not need to emit duplicate failure
+      } else {
+        console.error(`Subagent task failed for ${task.id}:`, err);
+        if (db.updateTaskStatus) {
+          await db.updateTaskStatus(task.id, 'pending');
+        }
+        this.notify({
+          id: `evt-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+          taskId: task.id,
+          agentId: task.agent_id,
+          agentName,
+          taskTitle: task.title,
+          type: 'failed',
+          detail: `${agentName} encountered an error: ${err.message || String(err)}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        });
       }
-      this.notify({
-        id: `evt-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
-        taskId: task.id,
-        agentId: task.agent_id,
-        agentName,
-        taskTitle: task.title,
-        type: 'failed',
-        detail: `${agentName} encountered an error: ${err.message || String(err)}`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      });
+    } finally {
+      this.activeTaskId = null;
+      this.currentAbortController = null;
     }
   }
 
