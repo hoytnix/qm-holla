@@ -389,6 +389,7 @@ function runBootstrapMigrations(database) {
       system_prompt TEXT NOT NULL,
       routing_description TEXT,
       parent_agent_id TEXT,
+      model TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -465,6 +466,9 @@ function runBootstrapMigrations(database) {
   } catch (_) {}
   try {
     database.run('ALTER TABLE messages ADD COLUMN company_id TEXT');
+  } catch (_) {}
+  try {
+    database.run('ALTER TABLE agents ADD COLUMN model TEXT');
   } catch (_) {}
 
   // Default LLM configuration seed

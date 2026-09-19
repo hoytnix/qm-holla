@@ -1,24 +1,29 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
-- Dynamically bound the Radial Graph CEO node and Fleet Destination Auto-Orchestrator to the **current CEO / Owner of the active Profile / Universe**:
-  - **RadialGraph Center Node**: In `components/canvas/RadialGraph.tsx`, dynamic `rootNode` and `captain` resolve their name from `activeCompany.owners` (or the active theme/company leader agent), displaying the current CEO name and `${themeConfig.leaderTitle} & CEO` instead of a static Luffy pin.
-  - **Fleet Destination Auto-Orchestrator**: In `app/chat/page.tsx`, the destination dropdown option dynamically displays `Auto-Orchestrate (${leaderTitle} ${profileCeoName})` matching the current workspace profile.
-  - **Orchestration Dispatcher (`lib/ai/orchestrator.ts`)**: `autoOrchestrateFleetDestination` dynamically looks up the active captain/CEO agent from the active roster and profile rather than hardcoding Luffy.
-  - **Crew Directory Reports Badge (`app/crew/page.tsx`)**: The reporting badge dynamically reads `REPORTS TO ${ceoName.toUpperCase()}` based on the current profile owner / leader title.
-  - **Theme Mapper (`lib/crew/theme-mapper.ts`)**: `resolveCrewMemberForTheme` and `getThemedCrewMember` now accept an optional `ceoOverrideName` and resolve according to the active theme/profile instead of hard-pinning Luffy across all universes.
+- Implemented **Per-Agent Model Customization**, enabling users to assign dedicated AI models to individual agents in their crew or fallback to global settings:
+  - **Agent Schema & OPFS SQLite Migration**:
+    - Extended `AgentRecord` interface in `lib/db/adapter.ts` with optional `model?: string | null`.
+    - Added `model TEXT` column to `agents` table across `lib/db/schema.sql`, `workers/db.worker.ts`, and `public/sqlite/sqlite-engine.js` with non-destructive bootstrap migration (`ALTER TABLE agents ADD COLUMN model TEXT`).
+    - Updated `DEFAULT_STRAW_HAT_AGENTS` in `lib/crew/default-crew.ts` and `saveAgent` in `lib/db/opfs-adapter.ts`.
+    - Preserved existing agent model assignments during theme switches in `lib/settings/settings-context.tsx`.
+  - **Crew Directory & Agent Configuration UI (`app/crew/page.tsx`)**:
+    - Added interactive model selection dropdown on each agent card populated with `GOOGLE_AI_STUDIO_MODELS` from `lib/ai/models.ts`.
+    - Added dynamic badge indicating whether an agent has a dedicated model (`Custom`) or inherits the `Global Default`.
+    - Integrated model selection in the agent edit/recruit modal and role instructions inspector modal.
+    - Persisted model selection instantly to browser-local OPFS SQLite via `db.saveAgent()`.
+  - **Execution Engine & Multi-Agent Routing**:
+    - Updated `assembleContext` in `lib/ai/orchestrator.ts` to expose `customModel: targetAgent.model || null` in `OrchestrationResult`.
+    - Updated chat dispatch in `app/chat/page.tsx` to route `x-llm-model` header using `targetAgent.model || customModel || config.model`.
+    - Updated autonomous subagent execution engine in `lib/ai/subagent-engine.ts` to dispatch tasks using `agent.model || context.targetAgent.model || config.model`.
 
 ## Recent Changes
-- **Radial Canvas (`components/canvas/RadialGraph.tsx`)**:
-  - Bound `rootNode` and `captain` to `profileCeoName` derived from `activeCompany.owners` or the database captain record and theme leader title.
-- **Helm Chat (`app/chat/page.tsx`)**:
-  - Updated Fleet Destination select dropdown to dynamically reflect `Auto-Orchestrate (${leaderTitle} ${profileCeoName})`.
-- **Crew Roster (`app/crew/page.tsx`)**:
-  - Made the reporting hierarchy tag display `REPORTS TO ${ceoName.toUpperCase()}`.
-- **Orchestrator Layer (`lib/ai/orchestrator.ts`)**:
-  - Rewrote `autoOrchestrateFleetDestination` to dynamically resolve the primary orchestrator from the active agent roster.
-- **Theme Mapper Layer (`lib/crew/theme-mapper.ts`)**:
-  - Removed hardcoded Luffy pinning in `resolveCrewMemberForTheme`.
+- **Agent Schema & Adapter (`lib/db/adapter.ts`, `lib/crew/default-crew.ts`, `lib/db/schema.sql`, `lib/db/opfs-adapter.ts`, `public/sqlite/sqlite-engine.js`, `workers/db.worker.ts`)**:
+  - Added `model` column and persistence for per-agent model customization.
+- **Crew Roster UI (`app/crew/page.tsx`)**:
+  - Added inline model picker on agent cards, edit modal dropdown, and role instructions inspection badge.
+- **Routing & Execution Engines (`lib/ai/orchestrator.ts`, `lib/ai/subagent-engine.ts`, `app/chat/page.tsx`)**:
+  - Wired agent-specific model resolution into chat route streaming and background task execution with global model fallback.
 
   - Defined `CompanyProfile` interface and `company_profiles` table.
   - Added `company_id` columns across `projects`, `tasks`, `documents`, `kbs`, and `messages` tables.

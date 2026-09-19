@@ -223,8 +223,8 @@ class OpfsDatabase implements IQuarkDatabase {
   async saveAgent(agent: AgentRecord): Promise<void> {
     if (this.worker) {
       await this.run(
-        `INSERT OR REPLACE INTO agents (id, name, role_title, avatar_url, system_prompt, routing_description, parent_agent_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO agents (id, name, role_title, avatar_url, system_prompt, routing_description, parent_agent_id, model)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           agent.id,
           agent.name,
@@ -233,6 +233,7 @@ class OpfsDatabase implements IQuarkDatabase {
           agent.system_prompt,
           agent.routing_description || null,
           agent.parent_agent_id || null,
+          agent.model || null,
         ]
       );
     } else {

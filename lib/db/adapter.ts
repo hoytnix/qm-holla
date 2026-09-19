@@ -6,6 +6,7 @@ export interface AgentRecord {
   system_prompt: string;
   routing_description?: string | null;
   parent_agent_id?: string | null;
+  model?: string | null;
   created_at?: string;
 }
 

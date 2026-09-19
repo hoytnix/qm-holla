@@ -158,11 +158,12 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
 
       // Check if API key is configured for live LLM generation
       if (config.apiKey && config.apiKey.trim()) {
+        const activeModel = agent?.model || context.targetAgent?.model || context.customModel || config.model;
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
           'x-llm-provider': config.provider,
           'x-llm-api-key': config.apiKey,
-          'x-llm-model': config.model,
+          'x-llm-model': activeModel,
           'x-llm-base-url': config.baseUrl,
         };
 

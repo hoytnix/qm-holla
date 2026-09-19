@@ -23,8 +23,11 @@ import {
   Sparkles,
   ArrowRight,
   Terminal,
+  Cpu,
+  Brain,
 } from 'lucide-react';
 import { useSettings } from '@/lib/settings/settings-context';
+import { GOOGLE_AI_STUDIO_MODELS } from '@/lib/ai/models';
 
 export default function CrewPage() {
   const { themeVersion, activeCompany, themeConfig } = useSettings();
@@ -44,6 +47,7 @@ export default function CrewPage() {
   const [formRole, setFormRole] = useState('');
   const [formRouting, setFormRouting] = useState('');
   const [formPrompt, setFormPrompt] = useState('');
+  const [formModel, setFormModel] = useState<string>('');
 
   const loadAll = async () => {
     try {
@@ -79,6 +83,7 @@ export default function CrewPage() {
     setFormRole(agent.role_title);
     setFormRouting(agent.routing_description || '');
     setFormPrompt(agent.system_prompt);
+    setFormModel(agent.model || '');
   };
 
   const openCreate = () => {
@@ -88,6 +93,7 @@ export default function CrewPage() {
     setFormRole('');
     setFormRouting('');
     setFormPrompt('');
+    setFormModel('');
   };
 
   const cancelEdit = () => {
@@ -108,11 +114,22 @@ export default function CrewPage() {
       system_prompt: formPrompt.trim(),
       routing_description: formRouting.trim() || null,
       parent_agent_id: editingAgent ? editingAgent.parent_agent_id : 'captain-core',
+      model: formModel.trim() || null,
     };
 
     await db.saveAgent(newRecord);
     await loadAll();
     cancelEdit();
+  };
+
+  const handleAgentModelChange = async (agent: AgentRecord, newModel: string) => {
+    const updatedAgent: AgentRecord = {
+      ...agent,
+      model: newModel ? newModel : null,
+    };
+    // Optimistically update UI
+    setAgents((prev) => prev.map((a) => (a.id === agent.id ? updatedAgent : a)));
+    await db.saveAgent(updatedAgent);
   };
 
   const handleDelete = async (id: string) => {
@@ -200,6 +217,27 @@ export default function CrewPage() {
                   onChange={(e) => setFormRouting(e.target.value)}
                   placeholder="e.g. Handles tactical planning, martial analysis, conflict resolution..."
                 />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1 block mb-1">
+                  Assigned AI Model (Custom Per-Agent)
+                </label>
+                <select
+                  value={formModel}
+                  onChange={(e) => setFormModel(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-slate-900/80 p-3 text-xs sm:text-sm text-white focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/20 backdrop-blur-md font-mono"
+                >
+                  <option value="">Default Fleet Model (Global Setting)</option>
+                  {GOOGLE_AI_STUDIO_MODELS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label} ({m.value}) {m.recommended ? '★ Recommended' : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-400 mt-1 ml-1">
+                  Assign a unique AI model for this specialist. If set to default, uses the global model from Settings.
+                </p>
               </div>
 
               <div>
@@ -298,8 +336,8 @@ export default function CrewPage() {
                         </p>
                       </div>
 
-                      {/* Open Assignments Badge */}
-                      <div className="flex items-center gap-2 pt-1">
+                      {/* Open Assignments Badge & Model Selector */}
+                      <div className="flex items-center gap-2 pt-1 flex-wrap">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] font-mono text-slate-300">
                           <span
                             className={`w-2 h-2 rounded-full ${
@@ -308,6 +346,40 @@ export default function CrewPage() {
                           />
                           <span>{openAssignments} open assignments</span>
                         </span>
+
+                        {agent.model && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-[10px] font-mono text-indigo-300">
+                            <Cpu width={11} height={11} />
+                            <span>{agent.model}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Model Selector Dropdown on Card */}
+                      <div className="pt-2">
+                        <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                          <span className="flex items-center gap-1">
+                            <Brain width={12} height={12} className="text-amber-400" />
+                            <span>Assigned AI Model</span>
+                          </span>
+                          {agent.model ? (
+                            <span className="text-[9px] text-amber-300 font-mono">Custom</span>
+                          ) : (
+                            <span className="text-[9px] text-slate-500 font-mono">Global Default</span>
+                          )}
+                        </label>
+                        <select
+                          value={agent.model || ''}
+                          onChange={(e) => handleAgentModelChange(agent, e.target.value)}
+                          className="w-full text-xs rounded-xl bg-slate-950/90 border border-white/10 py-1.5 px-2.5 text-slate-200 focus:outline-none focus:border-amber-400 font-mono"
+                        >
+                          <option value="">Default Fleet Model (Global)</option>
+                          {GOOGLE_AI_STUDIO_MODELS.map((m) => (
+                            <option key={m.value} value={m.value}>
+                              {m.label} ({m.value}) {m.recommended ? '★' : ''}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -393,6 +465,23 @@ export default function CrewPage() {
                   </span>
                   <div className="bg-slate-950 p-4 rounded-2xl border border-white/5 font-mono text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">
                     {inspectingInstructionsAgent.system_prompt}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                    Assigned AI Model
+                  </span>
+                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-white/5 text-xs text-slate-300 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Cpu width={15} height={15} className="text-amber-400" />
+                      <span className="font-mono text-white">
+                        {inspectingInstructionsAgent.model || 'Default Fleet Model (Global)'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {inspectingInstructionsAgent.model ? 'Custom Dedicated Model' : 'Inherited from Settings'}
+                    </span>
                   </div>
                 </div>
 

@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS agents (
   system_prompt TEXT NOT NULL,
   routing_description TEXT,
   parent_agent_id TEXT REFERENCES agents(id),
+  model TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -379,6 +380,10 @@ const SEED_DOCUMENTS = [
 
 function runBootstrapMigrations(database: any) {
   database.exec(SCHEMA_SQL);
+
+  try {
+    database.exec('ALTER TABLE agents ADD COLUMN model TEXT');
+  } catch (_) {}
 
   // Seed settings default if not present
   const rows: any[] = [];

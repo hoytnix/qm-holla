@@ -9,6 +9,7 @@ export interface OrchestrationResult {
   contextExcerpts: SearchResult[];
   crossAgentNotes: DocumentRecord[];
   agentMemoryBank?: Record<string, DocumentRecord>;
+  customModel?: string | null;
 }
 
 export const CAPTAIN_SYSTEM_PROMPT = `
@@ -233,6 +234,7 @@ Respect domain boundaries: Each division lead governs their domain. Reference si
     contextExcerpts: combinedExcerpts,
     crossAgentNotes: sharedDocs,
     agentMemoryBank: agentMemory,
+    customModel: targetAgent.model || null,
   };
 }
 

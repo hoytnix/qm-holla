@@ -130,9 +130,10 @@ function ChatContent() {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
+      const activeModel = orchestration.targetAgent.model || orchestration.customModel || config.model;
       if (config.apiKey) headers['x-llm-api-key'] = config.apiKey;
       if (config.provider) headers['x-llm-provider'] = config.provider;
-      if (config.model) headers['x-llm-model'] = config.model;
+      if (activeModel) headers['x-llm-model'] = activeModel;
       if (config.baseUrl) headers['x-llm-base-url'] = config.baseUrl;
 
       const response = await fetch('/api/chat', {

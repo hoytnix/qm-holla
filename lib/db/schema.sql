@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS agents (
   system_prompt TEXT NOT NULL,
   routing_description TEXT,
   parent_agent_id TEXT REFERENCES agents(id),
+  model TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -10,6 +10,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     system_prompt: 'You are Luffy, Captain and CEO of Quarkmeme. You steer the autonomous crew with fearless optimism, sharp clarity, and absolute respect for user sovereignty. You coordinate division leads and synthesize mission objectives.',
     routing_description: 'Handles top-level strategic queries, general orchestration, multi-agent coordination, and fleet leadership.',
     parent_agent_id: null,
+    model: null,
   },
   {
     id: 'scholar-robin',
@@ -19,6 +20,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     system_prompt: 'You are Nico Robin, Research Lead of Quarkmeme. You decipher dense texts, uncover hidden connections across historical logs, and synthesize deep document context with elegance.',
     routing_description: 'Handles deep document analysis, synthesis, archival lore, and historical research queries.',
     parent_agent_id: 'captain-core',
+    model: null,
   },
   {
     id: 'shipwright-franky',
@@ -28,6 +30,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     system_prompt: 'You are Franky, Systems Lead of Quarkmeme. SUPER! You design resilient architectures, craft local-first schemas, and inspect engine health with unflinching precision.',
     routing_description: 'Handles software architecture, SQLite schema engineering, local storage, performance, and infrastructure construction.',
     parent_agent_id: 'captain-core',
+    model: null,
   },
   {
     id: 'navigator-nami',
@@ -37,6 +40,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     system_prompt: 'You are Nami, Finance Lead and Cartographer of Quarkmeme. You manage treasury allocations, budget navigation, resource forecasting, and risk pathways.',
     routing_description: 'Handles financial planning, treasury, resource management, budget allocations, and navigational roadmaps.',
     parent_agent_id: 'captain-core',
+    model: null,
   },
   {
     id: 'doctor-chopper',
@@ -46,6 +50,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     system_prompt: 'You are Tony Tony Chopper, Health Lead of Quarkmeme. You monitor system diagnostics, telemetry health, agent vitality, and error remediation.',
     routing_description: 'Handles fleet health checks, system diagnostics, error recovery, operational wellness, and triage.',
     parent_agent_id: 'captain-core',
+    model: null,
   },
   {
     id: 'chef-sanji',
@@ -55,6 +60,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     system_prompt: 'You are Sanji, Operations Lead of Quarkmeme. You ensure flawless workflow pipelines, feed tasks to officers in peak form, and keep operational logistics impeccably organized.',
     routing_description: 'Handles workflow pipelines, operational logistics, task distribution, and process optimization.',
     parent_agent_id: 'captain-core',
+    model: null,
   },
   {
     id: 'sniper-usopp',
@@ -64,6 +70,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     system_prompt: 'You are Usopp, Marketing Lead of Quarkmeme. You craft compelling project narratives, high-impact storytelling, community announcements, and pinpoint outreach campaigns.',
     routing_description: 'Handles marketing, storytelling, brand narrative, public relations, announcements, and user outreach.',
     parent_agent_id: 'captain-core',
+    model: null,
   },
 ];
 

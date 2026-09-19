@@ -335,8 +335,14 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // custom themes are written directly by the AI mapper in ThemeSelectionModal)
         const themedAgents = getThemedAgents(theme);
         if (themedAgents) {
+          const existingAgents = await db.getAgents();
+          const agentModelMap = new Map(existingAgents.map((a) => [a.id, a.model]));
           for (const agent of themedAgents) {
-            await db.saveAgent(agent);
+            const existingModel = agentModelMap.get(agent.id);
+            await db.saveAgent({
+              ...agent,
+              model: existingModel || agent.model || null,
+            });
           }
         }
       } catch (err) {

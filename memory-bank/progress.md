@@ -3,6 +3,13 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Per-Agent Custom AI Model Assignment:
+  - Extended [`AgentRecord`](file:///home/oloty/Dev/qm-holla/lib/db/adapter.ts) schema and [`DEFAULT_STRAW_HAT_AGENTS`](file:///home/oloty/Dev/qm-holla/lib/crew/default-crew.ts) with `model?: string | null`.
+  - Added non-destructive database migrations (`ALTER TABLE agents ADD COLUMN model TEXT`) across [`schema.sql`](file:///home/oloty/Dev/qm-holla/lib/db/schema.sql), [`workers/db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts), and [`public/sqlite/sqlite-engine.js`](file:///home/oloty/Dev/qm-holla/public/sqlite/sqlite-engine.js).
+  - Enhanced [`app/crew/page.tsx`](file:///home/oloty/Dev/qm-holla/app/crew/page.tsx) with inline model dropdown selection populated with all Google AI Studio models from [`lib/ai/models.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/models.ts), dedicated/inherited indicator badges, modal editor dropdown, and role instructions inspection panel. Persisted selections directly to OPFS SQLite.
+  - Preserved custom model assignments across dynamic theme switches in [`lib/settings/settings-context.tsx`](file:///home/oloty/Dev/qm-holla/lib/settings/settings-context.tsx).
+  - Updated multi-agent intent routing and context assembly in [`lib/ai/orchestrator.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/orchestrator.ts) to resolve `customModel: targetAgent.model || null`.
+  - Updated chat streaming dispatch in [`app/chat/page.tsx`](file:///home/oloty/Dev/qm-holla/app/chat/page.tsx) and autonomous background task execution in [`lib/ai/subagent-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/subagent-engine.ts) to route `x-llm-model` using the agent's customized model with fallback to global settings.
 - [x] Bound CEO Node and Fleet Destination Auto-Orchestrator to Current Profile CEO:
   - In `components/canvas/RadialGraph.tsx`, bound the central `rootNode` and `captain` to the CEO / owner name of the active company profile (`activeCompany.owners`), falling back to the active theme/company leader agent name.
   - In `app/chat/page.tsx`, updated the Fleet Destination dropdown to dynamically display `Auto-Orchestrate (${leaderTitle} ${profileCeoName})` for the active workspace.
