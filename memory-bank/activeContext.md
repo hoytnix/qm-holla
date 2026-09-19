@@ -1,26 +1,28 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
-- Resolved the 500 Internal Server Error in `/api/chat` and stabilized the autonomous subagent execution pipeline.
-- Replaced outdated `@ai-sdk/google` integration with the official, installed `@google/genai` SDK (`GoogleGenAI`), eliminating the `AI_UnsupportedModelVersionError` (unsupported model version v4 error with AI SDK 5).
-- Hardened `/api/chat` with structured error status parsing (HTTP 401 for invalid/missing keys, HTTP 429 for rate limits/quota exhaustion, and detailed human-readable error messages).
-- Fortified `lib/ai/subagent-engine.ts` with comprehensive try/catch blocks, error logging, and seamless fallback to deterministic local synthesis with persisted audit notes in vault deliverables.
+- Implemented a full-page Notion-style rich Markdown editor for Vault Docs with live split preview, interactive markdown toolbars, and seamless OPFS SQLite autosave.
+- Built reusable modular editor components (`components/vault/NotionRichEditor.tsx`, `components/vault/MarkdownToolbar.tsx`, `components/vault/RichMarkdownRenderer.tsx`) matching the Millynish OS glass/minimalist aesthetic.
+- Upgraded `components/vault/MarkdownDrawer.tsx` to utilize `NotionRichEditor` with maximize/restore controls and quick task creation.
+- Integrated full-page document editing workflow in `app/vault/page.tsx` with collection assignment, fleet officer tags, word count, reading metrics, and FTS5 search integration.
 
 ## Recent Changes
-- **Chat Route (`app/api/chat/route.ts`)**:
-  - Migrated Gemini provider to `@google/genai` with streaming `generateContentStream`, `systemInstruction`, `temperature`, and `maxOutputTokens`.
-  - Added robust nested JSON error extraction in `parseErrorMessage` to cleanly surface Google RPC / API errors without 500 crashes.
-  - Retained OpenRouter and OpenAI-compatible provider integrations via `@ai-sdk/openai`.
-- **Subagent Execution Engine (`lib/ai/subagent-engine.ts`)**:
-  - Wrapped LLM streaming requests in dedicated try/catch with fallback reason tracking.
-  - Forwarded `temperature` and `maxTokens` from `config`.
-  - Persisted fallback metadata into generated deliverables to ensure transparent auditing without queue halting.
+- **Notion-Style Rich Editor Suite (`components/vault/`)**:
+  - `MarkdownToolbar.tsx`: Formatting tools for Headings (H1/H2/H3), text styles (Bold, Italic, Strikethrough, Code), lists (Bullet, Numbered, Task Checkbox), callouts/quotes, tables, dividers, links, live word count, reading time, and view mode toggles (`split`, `edit`, `preview`).
+  - `RichMarkdownRenderer.tsx`: Full custom markdown preview supporting syntax-highlighted code blocks with copy action, interactive task checkboxes that write back to source content, Notion-style colored callout blocks (`[!NOTE]`, `[!WARNING]`, `[!TIP]`), markdown tables, and inline typography.
+  - `NotionRichEditor.tsx`: Core editor container with 500ms debounced autosave to local SQLite, collection and officer assignment, tag management, fullscreen toggling, and split/preview view modes.
+- **Vault Page (`app/vault/page.tsx`)**:
+  - Upgraded to support seamless full-page document editing when a card is clicked or "Create Doc" is selected.
+  - Added return navigation, collection filtering, officer filtering, and FTS5 search jump-to-document.
+- **Markdown Drawer (`components/vault/MarkdownDrawer.tsx`)**:
+  - Replaced basic textarea with full `NotionRichEditor` integration, maximizing modal height and responsive screen sizing.
+- **Global Styles (`app/globals.css`)**:
+  - Added custom scrollbar styling and typography classes (`notion-preview`, `notion-callout`).
 - **Production Build Validation**:
-  - Clean TypeScript typecheck (`npx tsc --noEmit`).
-  - Next.js production build (`pnpm build`) compiled cleanly.
+  - Clean TypeScript verification (`npx tsc --noEmit` - 0 errors).
+  - Next.js production build (`pnpm build`) compiled cleanly (exit code 0, 9 static routes generated).
 
 ## Invariants Maintained
-1. Local-First SQLite storage guarantee (zero cloud database bills, all state stored client-side in IndexedDB).
-2. Ephemeral model routing invariant (keys passed dynamically per request without server storage).
-3. Zero unbundled emojis law across all UI elements (all vector Lucide SVG icons).
-4. 375px+ responsive mobile touch targets and `pb-safe` drawer layouts.
+1. Local-First SQLite storage guarantee (zero cloud database bills, all state stored client-side in IndexedDB/OPFS).
+2. Zero unbundled emojis law across all UI elements (all vector Lucide SVG icons).
+3. 375px+ responsive mobile touch targets and `pb-safe` drawer layouts.

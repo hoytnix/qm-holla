@@ -13,3 +13,48 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
+
+/* Custom scrollbars for rich editor panes */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Notion-style markdown typography enhancements */
+.notion-preview {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #e2e8f0;
+  line-height: 1.7;
+}
+
+.notion-preview h1,
+.notion-preview h2,
+.notion-preview h3,
+.notion-preview h4 {
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.notion-preview p {
+  margin-top: 0.6em;
+  margin-bottom: 0.6em;
+}
+
+.notion-callout {
+  border-left-width: 3px;
+  padding: 0.875rem 1rem;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  backdrop-filter: blur(8px);
+}
