@@ -3,13 +3,14 @@
 ## Current Progress Overview
 
 ### Completed & Functional
-- [x] BYOK & Model Provider Settings: OPFS SQLite `settings` table, `useSettings()` hook, dynamic ephemeral provider headers, `/settings` interface, OpenRouter/Gemini/OpenAI-compatible routing, and unconfigured alerts.
+- [x] Robust IndexedDB-Backed SQLite WASM Migration: Installed `sql.js` and `idb-keyval`, copied `sql-wasm.wasm`, replaced `/public/sqlite/db-worker.js` with header-free debounced IDB worker, eliminated COOP/COEP isolation requirements, and updated `lib/db/opfs-adapter.ts`.
+- [x] BYOK & Model Provider Settings: Local SQLite `settings` table, `useSettings()` hook, dynamic ephemeral provider headers, `/settings` interface, OpenRouter/Gemini/OpenAI-compatible routing, and unconfigured alerts.
 - [x] Next.js App Router architecture and base pages (`/`, `/chat`, `/crew`, `/vault`, `/settings`, `/api/chat`).
 - [x] Phase 1: Interactive gesture-enabled SVG radial map in [`RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx) with single/multi-touch pan & pinch zoom, floating controls, Level 0-3 radial hierarchy, and animated unfurling.
 - [x] Phase 1: Bottom [`ProjectWorkspaceDrawer.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/ProjectWorkspaceDrawer.tsx) with branch expand/collapse controls and persistent canvas legend footer.
-- [x] Phase 2: Database schema in [`schema.sql`](file:///home/oloty/Dev/qm-holla/lib/db/schema.sql) with `projects`, `documents`, `tasks`, `settings`, and `documents_fts`.
-- [x] Phase 2: Web Worker actions in [`db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts) and [`opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts) (`SAVE_DOCUMENT`, `GET_DOCUMENTS_BY_PROJECT`, `SEARCH_DOCUMENTS`, `TOGGLE_TASK_STATUS`, `GET_SETTING`, `SET_SETTING`, `GET_ALL_SETTINGS`).
-- [x] Phase 2: Mobile [`MarkdownDrawer.tsx`](file:///home/oloty/Dev/qm-holla/components/vault/MarkdownDrawer.tsx) with debounced 500ms auto-save directly to OPFS SQLite.
+- [x] Phase 2: Database schema in [`schema.sql`](file:///home/oloty/Dev/qm-holla/lib/db/schema.sql) with `projects`, `documents`, `tasks`, `settings`, and `messages`.
+- [x] Phase 2: Web Worker actions in [`public/sqlite/db-worker.js`](file:///home/oloty/Dev/qm-holla/public/sqlite/db-worker.js) and [`opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts) (`SAVE_DOCUMENT`, `GET_DOCUMENTS_BY_PROJECT`, `SEARCH_DOCUMENTS`, `TOGGLE_TASK_STATUS`, `GET_SETTING`, `SET_SETTING`, `GET_ALL_SETTINGS`).
+- [x] Phase 2: Mobile [`MarkdownDrawer.tsx`](file:///home/oloty/Dev/qm-holla/components/vault/MarkdownDrawer.tsx) with debounced auto-save directly to local SQLite and quick task creation.
 - [x] Phase 3: Captain's Log hero dashboard in [`CaptainsLog.tsx`](file:///home/oloty/Dev/qm-holla/components/dashboard/CaptainsLog.tsx) with open commitments counter.
 - [x] Phase 3: 6:00 AM Morning Planning ritual controller in [`MorningPlanningModal.tsx`](file:///home/oloty/Dev/qm-holla/components/planning/MorningPlanningModal.tsx) and crimson trigger button in [`Navbar.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/Navbar.tsx).
 - [x] Phase 4: Inter-agent shared memory bus and separation of duties in [`orchestrator.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/orchestrator.ts).
@@ -18,11 +19,7 @@
 - [x] Phase 5: Zero-cost offline speech engine in [`speech-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/voice/speech-engine.ts) with STT and energetic Luffy TTS persona.
 - [x] Phase 5: Voice Helm interface in [`VoiceHelmSheet.tsx`](file:///home/oloty/Dev/qm-holla/components/voice/VoiceHelmSheet.tsx) with animated waveform, 90-second countdown ring, and audio controls.
 - [x] Strict vector icon enforcement: Replaced all unbundled Unicode emojis across the UI with `lucide-react` SVG vector icons.
-- [x] Netlify deployment OPFS hang fix: Added [`public/_headers`](file:///home/oloty/Dev/qm-holla/public/_headers) and [`netlify.toml`](file:///home/oloty/Dev/qm-holla/netlify.toml), 2500ms safety timeout & graceful memory fallback in [`opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts), worker error reporting in [`db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts), and non-blocking immediate canvas render with status badge in [`RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx).
-- [x] SQLite OPFS proxy URL parameter fix: Switched `db.worker.ts` to `importScripts('/sqlite/sqlite3.js')` with official SQLite WASM 3.53.4 static assets, resolving the Next.js Webpack bundler query stripping error (`Expecting vfs=opfs|opfs-wl URL argument for this worker`).
-- [x] SQLite WASM 404 compile error & adapter init memoization: Configured `locateFile` in `workers/db.worker.ts`, hardened `OpfsDatabase.init()` in `lib/db/opfs-adapter.ts` to eliminate re-initialization cascades, and updated `/sqlite/*.wasm` headers in `public/_headers` and `netlify.toml`.
-- [x] Decouple SQLite worker from Next.js Webpack chunking: Created standalone `/sqlite/db-worker.js` with direct static `importScripts('sqlite3.js')`, switched `opfs-adapter.ts` to direct static `new Worker('/sqlite/db-worker.js')`, and configured `Cross-Origin-Resource-Policy: cross-origin` across Netlify headers.
-- [x] Restored pristine official `sqlite3-opfs-async-proxy.js` from `@sqlite.org/sqlite-wasm` and deployed `_headers` to repository root and `/public` for Netlify COOP/COEP isolation.
+- [x] Universal zero-header Netlify configuration: Permissive CORS and `/sql-wasm.wasm` headers in `_headers`, `public/_headers`, and `netlify.toml`.
 - [x] TypeScript validation (`npx tsc --noEmit`) and production build verification (`pnpm build`).
 
 ### In Progress / Roadmap

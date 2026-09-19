@@ -30,6 +30,7 @@
     "dexie": "^4.3.0",
     "dotenv": "^17.2.3",
     "framer-motion": "^12.34.3",
+    "idb-keyval": "^6.3.0",
     "lucide-react": "^0.546.0",
     "md5": "^2.3.0",
     "motion": "^12.23.24",
@@ -41,6 +42,7 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.0",
     "shiki": "^3.22.0",
+    "sql.js": "^1.14.2",
     "tailwind-merge": "^3.5.0",
     "uuid": "^13.0.0",
     "zod": "^4.3.6"
@@ -50,6 +52,7 @@
     "@types/node": "^22.14.0",
     "@types/postcss-load-config": "^3.0.1",
     "@types/react": "^19.3.0",
+    "@types/sql.js": "^1.4.11",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.19",

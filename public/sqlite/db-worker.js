@@ -1,100 +1,67 @@
-/* Quarkmeme SQLite OPFS Dedicated Worker */
+/* Quarkmeme Universal SQLite Worker (IDB-Backed, No COOP/COEP Required) */
 'use strict';
 
+// Load sql.js wasm loader from local static assets (with CDN fallback if needed)
+try {
+  importScripts('/sql-wasm.js');
+} catch (e) {
+  importScripts('https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/sql-wasm.js');
+}
+
 let db = null;
+let SQL = null;
 let isInitialized = false;
+let saveDebounceTimer = null;
 
-const SCHEMA_SQL = `
-CREATE TABLE IF NOT EXISTS agents (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  role_title TEXT NOT NULL,
-  avatar_url TEXT,
-  system_prompt TEXT NOT NULL,
-  routing_description TEXT,
-  parent_agent_id TEXT REFERENCES agents(id),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+// Minimal native IndexedDB helpers
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('quarkmeme_db_store', 1);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains('files')) {
+        req.result.createObjectStore('files');
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
 
-CREATE TABLE IF NOT EXISTS projects (
-  id TEXT PRIMARY KEY,
-  agent_id TEXT NOT NULL REFERENCES agents(id),
-  title TEXT NOT NULL,
-  description TEXT,
-  category TEXT NOT NULL,
-  is_private INTEGER DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+async function loadDbFromIDB() {
+  const idb = await openIDB();
+  return new Promise((resolve) => {
+    const tx = idb.transaction('files', 'readonly');
+    const store = tx.objectStore('files');
+    const req = store.get('quarkmeme.db');
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => resolve(null);
+  });
+}
 
-CREATE TABLE IF NOT EXISTS kbs (
-  id TEXT PRIMARY KEY,
-  agent_id TEXT NOT NULL REFERENCES agents(id),
-  name TEXT NOT NULL,
-  description TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+async function saveDbToIDB(data) {
+  const idb = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = idb.transaction('files', 'readwrite');
+    const store = tx.objectStore('files');
+    const req = store.put(data, 'quarkmeme.db');
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
 
-CREATE TABLE IF NOT EXISTS documents (
-  id TEXT PRIMARY KEY,
-  project_id TEXT REFERENCES projects(id),
-  kb_id TEXT REFERENCES kbs(id),
-  agent_id TEXT REFERENCES agents(id),
-  title TEXT NOT NULL,
-  content TEXT NOT NULL,
-  metadata TEXT,
-  file_path TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS tasks (
-  id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL REFERENCES projects(id),
-  agent_id TEXT NOT NULL REFERENCES agents(id),
-  title TEXT NOT NULL,
-  status TEXT DEFAULT 'pending',
-  priority TEXT DEFAULT 'medium',
-  completed_at DATETIME,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(
-  title,
-  content,
-  content=documents,
-  content_rowid=rowid
-);
-
-CREATE TABLE IF NOT EXISTS messages (
-  id TEXT PRIMARY KEY,
-  thread_id TEXT NOT NULL,
-  sender_type TEXT NOT NULL,
-  agent_id TEXT REFERENCES agents(id),
-  content TEXT NOT NULL,
-  delegation_trace TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TRIGGER IF NOT EXISTS documents_ai AFTER INSERT ON documents BEGIN
-  INSERT INTO documents_fts(rowid, title, content) VALUES (new.rowid, new.title, new.content);
-END;
-
-CREATE TRIGGER IF NOT EXISTS documents_ad AFTER DELETE ON documents BEGIN
-  INSERT INTO documents_fts(documents_fts, rowid, title, content) VALUES('delete', old.rowid, old.title, old.content);
-END;
-
-CREATE TRIGGER IF NOT EXISTS documents_au AFTER UPDATE ON documents BEGIN
-  INSERT INTO documents_fts(documents_fts, rowid, title, content) VALUES('delete', old.rowid, old.title, old.content);
-  INSERT INTO documents_fts(rowid, title, content) VALUES (new.rowid, new.title, new.content);
-END;
-`;
+function scheduleSave() {
+  if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+  saveDebounceTimer = setTimeout(async () => {
+    if (!db) return;
+    try {
+      const binary = db.export();
+      await saveDbToIDB(binary);
+      console.log('[db-worker] Database state saved to IndexedDB');
+    } catch (err) {
+      console.error('[db-worker] Failed to persist database:', err);
+    }
+  }, 250);
+}
 
 const SEED_AGENTS = [
   {
@@ -174,8 +141,8 @@ const SEED_PROJECTS = [
   {
     id: 'proj-opfs-engine',
     agent_id: 'shipwright-franky',
-    title: 'OPFS SQLite Engine Architecture',
-    description: 'Zero-cloud persistent storage engine with synchronous Web Worker thread isolation.',
+    title: 'IDB SQLite Engine Architecture',
+    description: 'Zero-cloud persistent storage engine backed by IndexedDB binary persistence.',
     category: 'dev',
     is_private: 1,
   },
@@ -235,7 +202,7 @@ const SEED_TASKS = [
     id: 'task-franky-1',
     project_id: 'proj-opfs-engine',
     agent_id: 'shipwright-franky',
-    title: 'Configure OPFS synchronous proxy access handles',
+    title: 'Configure IndexedDB binary debounced persistence',
     status: 'completed',
     priority: 'high',
     completed_at: new Date(Date.now() - 3600000 * 8).toISOString(),
@@ -244,7 +211,7 @@ const SEED_TASKS = [
     id: 'task-franky-2',
     project_id: 'proj-opfs-engine',
     agent_id: 'shipwright-franky',
-    title: 'Stress-test 100k BM25 FTS5 document indexing latency',
+    title: 'Stress-test SQLite WASM query latency in Web Worker',
     status: 'pending',
     priority: 'high',
   },
@@ -325,7 +292,7 @@ const SEED_DOCUMENTS = [
     kb_id: 'kb-scholar-robin',
     agent_id: 'scholar-robin',
     title: 'Quarkmeme Local-First Manifesto.md',
-    content: `# Quarkmeme Local-First Manifesto\n\n> "True sovereignty begins when your thoughts remain inside your own vessel."\n\n## Core Principles\n1. Zero Cloud Database Bills\n2. Radial Spatial Intelligence\n3. Deterministic Memory via SQLite WASM + OPFS`,
+    content: `# Quarkmeme Local-First Manifesto\n\n> "True sovereignty begins when your thoughts remain inside your own vessel."\n\n## Core Principles\n1. Zero Cloud Database Bills\n2. Radial Spatial Intelligence\n3. Deterministic Memory via SQLite WASM + IndexedDB Persistence`,
     metadata: JSON.stringify({ tags: ['manifesto', 'local-first', 'sovereignty'], author: 'Robin' }),
   },
   {
@@ -333,9 +300,9 @@ const SEED_DOCUMENTS = [
     project_id: 'proj-opfs-engine',
     kb_id: 'kb-shipwright-franky',
     agent_id: 'shipwright-franky',
-    title: 'OPFS Architecture & VFS Proxy.md',
-    content: `# OPFS Engine Architecture\n\nSUPER design specifications for browser persistence:\n- Web Worker Thread Isolation\n- Synchronous Access Handle\n- COOP & COEP Security Headers`,
-    metadata: JSON.stringify({ tags: ['opfs', 'architecture', 'sqlite'], author: 'Franky' }),
+    title: 'IDB SQLite Engine Architecture.md',
+    content: `# IDB SQLite Engine Architecture\n\nSUPER design specifications for browser persistence:\n- Web Worker Thread Isolation\n- Debounced IndexedDB Binary Storage\n- Universal Zero-Header Compatibility (No COOP/COEP needed)`,
+    metadata: JSON.stringify({ tags: ['sqlite', 'indexeddb', 'architecture'], author: 'Franky' }),
   },
   {
     id: 'doc-treasury',
@@ -376,47 +343,110 @@ const SEED_DOCUMENTS = [
 ];
 
 function runBootstrapMigrations(database) {
-  database.exec(SCHEMA_SQL);
+  database.run(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS agents (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      role_title TEXT NOT NULL,
+      avatar_url TEXT,
+      system_prompt TEXT NOT NULL,
+      routing_description TEXT,
+      parent_agent_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      agent_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      category TEXT NOT NULL,
+      is_private INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS kbs (
+      id TEXT PRIMARY KEY,
+      agent_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      agent_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
+      priority TEXT DEFAULT 'medium',
+      completed_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS documents (
+      id TEXT PRIMARY KEY,
+      project_id TEXT,
+      kb_id TEXT,
+      agent_id TEXT,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      metadata TEXT,
+      file_path TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS messages (
+      id TEXT PRIMARY KEY,
+      thread_id TEXT NOT NULL,
+      sender_type TEXT NOT NULL,
+      agent_id TEXT,
+      content TEXT NOT NULL,
+      delegation_trace TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 
   // Default LLM configuration seed
-  const rows = [];
-  database.exec({
-    sql: "SELECT COUNT(*) as count FROM settings WHERE key = 'llm_config'",
-    rowMode: 'object',
-    callback: (r) => rows.push(r),
-  });
+  const stmt = database.prepare("SELECT value FROM settings WHERE key = 'llm_config'");
+  let hasConfig = false;
+  if (stmt.step()) hasConfig = true;
+  stmt.free();
 
-  if (rows.length === 0 || Number(rows[0]?.count) === 0) {
+  if (!hasConfig) {
     const defaultSettings = JSON.stringify({
       provider: 'gemini',
       apiKey: '',
-      model: 'gemini-3.5-flash-lite',
+      model: 'gemini-2.5-flash',
       baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
       temperature: 0.7,
       maxTokens: 2048,
     });
-    database.exec({
-      sql: 'INSERT INTO settings (key, value) VALUES (?, ?)',
-      bind: ['llm_config', defaultSettings],
-    });
+    database.run('INSERT INTO settings (key, value) VALUES (?, ?)', ['llm_config', defaultSettings]);
   }
 
-  // Seed Crew, Projects, Tasks, and Documents if agents are empty
-  let agentCount = 0;
-  database.exec({
-    sql: 'SELECT COUNT(*) AS count FROM agents',
-    rowMode: 'object',
-    callback: (row) => {
-      agentCount = Number(row?.count) || 0;
-    },
-  });
+  // Seed default crew if agents table is empty
+  const countStmt = database.prepare('SELECT COUNT(*) AS count FROM agents');
+  let count = 0;
+  if (countStmt.step()) {
+    count = countStmt.getAsObject().count || 0;
+  }
+  countStmt.free();
 
-  if (agentCount === 0) {
+  if (count === 0) {
     for (const agent of SEED_AGENTS) {
-      database.exec({
-        sql: `INSERT OR REPLACE INTO agents (id, name, role_title, avatar_url, system_prompt, routing_description, parent_agent_id)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        bind: [
+      database.run(
+        `INSERT OR REPLACE INTO agents (id, name, role_title, avatar_url, system_prompt, routing_description, parent_agent_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
           agent.id,
           agent.name,
           agent.role_title,
@@ -424,66 +454,38 @@ function runBootstrapMigrations(database) {
           agent.system_prompt,
           agent.routing_description,
           agent.parent_agent_id,
-        ],
-      });
+        ]
+      );
     }
 
     for (const proj of SEED_PROJECTS) {
-      database.exec({
-        sql: `INSERT OR REPLACE INTO projects (id, agent_id, title, description, category, is_private)
-              VALUES (?, ?, ?, ?, ?, ?)`,
-        bind: [
-          proj.id,
-          proj.agent_id,
-          proj.title,
-          proj.description,
-          proj.category,
-          proj.is_private,
-        ],
-      });
+      database.run(
+        `INSERT OR REPLACE INTO projects (id, agent_id, title, description, category, is_private)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [proj.id, proj.agent_id, proj.title, proj.description, proj.category, proj.is_private]
+      );
 
-      database.exec({
-        sql: `INSERT OR REPLACE INTO kbs (id, agent_id, name, description)
-              VALUES (?, ?, ?, ?)`,
-        bind: [
-          `kb-${proj.agent_id}`,
-          proj.agent_id,
-          `${proj.title} Collection`,
-          proj.description,
-        ],
-      });
+      database.run(
+        `INSERT OR REPLACE INTO kbs (id, agent_id, name, description)
+         VALUES (?, ?, ?, ?)`,
+        [`kb-${proj.agent_id}`, proj.agent_id, `${proj.title} Collection`, proj.description]
+      );
     }
 
     for (const task of SEED_TASKS) {
-      database.exec({
-        sql: `INSERT OR REPLACE INTO tasks (id, project_id, agent_id, title, status, priority, completed_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        bind: [
-          task.id,
-          task.project_id,
-          task.agent_id,
-          task.title,
-          task.status,
-          task.priority,
-          task.completed_at || null,
-        ],
-      });
+      database.run(
+        `INSERT OR REPLACE INTO tasks (id, project_id, agent_id, title, status, priority, completed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [task.id, task.project_id, task.agent_id, task.title, task.status, task.priority, task.completed_at || null]
+      );
     }
 
     for (const doc of SEED_DOCUMENTS) {
-      database.exec({
-        sql: `INSERT OR REPLACE INTO documents (id, project_id, kb_id, agent_id, title, content, metadata)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        bind: [
-          doc.id,
-          doc.project_id,
-          doc.kb_id,
-          doc.agent_id,
-          doc.title,
-          doc.content,
-          doc.metadata,
-        ],
-      });
+      database.run(
+        `INSERT OR REPLACE INTO documents (id, project_id, kb_id, agent_id, title, content, metadata)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [doc.id, doc.project_id, doc.kb_id, doc.agent_id, doc.title, doc.content, doc.metadata]
+      );
     }
   }
 }
@@ -492,61 +494,26 @@ async function initSqlite() {
   if (isInitialized) return;
 
   try {
-    console.log('[db-worker] Initializing SQLite worker environment:', {
-      crossOriginIsolated: self.crossOriginIsolated,
-      hasSharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined',
-      hasStorage: typeof navigator !== 'undefined' && Boolean(navigator.storage?.getDirectory)
+    SQL = await initSqlJs({
+      locateFile: () => '/sql-wasm.wasm',
     });
 
-    // Relative import resolves against /sqlite/db-worker.js -> /sqlite/sqlite3.js
-    importScripts('sqlite3.js');
-
-    if (typeof sqlite3InitModule !== 'function') {
-      throw new Error('sqlite3InitModule not found in sqlite3.js');
-    }
-
-    const sqlite3 = await sqlite3InitModule({
-      print: console.log,
-      printErr: console.error,
-    });
-
-    // Check for OPFS availability
-    if ('opfs' in sqlite3 && sqlite3.oo1 && sqlite3.oo1.OpfsDb) {
-      try {
-        db = new sqlite3.oo1.OpfsDb('/quarkmeme.db');
-        console.log('[db-worker] OPFS SQLite DB mounted successfully: /quarkmeme.db');
-      } catch (opfsErr) {
-        console.warn('[db-worker] OpfsDb constructor failed, using memory DB:', opfsErr);
-        db = new sqlite3.oo1.DB();
-      }
+    const savedData = await loadDbFromIDB();
+    if (savedData) {
+      db = new SQL.Database(savedData);
+      console.log('[db-worker] Restored existing database from IndexedDB');
     } else {
-      console.warn('[db-worker] OPFS not installed on sqlite3 object, using memory fallback.', {
-        hasOpfs: 'opfs' in sqlite3,
-        crossOriginIsolated: self.crossOriginIsolated
-      });
-      db = new sqlite3.oo1.DB();
+      db = new SQL.Database();
+      console.log('[db-worker] Initialized fresh SQLite database');
     }
 
     runBootstrapMigrations(db);
+    scheduleSave();
 
     isInitialized = true;
-    self.postMessage({
-      type: 'INIT_SUCCESS',
-      success: true,
-      opfs: Boolean('opfs' in sqlite3 && sqlite3.oo1 && sqlite3.oo1.OpfsDb)
-    });
+    self.postMessage({ type: 'INIT_SUCCESS', success: true });
   } catch (err) {
-    console.error('[db-worker] Fatal initialization error:', err);
-    try {
-      if (typeof sqlite3 !== 'undefined' && sqlite3 && sqlite3.oo1 && sqlite3.oo1.DB) {
-        db = new sqlite3.oo1.DB();
-        runBootstrapMigrations(db);
-        isInitialized = true;
-        self.postMessage({ type: 'INIT_SUCCESS', success: true, fallback: true });
-        return;
-      }
-    } catch (_) {}
-
+    console.error('[db-worker] SQLite initialization failed:', err);
     self.postMessage({
       type: 'INIT_ERROR',
       success: false,
@@ -555,20 +522,18 @@ async function initSqlite() {
   }
 }
 
-// Global unhandled error handlers
-self.onerror = (err) => {
-  console.error('Unhandled db-worker.js error event:', err);
-  try {
-    self.postMessage({ type: 'INIT_ERROR', success: false, error: String(err && err.message ? err.message : err) });
-  } catch {}
-};
-
-self.onunhandledrejection = (event) => {
-  console.error('Unhandled db-worker.js promise rejection:', event.reason);
-  try {
-    self.postMessage({ type: 'INIT_ERROR', success: false, error: String(event.reason && event.reason.message ? event.reason.message : event.reason) });
-  } catch {}
-};
+function execToObjects(database, sql, bind = []) {
+  const res = database.exec(sql, bind);
+  if (!res || res.length === 0) return [];
+  const { columns, values } = res[0];
+  return values.map((row) => {
+    const obj = {};
+    columns.forEach((col, i) => {
+      obj[col] = row[i];
+    });
+    return obj;
+  });
+}
 
 self.onmessage = async (e) => {
   const data = e.data || {};
@@ -591,55 +556,76 @@ self.onmessage = async (e) => {
   try {
     switch (actionType) {
       case 'exec': {
-        const { sql, bind } = payload;
-        const rows = [];
-        db.exec({
-          sql,
-          bind: bind || [],
-          rowMode: 'object',
-          callback: (row) => {
-            rows.push(row);
-          },
-        });
+        const rows = execToObjects(db, payload.sql, payload.bind || []);
         self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
         break;
       }
 
       case 'run': {
-        const { sql, bind } = payload;
-        db.exec({
-          sql,
-          bind: bind || [],
-        });
+        db.run(payload.sql, payload.bind || []);
+        scheduleSave();
         self.postMessage({ id, type: 'SUCCESS', success: true, result: true });
         break;
       }
 
       case 'EXECUTE_SQL': {
-        const rows = db.exec({
-          sql: payload.sql,
-          bind: payload.bind || [],
-          returnValue: 'resultRows',
-        });
-        self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
+        const isSelect = payload.sql.trim().toUpperCase().startsWith('SELECT');
+        if (isSelect) {
+          const res = db.exec(payload.sql, payload.bind || []);
+          const rows = res.length > 0 ? res[0].values : [];
+          self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
+        } else {
+          db.run(payload.sql, payload.bind || []);
+          scheduleSave();
+          self.postMessage({ id, type: 'SUCCESS', success: true, result: [] });
+        }
+        break;
+      }
+
+      case 'GET_SETTING': {
+        const stmt = db.prepare('SELECT value FROM settings WHERE key = ?');
+        stmt.bind([payload.key]);
+        let val = payload.defaultValue ?? null;
+        if (stmt.step()) {
+          val = stmt.get()[0];
+        }
+        stmt.free();
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: val, result: val });
+        break;
+      }
+
+      case 'SET_SETTING': {
+        db.run(
+          'INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
+          [payload.key, payload.value]
+        );
+        scheduleSave();
+        self.postMessage({ id, type: 'SUCCESS', success: true, result: true });
+        break;
+      }
+
+      case 'GET_ALL_SETTINGS': {
+        const rows = execToObjects(db, 'SELECT key, value FROM settings');
+        const settingsMap = {};
+        for (const row of rows) {
+          settingsMap[row.key] = row.value;
+        }
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: settingsMap, result: settingsMap });
         break;
       }
 
       case 'GET_AGENTS': {
-        const rows = db.exec({
-          sql: 'SELECT * FROM agents',
-          returnValue: 'resultRows',
-        });
+        const rows = execToObjects(db, 'SELECT * FROM agents ORDER BY created_at ASC');
         self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
         break;
       }
 
       case 'SAVE_DOCUMENT': {
         const { doc } = payload;
-        db.exec({
-          sql: `INSERT OR REPLACE INTO documents (id, project_id, kb_id, agent_id, title, content, metadata, file_path, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-          bind: [
+        db.run(
+          `INSERT OR REPLACE INTO documents (id, project_id, kb_id, agent_id, title, content, metadata, file_path, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+          [
             doc.id,
             doc.project_id || null,
             doc.kb_id || null,
@@ -648,161 +634,63 @@ self.onmessage = async (e) => {
             doc.content,
             doc.metadata || null,
             doc.file_path || null,
-          ],
-        });
+          ]
+        );
+        scheduleSave();
         self.postMessage({ id, type: 'SUCCESS', success: true, result: true });
         break;
       }
 
       case 'GET_DOCUMENTS_BY_PROJECT': {
-        const { projectId } = payload;
-        const rows = [];
-        db.exec({
-          sql: `SELECT * FROM documents WHERE project_id = ? ORDER BY updated_at DESC`,
-          bind: [projectId],
-          rowMode: 'object',
-          callback: (row) => {
-            rows.push(row);
-          },
-        });
+        const rows = execToObjects(
+          db,
+          `SELECT * FROM documents WHERE project_id = ? ORDER BY updated_at DESC`,
+          [payload.projectId]
+        );
         self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
         break;
       }
 
       case 'SEARCH_DOCUMENTS': {
         const { query, limit, agentId } = payload;
-        const sanitizedQuery = (query || '')
-          .replace(/["'*]/g, ' ')
-          .trim()
-          .split(/\\s+/)
-          .filter(Boolean)
-          .join(' OR ');
-
-        const rows = [];
-        if (sanitizedQuery) {
-          try {
-            let sql = `
-              SELECT d.id, d.project_id, d.kb_id, d.agent_id, d.title, d.content, d.metadata, bm25(documents_fts) as rank
-              FROM documents_fts
-              JOIN documents d ON documents_fts.rowid = d.rowid
-              WHERE documents_fts MATCH ?
-            `;
-            const params = [sanitizedQuery];
-            if (agentId) {
-              sql += ` AND d.agent_id = ?`;
-              params.push(agentId);
-            }
-            sql += ` ORDER BY rank LIMIT ?`;
-            params.push(limit || 10);
-
-            db.exec({
-              sql,
-              bind: params,
-              rowMode: 'object',
-              callback: (row) => {
-                rows.push(row);
-              },
-            });
-          } catch (e) {
-            let sql = `
-              SELECT d.id, d.project_id, d.kb_id, d.agent_id, d.title, d.content, d.metadata
-              FROM documents d
-              WHERE (d.title LIKE ? OR d.content LIKE ?)
-            `;
-            const term = `%${query}%`;
-            const params = [term, term];
-            if (agentId) {
-              sql += ` AND d.agent_id = ?`;
-              params.push(agentId);
-            }
-            sql += ` LIMIT ?`;
-            params.push(limit || 10);
-
-            db.exec({
-              sql,
-              bind: params,
-              rowMode: 'object',
-              callback: (row) => {
-                rows.push(row);
-              },
-            });
-          }
+        let sql = `SELECT id, project_id, kb_id, agent_id, title, content, metadata FROM documents WHERE (title LIKE ? OR content LIKE ?)`;
+        const term = `%${query || ''}%`;
+        const params = [term, term];
+        if (agentId) {
+          sql += ` AND agent_id = ?`;
+          params.push(agentId);
         }
+        sql += ` ORDER BY updated_at DESC LIMIT ?`;
+        params.push(limit || 10);
+        const rows = execToObjects(db, sql, params);
         self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
         break;
       }
 
       case 'TOGGLE_TASK_STATUS': {
         const { taskId } = payload;
-        let currentTask = null;
-        db.exec({
-          sql: `SELECT * FROM tasks WHERE id = ? LIMIT 1`,
-          bind: [taskId],
-          rowMode: 'object',
-          callback: (row) => {
-            currentTask = row;
-          },
-        });
-
-        if (!currentTask) {
+        const tasks = execToObjects(db, 'SELECT * FROM tasks WHERE id = ? LIMIT 1', [taskId]);
+        if (tasks.length === 0) {
           throw new Error(`Task with id ${taskId} not found`);
         }
-
+        const currentTask = tasks[0];
         const nextStatus = currentTask.status === 'completed' ? 'pending' : 'completed';
         const completedAt = nextStatus === 'completed' ? new Date().toISOString() : null;
 
-        db.exec({
-          sql: `UPDATE tasks SET status = ?, completed_at = ? WHERE id = ?`,
-          bind: [nextStatus, completedAt, taskId],
-        });
+        db.run('UPDATE tasks SET status = ?, completed_at = ? WHERE id = ?', [nextStatus, completedAt, taskId]);
+        scheduleSave();
 
         const updatedTask = {
           ...currentTask,
           status: nextStatus,
           completed_at: completedAt,
         };
-
         self.postMessage({ id, type: 'SUCCESS', success: true, data: updatedTask, result: updatedTask });
         break;
       }
 
-      case 'GET_SETTING': {
-        const { key, defaultValue } = payload;
-        const rows = db.exec({
-          sql: 'SELECT value FROM settings WHERE key = ?',
-          bind: [key],
-          returnValue: 'resultRows',
-        });
-        const value = rows && rows.length > 0 ? rows[0][0] : defaultValue ?? null;
-        self.postMessage({ id, type: 'SUCCESS', success: true, data: value, result: value });
-        break;
-      }
-
-      case 'SET_SETTING': {
-        const { key, value } = payload;
-        db.exec({
-          sql: 'INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP',
-          bind: [key, value],
-        });
-        self.postMessage({ id, type: 'SUCCESS', success: true, result: true });
-        break;
-      }
-
-      case 'GET_ALL_SETTINGS': {
-        const settingsMap = {};
-        db.exec({
-          sql: `SELECT key, value FROM settings`,
-          rowMode: 'object',
-          callback: (row) => {
-            settingsMap[row.key] = row.value;
-          },
-        });
-        self.postMessage({ id, type: 'SUCCESS', success: true, data: settingsMap, result: settingsMap });
-        break;
-      }
-
       default:
-        self.postMessage({ id, type: 'ERROR', success: false, error: `Unknown worker action: ${actionType}` });
+        self.postMessage({ id, type: 'ERROR', success: false, error: `Unknown action: ${actionType}` });
     }
   } catch (err) {
     self.postMessage({

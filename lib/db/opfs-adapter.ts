@@ -41,7 +41,7 @@ class OpfsDatabase implements IQuarkDatabase {
     this.isWorkerSupported = typeof window !== 'undefined' && typeof Worker !== 'undefined';
     if (this.isWorkerSupported) {
       try {
-        // Direct static URL prevents Next.js Webpack from hashing or intercepting the worker
+        // Direct static URL points cleanly to /sqlite/db-worker.js
         this.worker = new Worker('/sqlite/db-worker.js');
 
         this.worker.onmessage = (event: MessageEvent) => {
@@ -79,30 +79,22 @@ class OpfsDatabase implements IQuarkDatabase {
         return;
       }
 
-      if (!window.crossOriginIsolated) {
-        console.warn('crossOriginIsolated is false; OPFS sync unavailable, switching to in-memory/fallback mode.');
-        this.isReady = true;
-        this.usingFallback = true;
-        this.initialized = true;
-        await this.seedDefaultDataIfEmpty();
-        return;
-      }
-
       try {
         await new Promise<void>((resolve) => {
+          // Fast 2000ms safety timeout since sql.js does not require OPFS async proxies
           const timeout = setTimeout(() => {
-            console.warn('Worker initialization timed out after 4s; operating in fallback mode.');
+            console.warn('Worker initialization timed out after 2s; operating in fallback mode.');
             this.isReady = true;
             this.usingFallback = true;
             this.initialized = true;
             resolve();
-          }, 4000);
+          }, 2000);
 
           const onInitMessage = (e: MessageEvent) => {
             if (e.data?.type === 'INIT_SUCCESS') {
               clearTimeout(timeout);
               this.isReady = true;
-              this.usingFallback = Boolean(e.data.fallback);
+              this.usingFallback = false;
               this.initialized = true;
               this.worker?.removeEventListener('message', onInitMessage);
               resolve();
