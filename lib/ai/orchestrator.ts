@@ -240,7 +240,7 @@ Respect domain boundaries: Each division lead governs their domain. Reference si
  * Pipeline execution options for agent orchestration tasks.
  */
 export interface AgentPipelineOptions {
-  orchestrator: {
+  orchestrator?: {
     agentId: string;
     name: string;
     role: string;
@@ -256,15 +256,16 @@ export async function executeAgentPipeline(options: AgentPipelineOptions): Promi
   const { orchestrator, task, enforceAnchorCEO } = options;
   const promptText = typeof task === 'string' ? task : task?.title || task?.prompt || task?.content || JSON.stringify(task);
 
-  // If anchor CEO is enforced, route context directly to the captain-core agent
-  const agentId = enforceAnchorCEO ? 'captain-core' : orchestrator.agentId;
+  // If orchestrator is provided and not strictly overriding, use that, else resolve dynamically
+  const agentId = orchestrator?.agentId || (enforceAnchorCEO ? 'captain-core' : undefined);
   const context = await assembleContext(promptText, agentId);
 
   return {
     success: true,
-    orchestrator: {
-      ...orchestrator,
-      agentId,
+    orchestrator: orchestrator || {
+      agentId: context.targetAgent.id,
+      name: context.targetAgent.name,
+      role: context.targetAgent.role_title,
     },
     delegationPath: context.delegationPath,
     targetAgent: context.targetAgent,
@@ -273,16 +274,18 @@ export async function executeAgentPipeline(options: AgentPipelineOptions): Promi
 }
 
 /**
- * Pin Fleet Destination Auto-Orchestrate directly to Luffy.
- * Routes the high-level autoOrchestrate dispatcher directly to the Captain/Luffy
- * agent context, bypassing theme-based persona swaps for fleet destination actions.
+ * Routes the high-level autoOrchestrate dispatcher to the CEO/Captain agent
+ * of the currently active profile and fleet roster.
  */
-export async function autoOrchestrateFleetDestination(taskPayload: any) {
-  // Always assign execution authority to Luffy
+export async function autoOrchestrateFleetDestination(taskPayload: any, customCeoName?: string) {
+  await db.init();
+  const agents = await db.getAgents();
+  const captain = agents.find((a) => !a.parent_agent_id) || agents[0];
+
   const primaryOrchestrator = {
-    agentId: 'captain-core',
-    name: 'Monkey D. Luffy',
-    role: 'Captain',
+    agentId: captain?.id || 'captain-core',
+    name: customCeoName || captain?.name || 'Captain & CEO',
+    role: captain?.role_title || 'Captain',
   };
 
   return executeAgentPipeline({

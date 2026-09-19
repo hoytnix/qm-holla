@@ -1,18 +1,24 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
-- Locked the central CEO node to **Luffy** in the Radial Graph and bound the Fleet Destination Auto-Orchestrator to Luffy across all themes:
-  - **Captain/CEO Identity Pinning in `theme-mapper.ts`**: Implemented `resolveCrewMemberForTheme` and `getThemedCrewMember` to hard-pin Captain/CEO to Monkey D. Luffy regardless of active theme, while allowing secondary crew members to adapt dynamically.
-  - **RadialGraph Center Node Invariant**: Enforced `rootNode` identity as Monkey D. Luffy (`ceo-root`, Captain & CEO) in `components/canvas/RadialGraph.tsx`, isolating the central node from theme persona swaps.
-  - **Fleet Destination Auto-Orchestrator**: Added `autoOrchestrateFleetDestination` and `executeAgentPipeline` in `lib/ai/orchestrator.ts` routing top-level auto-orchestration directly to Luffy (`captain-core`).
+- Dynamically bound the Radial Graph CEO node and Fleet Destination Auto-Orchestrator to the **current CEO / Owner of the active Profile / Universe**:
+  - **RadialGraph Center Node**: In `components/canvas/RadialGraph.tsx`, dynamic `rootNode` and `captain` resolve their name from `activeCompany.owners` (or the active theme/company leader agent), displaying the current CEO name and `${themeConfig.leaderTitle} & CEO` instead of a static Luffy pin.
+  - **Fleet Destination Auto-Orchestrator**: In `app/chat/page.tsx`, the destination dropdown option dynamically displays `Auto-Orchestrate (${leaderTitle} ${profileCeoName})` matching the current workspace profile.
+  - **Orchestration Dispatcher (`lib/ai/orchestrator.ts`)**: `autoOrchestrateFleetDestination` dynamically looks up the active captain/CEO agent from the active roster and profile rather than hardcoding Luffy.
+  - **Crew Directory Reports Badge (`app/crew/page.tsx`)**: The reporting badge dynamically reads `REPORTS TO ${ceoName.toUpperCase()}` based on the current profile owner / leader title.
+  - **Theme Mapper (`lib/crew/theme-mapper.ts`)**: `resolveCrewMemberForTheme` and `getThemedCrewMember` now accept an optional `ceoOverrideName` and resolve according to the active theme/profile instead of hard-pinning Luffy across all universes.
 
 ## Recent Changes
+- **Radial Canvas (`components/canvas/RadialGraph.tsx`)**:
+  - Bound `rootNode` and `captain` to `profileCeoName` derived from `activeCompany.owners` or the database captain record and theme leader title.
+- **Helm Chat (`app/chat/page.tsx`)**:
+  - Updated Fleet Destination select dropdown to dynamically reflect `Auto-Orchestrate (${leaderTitle} ${profileCeoName})`.
+- **Crew Roster (`app/crew/page.tsx`)**:
+  - Made the reporting hierarchy tag display `REPORTS TO ${ceoName.toUpperCase()}`.
+- **Orchestrator Layer (`lib/ai/orchestrator.ts`)**:
+  - Rewrote `autoOrchestrateFleetDestination` to dynamically resolve the primary orchestrator from the active agent roster.
 - **Theme Mapper Layer (`lib/crew/theme-mapper.ts`)**:
-  - Exported `resolveCrewMemberForTheme(role, currentTheme)` and `getThemedCrewMember(role, currentTheme)`.
-- **Canvas Visualization (`components/canvas/RadialGraph.tsx`)**:
-  - Enforced `rootNode` memo with hard-pinned Luffy credentials and pinned `captain` node.
-- **AI Orchestrator (`lib/ai/orchestrator.ts`)**:
-  - Added `autoOrchestrateFleetDestination(taskPayload)` and `executeAgentPipeline(options)`.
+  - Removed hardcoded Luffy pinning in `resolveCrewMemberForTheme`.
 
   - Defined `CompanyProfile` interface and `company_profiles` table.
   - Added `company_id` columns across `projects`, `tasks`, `documents`, `kbs`, and `messages` tables.

@@ -27,7 +27,7 @@ import {
 import { useSettings } from '@/lib/settings/settings-context';
 
 export default function CrewPage() {
-  const { themeVersion } = useSettings();
+  const { themeVersion, activeCompany, themeConfig } = useSettings();
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -240,6 +240,10 @@ export default function CrewPage() {
             {agents.map((agent) => {
               const isCaptain = !agent.parent_agent_id;
               const openAssignments = getOpenAssignmentsCount(agent.id);
+              const captainAgent = agents.find((a) => !a.parent_agent_id);
+              const ceoName = activeCompany?.owners?.trim()
+                ? activeCompany.owners.split(/[,&/]/)[0].trim()
+                : (captainAgent?.name ? captainAgent.name.split(' ')[0] : (themeConfig?.leaderTitle || 'CEO'));
 
               return (
                 <GlassCard
@@ -279,7 +283,7 @@ export default function CrewPage() {
                             : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
                         }`}
                       >
-                        {isCaptain ? 'REPORTS TO YOU' : 'REPORTS TO LUFFY'}
+                        {isCaptain ? 'REPORTS TO YOU' : `REPORTS TO ${ceoName.toUpperCase()}`}
                       </span>
                     </div>
 

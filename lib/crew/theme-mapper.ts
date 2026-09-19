@@ -453,7 +453,7 @@ export function getCharacterName(theme: AppTheme, slot: AgentRoleSlot): string {
 /**
  * Returns a themed crew member representation for a specific role and theme.
  */
-export function getThemedCrewMember(role: string, currentTheme: string) {
+export function getThemedCrewMember(role: string, currentTheme: string, ceoOverrideName?: string) {
   const roleLower = role.toLowerCase();
   // Map common role descriptors to AgentRoleSlot
   let slot: AgentRoleSlot = 'captain-core';
@@ -473,9 +473,11 @@ export function getThemedCrewMember(role: string, currentTheme: string) {
 
   const char = getCharacterForSlot(currentTheme as AppTheme, slot);
   if (char) {
+    const isCaptainSlot = slot === 'captain-core';
+    const characterName = (isCaptainSlot && ceoOverrideName) ? ceoOverrideName : char.characterName;
     return {
       id: slot,
-      name: char.characterName,
+      name: characterName,
       title: char.roleTitle,
       avatar: `/avatars/${char.characterName.toLowerCase().replace(/\s+/g, '-')}.png`,
       role: char.roleTitle.toLowerCase(),
@@ -492,21 +494,8 @@ export function getThemedCrewMember(role: string, currentTheme: string) {
 }
 
 /**
- * Resolves a crew member for the given theme, enforcing that Captain/CEO
- * is always hard-pinned to Monkey D. Luffy across all themes.
+ * Resolves a crew member for the given theme, respecting the active profile/universe CEO.
  */
-export function resolveCrewMemberForTheme(role: string, currentTheme: string) {
-  // Hard pin Captain/CEO to Luffy across all themes
-  if (role.toLowerCase() === 'captain' || role.toLowerCase() === 'ceo') {
-    return {
-      id: 'luffy',
-      name: 'Monkey D. Luffy',
-      title: 'Captain / CEO',
-      avatar: '/avatars/luffy.png',
-      role: 'captain',
-    };
-  }
-
-  // Fallback to standard theme mapping for other crew members
-  return getThemedCrewMember(role, currentTheme);
+export function resolveCrewMemberForTheme(role: string, currentTheme: string, ceoOverrideName?: string) {
+  return getThemedCrewMember(role, currentTheme, ceoOverrideName);
 }

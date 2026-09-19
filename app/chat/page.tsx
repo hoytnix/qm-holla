@@ -31,7 +31,7 @@ function ChatContent() {
   const searchParams = useSearchParams();
   const requestedAgentId = searchParams.get('agent');
 
-  const { config, isConfigured, themeVersion } = useSettings();
+  const { config, isConfigured, themeVersion, activeCompany, themeConfig } = useSettings();
 
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>('auto');
@@ -190,6 +190,11 @@ function ChatContent() {
   };
 
   const selectedAgent = agents.find((a) => a.id === selectedAgentId);
+  const captainAgent = agents.find((a) => !a.parent_agent_id) || agents[0];
+  const profileCeoName = activeCompany?.owners?.trim()
+    ? activeCompany.owners.split(/[,&/]/)[0].trim()
+    : (captainAgent?.name ? captainAgent.name.split(' ')[0] : (themeConfig?.leaderTitle || 'CEO'));
+  const leaderTitle = themeConfig?.leaderTitle || 'Captain';
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
@@ -208,7 +213,9 @@ function ChatContent() {
                 onChange={(e) => setSelectedAgentId(e.target.value)}
                 className="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-400"
               >
-                <option value="auto">Auto-Orchestrate (Captain Luffy)</option>
+                <option value="auto">
+                  Auto-Orchestrate ({leaderTitle} {profileCeoName})
+                </option>
                 {agents.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name} ({a.role_title.split(' ')[0]})

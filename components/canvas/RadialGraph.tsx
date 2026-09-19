@@ -99,7 +99,7 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
   const [isPersistingNode, setIsPersistingNode] = useState(false);
 
   // Use theme-aware agent fallback instead of hardcoded One Piece
-  const { currentTheme, activeCompanyId } = useSettings();
+  const { currentTheme, activeCompanyId, activeCompany, themeConfig } = useSettings();
   const themedFallbackAgents = getThemedAgents(currentTheme) || DEFAULT_CREW;
 
   // Initialize agents and projects state with theme-aware fallback for immediate non-blocking render
@@ -225,31 +225,41 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
   const effectiveTasks = tasks.length > 0 ? tasks : DEFAULT_TASKS;
   const effectiveDocs = documents.length > 0 ? documents : DEFAULT_DOCUMENTS;
 
-  // Ensure root/center node always represents Luffy
+  // Resolve captain / CEO agent from current profile or database records
+  const existingCaptain = effectiveAgents.find((a) => !a.parent_agent_id) || effectiveAgents[0];
+
+  // Derive CEO name from active profile owners / company profile, falling back to agent's name
+  const profileCeoName = useMemo(() => {
+    if (activeCompany?.owners && activeCompany.owners.trim()) {
+      return activeCompany.owners.split(/[,&/]/)[0].trim();
+    }
+    return existingCaptain?.name ? existingCaptain.name.split(' ')[0] : (themeConfig.leaderTitle || 'CEO');
+  }, [activeCompany?.owners, existingCaptain?.name, themeConfig.leaderTitle]);
+
+  // Root / center node dynamically represents the current CEO of the active profile
   const rootNode = useMemo(() => {
     return {
       id: 'ceo-root',
       role: 'CEO',
-      name: 'Monkey D. Luffy',
-      avatar: '/avatars/luffy.png',
+      name: profileCeoName,
+      title: `${themeConfig.leaderTitle} & CEO`,
+      avatar: existingCaptain?.avatar_url || '/avatars/default.png',
       status: 'active',
       isAnchor: true,
     };
-  }, []);
+  }, [profileCeoName, themeConfig.leaderTitle, existingCaptain?.avatar_url]);
 
-  // Hard pin captain to Luffy across all themes to enforce Level 0 invariant
   const captain = useMemo<AgentRecord>(() => {
-    const existingCaptain = effectiveAgents.find((a) => !a.parent_agent_id);
     return {
       id: existingCaptain?.id || 'captain-core',
-      name: rootNode.name,
-      role_title: 'Captain/CEO',
+      name: profileCeoName,
+      role_title: existingCaptain?.role_title || `${themeConfig.leaderTitle}/CEO`,
       avatar_url: existingCaptain?.avatar_url || 'crown',
-      system_prompt: existingCaptain?.system_prompt || 'You are Luffy, Captain and CEO of Quarkmeme.',
+      system_prompt: existingCaptain?.system_prompt || `You are ${profileCeoName}, Leader and CEO of Quarkmeme.`,
       routing_description: existingCaptain?.routing_description || 'Handles top-level strategic queries and fleet leadership.',
       parent_agent_id: null,
     };
-  }, [effectiveAgents, rootNode.name]);
+  }, [existingCaptain, profileCeoName, themeConfig.leaderTitle]);
 
   const specialistCrew = effectiveAgents.filter((a) => a.id !== (captain?.id || 'captain-core') && a.parent_agent_id !== null);
 
@@ -586,10 +596,10 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
               <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-amber-300 mb-1 shadow-inner">
                 <AgentIcon agentId={captain.id} role={captain.role_title} width={22} height={22} />
               </div>
-              <span className="text-[11px] font-extrabold text-white tracking-wider uppercase text-center px-1">
-                Luffy
+              <span className="text-[11px] font-extrabold text-white tracking-wider uppercase text-center px-1 truncate max-w-[90px]">
+                {rootNode.name}
               </span>
-              <span className="text-[9px] text-amber-300/80 font-mono">Captain & CEO</span>
+              <span className="text-[9px] text-amber-300/80 font-mono truncate max-w-[90px]">{rootNode.title}</span>
               <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-slate-950 flex items-center justify-center animate-pulse" />
             </motion.div>
           )}
