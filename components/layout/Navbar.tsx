@@ -49,7 +49,7 @@ export const Navbar: React.FC = () => {
                     : 'text-slate-300 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon width={20} height={20} className="w-5 h-5 shrink-0" />
                 <span>{item.label}</span>
               </Link>
             );

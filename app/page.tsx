@@ -69,13 +69,13 @@ export default function CanvasPage() {
           <div className="flex items-center gap-3">
             <Link href="/chat">
               <GlassButton variant="glow" className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" />
+                <MessageSquare width={20} height={20} className="w-5 h-5" />
                 <span>Open Helm Chat</span>
               </GlassButton>
             </Link>
             <Link href="/vault">
               <GlassButton variant="secondary" className="flex items-center gap-2">
-                <HardDrive className="w-4 h-4" />
+                <HardDrive width={20} height={20} className="w-5 h-5" />
                 <span>Manage Vault</span>
               </GlassButton>
             </Link>
@@ -168,9 +168,9 @@ export default function CanvasPage() {
                   <div className="pt-2 flex flex-col gap-2">
                     <Link href={`/chat?agent=${selectedAgent.id}`} className="w-full">
                       <GlassButton variant="primary" className="w-full flex items-center justify-center gap-2">
-                        <MessageSquare className="w-4 h-4" />
+                        <MessageSquare width={20} height={20} className="w-5 h-5" />
                         <span>Dispatch to {selectedAgent.name.split(' ')[0]}</span>
-                        <ArrowRight className="w-4 h-4 ml-1" />
+                        <ArrowRight width={20} height={20} className="w-5 h-5 ml-1" />
                       </GlassButton>
                     </Link>
                   </div>
@@ -185,7 +185,7 @@ export default function CanvasPage() {
             {/* Architecture Metrics Card */}
             <GlassCard className="p-5 border-white/10 bg-slate-900/40">
               <div className="flex items-center gap-2 text-slate-200 text-xs font-semibold uppercase tracking-wider mb-3">
-                <Cpu className="w-4 h-4 text-indigo-400" />
+                <Cpu width={20} height={20} className="w-5 h-5 text-indigo-400" />
                 <span>Engine Specifications</span>
               </div>
               <div className="grid grid-cols-2 gap-3 text-xs">

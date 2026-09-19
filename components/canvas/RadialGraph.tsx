@@ -4,6 +4,9 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Compass, Sparkles, FolderGit2, BookOpen, Layers, Zap } from 'lucide-react';
 import { AgentRecord } from '@/lib/db/adapter';
+import { DEFAULT_STRAW_HAT_AGENTS, DEFAULT_PROJECT_NODES } from '@/lib/crew/default-crew';
+
+export { DEFAULT_STRAW_HAT_AGENTS, DEFAULT_PROJECT_NODES };
 
 interface RadialGraphProps {
   agents: AgentRecord[];
@@ -18,9 +21,12 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
 }) => {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
+  // When agents is empty, render the fallback Straw Hat crew hierarchy so canvas is immediately interactive
+  const effectiveAgents = agents.length > 0 ? agents : DEFAULT_STRAW_HAT_AGENTS;
+
   // Captain is the center node
-  const captain = agents.find((a) => !a.parent_agent_id) || agents[0];
-  const specialistCrew = agents.filter((a) => a.id !== captain?.id);
+  const captain = effectiveAgents.find((a) => !a.parent_agent_id) || effectiveAgents[0];
+  const specialistCrew = effectiveAgents.filter((a) => a.id !== captain?.id);
 
   // Layout parameters
   const center = { x: 300, y: 300 };

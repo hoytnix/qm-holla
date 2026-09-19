@@ -6,6 +6,7 @@ import {
   SearchResult,
   MessageRecord,
 } from './adapter';
+import { DEFAULT_STRAW_HAT_AGENTS, DEFAULT_PROJECT_NODES } from '@/lib/crew/default-crew';
 
 class OpfsDatabase implements IQuarkDatabase {
   private worker: Worker | null = null;
@@ -98,67 +99,26 @@ class OpfsDatabase implements IQuarkDatabase {
   private async seedDefaultDataIfEmpty() {
     const agents = await this.getAgents();
     if (agents.length === 0) {
-      // Default Captain Luffy Core Orchestrator
-      const captain: AgentRecord = {
-        id: 'captain-core',
-        name: 'Luffy Core Orchestrator',
-        role_title: 'Grand Line Fleet Captain & Core Router',
-        avatar_url: '🏴‍☠️',
-        system_prompt: `You are the Luffy Core Orchestrator of Quarkmeme. You steer the entire autonomous crew across the Grand Line of knowledge. Evaluate user queries, delegate with clarity to specialized officers, and synthesize final responses with unwavering conviction.`,
-        routing_description: 'Handles top-level strategic queries, general questions, and orchestrates multi-agent tasks.',
-        parent_agent_id: null,
-      };
+      for (const agent of DEFAULT_STRAW_HAT_AGENTS) {
+        await this.saveAgent(agent);
+      }
 
-      const navigator: AgentRecord = {
-        id: 'navigator-nami',
-        name: 'Nami Navigator',
-        role_title: 'Cartographer & Knowledge Scout',
-        avatar_url: '🧭',
-        system_prompt: `You are Nami, Chief Cartographer of Quarkmeme. You map local knowledge documents, index repositories, navigate complex directories, and chart optimal paths through stored lore.`,
-        routing_description: 'Handles file system indexing, vault organization, search queries, and document navigation.',
-        parent_agent_id: 'captain-core',
-      };
+      for (const proj of DEFAULT_PROJECT_NODES) {
+        const kbId = `kb-${proj.agent_id}`;
+        await this.saveKb({
+          id: kbId,
+          agent_id: proj.agent_id,
+          name: `${proj.title} Collection`,
+          description: `Default project workspace for ${proj.title}`,
+        });
 
-      const scholar: AgentRecord = {
-        id: 'scholar-robin',
-        name: 'Robin Archaeologist',
-        role_title: 'Historical Synthesis & Deep Research Specialist',
-        avatar_url: '📜',
-        system_prompt: `You are Nico Robin, Senior Archaeologist of Quarkmeme. You decipher dense texts, uncover hidden connections across historical logs, and synthesize deep document context with elegance.`,
-        routing_description: 'Handles deep document analysis, synthesis, archival lore, and historical research queries.',
-        parent_agent_id: 'captain-core',
-      };
-
-      const engineer: AgentRecord = {
-        id: 'shipwright-franky',
-        name: 'Franky Shipwright',
-        role_title: 'System Architect & High-Octane Builder',
-        avatar_url: '⚙️',
-        system_prompt: `You are Franky, Master Shipwright of Quarkmeme. SUPER! You design resilient architectures, craft local-first schemas, and inspect engine health with unflinching precision.`,
-        routing_description: 'Handles software architecture, SQLite schema engineering, local storage, and code construction.',
-        parent_agent_id: 'captain-core',
-      };
-
-      await this.saveAgent(captain);
-      await this.saveAgent(navigator);
-      await this.saveAgent(scholar);
-      await this.saveAgent(engineer);
-
-      // Seed Initial Knowledge Base & Document
-      const initialKb: KbRecord = {
-        id: 'kb-grand-line-overview',
-        agent_id: 'captain-core',
-        name: 'Grand Line Navigation Lore',
-        description: 'Core tactical manual and operational guidelines for Quarkmeme crew fleet.',
-      };
-      await this.saveKb(initialKb);
-
-      await this.saveDocument({
-        id: 'doc-quarkmeme-manifesto',
-        kb_id: 'kb-grand-line-overview',
-        title: 'Quarkmeme Local-First Manifesto',
-        content: `Quarkmeme is an offline-ready autonomous multi-agent operating canvas. Running SQLite WASM on top of the browser's Origin Private File System (OPFS), user knowledge is preserved entirely on-device with zero forced latency and full cryptographic autonomy. When cloud coordination is desired, Turso libSQL sync serves as the seamless upgrade bridge.`,
-      });
+        await this.saveDocument({
+          id: proj.id,
+          kb_id: kbId,
+          title: proj.title,
+          content: `${proj.title} - Autonomous division node managed by Quarkmeme Straw Hat crew.`,
+        });
+      }
     }
   }
 
