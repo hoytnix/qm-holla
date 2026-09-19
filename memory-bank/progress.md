@@ -21,6 +21,7 @@
 - [x] Netlify deployment OPFS hang fix: Added [`public/_headers`](file:///home/oloty/Dev/qm-holla/public/_headers) and [`netlify.toml`](file:///home/oloty/Dev/qm-holla/netlify.toml), 2500ms safety timeout & graceful memory fallback in [`opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts), worker error reporting in [`db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts), and non-blocking immediate canvas render with status badge in [`RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx).
 - [x] SQLite OPFS proxy URL parameter fix: Switched `db.worker.ts` to `importScripts('/sqlite/sqlite3.js')` with official SQLite WASM 3.53.4 static assets, resolving the Next.js Webpack bundler query stripping error (`Expecting vfs=opfs|opfs-wl URL argument for this worker`).
 - [x] SQLite WASM 404 compile error & adapter init memoization: Configured `locateFile` in `workers/db.worker.ts`, hardened `OpfsDatabase.init()` in `lib/db/opfs-adapter.ts` to eliminate re-initialization cascades, and updated `/sqlite/*.wasm` headers in `public/_headers` and `netlify.toml`.
+- [x] Decouple SQLite worker from Next.js Webpack chunking: Created standalone `/sqlite/db-worker.js` with direct static `importScripts('sqlite3.js')`, switched `opfs-adapter.ts` to direct static `new Worker('/sqlite/db-worker.js')`, and configured `Cross-Origin-Resource-Policy: cross-origin` across Netlify headers.
 - [x] TypeScript validation (`npx tsc --noEmit`) and production build verification (`pnpm build`).
 
 ### In Progress / Roadmap

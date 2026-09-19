@@ -49,6 +49,11 @@
   - Hardened `OpfsDatabase.init()` in [`lib/db/opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts): memoized `initPromise`, added `this.isReady` short-circuit guard, 3000ms timeout with fallback activation, and cleanly handled `INIT_SUCCESS` / `INIT_ERROR` message routing to prevent infinite initialization re-entry.
   - Configured explicit `Content-Type: application/wasm`, `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`, and `Access-Control-Allow-Origin: *` headers for `/sqlite/*.wasm` in both [`public/_headers`](file:///home/oloty/Dev/qm-holla/public/_headers) and [`netlify.toml`](file:///home/oloty/Dev/qm-holla/netlify.toml).
   - Verified clean TypeScript checks (`npx tsc --noEmit`) and production build compilation (`pnpm build`).
+- **Decouple SQLite Worker from Next.js Webpack Chunking**:
+  - Created standalone static worker [`public/sqlite/db-worker.js`](file:///home/oloty/Dev/qm-holla/public/sqlite/db-worker.js) running pure JavaScript off the public directory without Webpack compilation or hashing.
+  - Replaced Webpack worker dynamic instantiation in [`lib/db/opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts) with direct static `new Worker('/sqlite/db-worker.js')`, preventing Next.js bundler rewriting of worker dependencies.
+  - Configured `Cross-Origin-Resource-Policy: cross-origin` across `/*` and `/sqlite/*` in both [`public/_headers`](file:///home/oloty/Dev/qm-holla/public/_headers) and [`netlify.toml`](file:///home/oloty/Dev/qm-holla/netlify.toml) so nested worker threads and OPFS async proxy worker loading are never blocked under COEP.
+  - Verified clean TypeScript validation (`npx tsc --noEmit`) and production build compilation (`pnpm build`).
 
 ## Invariants Maintained
 1. Local-First OPFS SQLite storage guarantee (zero external database dependencies, credentials stored in client OPFS).

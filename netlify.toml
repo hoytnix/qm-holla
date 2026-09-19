@@ -3,12 +3,14 @@
   [headers.values]
     Cross-Origin-Opener-Policy = "same-origin"
     Cross-Origin-Embedder-Policy = "require-corp"
+    Cross-Origin-Resource-Policy = "cross-origin"
 
 [[headers]]
   for = "/sqlite/*"
   [headers.values]
     Cross-Origin-Opener-Policy = "same-origin"
     Cross-Origin-Embedder-Policy = "require-corp"
+    Cross-Origin-Resource-Policy = "cross-origin"
     Access-Control-Allow-Origin = "*"
     Content-Type = "application/javascript"
 
@@ -18,4 +20,5 @@
     Content-Type = "application/wasm"
     Cross-Origin-Opener-Policy = "same-origin"
     Cross-Origin-Embedder-Policy = "require-corp"
+    Cross-Origin-Resource-Policy = "cross-origin"
     Access-Control-Allow-Origin = "*"
