@@ -3,6 +3,12 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Individual Isolated Memory Banks & Dynamic Provisioning for Agents (`/memory-bank/agents/[agent-id]/`):
+  - Created [`lib/crew/agent-memory.ts`](file:///home/oloty/Dev/qm-holla/lib/crew/agent-memory.ts) with standard 6 core file generator (`projectbrief.md`, `productContext.md`, `systemPatterns.md`, `techContext.md`, `activeContext.md`, `progress.md`), dynamic provisioning, context rehydration, and post-task state synchronization.
+  - Seeded physical directories and markdown files under `memory-bank/agents/[agent-id]/` for all 7 Straw Hat crew members (`captain-core`, `scholar-robin`, `shipwright-franky`, `navigator-nami`, `doctor-chopper`, `chef-sanji`, `sniper-usopp`).
+  - Integrated `DEFAULT_CREW_MEMORY_DOCUMENTS` into [`lib/crew/default-crew.ts`](file:///home/oloty/Dev/qm-holla/lib/crew/default-crew.ts) and connected dynamic provisioning to `db.saveAgent` in [`lib/db/opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts) for all custom recruited specialists.
+  - Integrated agent Memory Bank rehydration into `assembleContext` in [`lib/ai/orchestrator.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/orchestrator.ts) and post-task execution sync into [`lib/ai/subagent-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/subagent-engine.ts).
+  - Enhanced [`app/crew/page.tsx`](file:///home/oloty/Dev/qm-holla/app/crew/page.tsx) with Memory Bank inspection and direct Vault navigation links; updated [`app/vault/page.tsx`](file:///home/oloty/Dev/qm-holla/app/vault/page.tsx) with Memory Bank filters and `/memory-bank/agents/*` virtual filesystem badges.
 - [x] Agent Tool Usage Efficiency & Context Scoping (`GEMINI.md`, `AGENTS.md`, `CLAUDE.md`):
   - Enforced line-count restriction rules across all instruction files limiting `grep`, `find`, and terminal search utilities to at most 30 lines per request (`| head -n 30`).
   - Added strict failure conditions in `GEMINI.md` to bar unbounded or permissive searches, prevent context pollution, and optimize token costs.

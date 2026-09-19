@@ -385,6 +385,31 @@ export default function CrewPage() {
 
                 <div>
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                    Isolated Memory Bank (/memory-bank/agents/{inspectingInstructionsAgent.id}/)
+                  </span>
+                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-white/5 text-xs text-slate-300 space-y-1.5">
+                    <p className="text-amber-300 font-mono text-[11px]">
+                      • Directory: /memory-bank/agents/{inspectingInstructionsAgent.id}/
+                    </p>
+                    <p className="text-slate-400 text-[11px]">
+                      • 6 Core Files: <span className="font-mono text-slate-300">projectbrief.md</span>, <span className="font-mono text-slate-300">productContext.md</span>, <span className="font-mono text-slate-300">systemPatterns.md</span>, <span className="font-mono text-slate-300">techContext.md</span>, <span className="font-mono text-slate-300">activeContext.md</span>, <span className="font-mono text-slate-300">progress.md</span>.
+                    </p>
+                    <p className="text-slate-400 text-[11px]">
+                      • Automatically loaded & rehydrated on every execution turn. Updates synced on task completion.
+                    </p>
+                    <div className="pt-1">
+                      <Link href={`/vault?agent=${inspectingInstructionsAgent.id}`}>
+                        <span className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 underline font-medium">
+                          <span>Open Memory Bank in Vault</span>
+                          <ArrowRight width={12} height={12} />
+                        </span>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">
                     Scoped Knowledge & Tool Access
                   </span>
                   <div className="bg-slate-950/60 p-3 rounded-2xl border border-white/5 text-xs text-slate-400 space-y-1">

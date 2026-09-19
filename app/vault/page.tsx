@@ -21,6 +21,8 @@ import {
   Filter,
   CheckCircle2,
   Layers,
+  Shield,
+  Folder,
 } from 'lucide-react';
 
 export default function VaultPage() {
@@ -137,7 +139,21 @@ export default function VaultPage() {
           return false;
         }
       }
-      if (selectedKbId !== 'all' && doc.kb_id !== selectedKbId) {
+      if (selectedKbId === 'memory-bank') {
+        const isMem = Boolean(
+          (doc.file_path && doc.file_path.startsWith('/memory-bank/agents/')) ||
+          (doc.metadata && doc.metadata.includes('memory-bank')) ||
+          doc.id.startsWith('mem-')
+        );
+        if (!isMem) return false;
+      } else if (selectedKbId === 'notes-only') {
+        const isMem = Boolean(
+          (doc.file_path && doc.file_path.startsWith('/memory-bank/agents/')) ||
+          (doc.metadata && doc.metadata.includes('memory-bank')) ||
+          doc.id.startsWith('mem-')
+        );
+        if (isMem) return false;
+      } else if (selectedKbId !== 'all' && doc.kb_id !== selectedKbId) {
         return false;
       }
       return true;
@@ -236,18 +252,22 @@ export default function VaultPage() {
                   ))}
                 </select>
 
-                {/* Filter by Collection */}
+                {/* Filter by Collection / Memory Bank */}
                 <select
                   value={selectedKbId}
                   onChange={(e) => setSelectedKbId(e.target.value)}
                   className="px-3 py-2 rounded-xl bg-slate-950/70 border border-white/10 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-indigo-400"
                 >
-                  <option value="all">All Collections</option>
-                  {kbs.map((k) => (
-                    <option key={k.id} value={k.id}>
-                      {k.name}
-                    </option>
-                  ))}
+                  <option value="all">All Vault Documents</option>
+                  <option value="memory-bank">Isolated Memory Banks (/memory-bank/agents/*)</option>
+                  <option value="notes-only">General Vault Notes & Manifesto</option>
+                  <optgroup label="Knowledge Collections">
+                    {kbs.map((k) => (
+                      <option key={k.id} value={k.id}>
+                        {k.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
 
                 <GlassButton type="submit" variant="primary" className="px-5 text-xs sm:text-sm">
@@ -430,12 +450,24 @@ export default function VaultPage() {
 
                             {/* Badges / Meta */}
                             <div className="flex items-center gap-2 mb-3 flex-wrap">
-                              <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-mono">
-                                {kb?.name || 'General Lore'}
-                              </span>
+                              {doc.file_path && doc.file_path.startsWith('/memory-bank/agents/') ? (
+                                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono flex items-center gap-1">
+                                  <Shield width={10} height={10} />
+                                  <span>{doc.file_path.split('/').pop()}</span>
+                                </span>
+                              ) : (
+                                <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-mono">
+                                  {kb?.name || 'General Lore'}
+                                </span>
+                              )}
                               {agent && (
                                 <span className="text-[10px] text-slate-400 truncate">
                                   {agent.name.split(' ')[0]}
+                                </span>
+                              )}
+                              {doc.file_path && (
+                                <span className="text-[9px] text-slate-500 font-mono truncate max-w-[200px]" title={doc.file_path}>
+                                  {doc.file_path}
                                 </span>
                               )}
                             </div>

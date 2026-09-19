@@ -1,5 +1,6 @@
 import { db } from '@/lib/db/opfs-adapter';
 import { AgentRecord, SearchResult, DocumentRecord } from '@/lib/db/adapter';
+import { loadAgentMemoryBank } from '@/lib/crew/agent-memory';
 
 export interface OrchestrationResult {
   targetAgent: AgentRecord;
@@ -7,6 +8,7 @@ export interface OrchestrationResult {
   systemInstruction: string;
   contextExcerpts: SearchResult[];
   crossAgentNotes: DocumentRecord[];
+  agentMemoryBank?: Record<string, DocumentRecord>;
 }
 
 export const CAPTAIN_SYSTEM_PROMPT = `
@@ -168,6 +170,31 @@ export async function assembleContext(
   // Resolve inter-agent shared memory
   const sharedDocs = await resolveSharedContext(targetAgent.id, userPrompt);
 
+  // Load and rehydrate agent's dedicated Memory Bank from Vault
+  let agentMemory: Record<string, DocumentRecord> = {};
+  let memoryBankBlock = '';
+  try {
+    agentMemory = await loadAgentMemoryBank(db, targetAgent);
+    const activeContext = agentMemory['activeContext.md']?.content || '';
+    const progress = agentMemory['progress.md']?.content || '';
+    const projectBrief = agentMemory['projectbrief.md']?.content || '';
+
+    if (activeContext || progress || projectBrief) {
+      memoryBankBlock = `\n\n--- AGENT ISOLATED MEMORY BANK (/memory-bank/agents/${targetAgent.id}/) ---
+[projectbrief.md]
+${projectBrief.slice(0, 800)}
+
+[activeContext.md]
+${activeContext.slice(0, 800)}
+
+[progress.md]
+${progress.slice(0, 800)}
+--- END AGENT MEMORY BANK ---\n`;
+    }
+  } catch (memErr) {
+    console.warn(`Could not load memory bank for agent ${targetAgent.id}:`, memErr);
+  }
+
   // Build composite system prompt
   let globalBlock = '';
   if (globalPrompt && globalPrompt.trim()) {
@@ -197,7 +224,7 @@ You are operating within a sovereign multi-agent crew.
 Respect domain boundaries: Each division lead governs their domain. Reference sibling research or specifications for context, but do NOT rewrite or contradict their core specs without explicit user delegation.
 `;
 
-  const systemInstruction = `${globalBlock}${targetAgent.system_prompt}${contextBlock}${separationOfDuties}\n\nMaintain character and resolve user queries efficiently. Always stay grounded in provided knowledge where applicable.`;
+  const systemInstruction = `${globalBlock}${targetAgent.system_prompt}${memoryBankBlock}${contextBlock}${separationOfDuties}\n\nMaintain character and resolve user queries efficiently. Always stay grounded in provided knowledge where applicable.`;
 
   return {
     targetAgent,
@@ -205,5 +232,6 @@ Respect domain boundaries: Each division lead governs their domain. Reference si
     systemInstruction,
     contextExcerpts: combinedExcerpts,
     crossAgentNotes: sharedDocs,
+    agentMemoryBank: agentMemory,
   };
 }

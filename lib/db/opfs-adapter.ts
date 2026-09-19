@@ -15,6 +15,7 @@ import {
   DEFAULT_TASKS,
   DEFAULT_DOCUMENTS,
 } from '@/lib/crew/default-crew';
+import { provisionAgentMemoryBank } from '@/lib/crew/agent-memory';
 
 class OpfsDatabase implements IQuarkDatabase {
   private worker: Worker | null = null;
@@ -232,14 +233,20 @@ class OpfsDatabase implements IQuarkDatabase {
           agent.parent_agent_id || null,
         ]
       );
-      return;
+    } else {
+      const idx = this.memAgents.findIndex((a) => a.id === agent.id);
+      if (idx >= 0) {
+        this.memAgents[idx] = agent;
+      } else {
+        this.memAgents.push(agent);
+      }
     }
 
-    const idx = this.memAgents.findIndex((a) => a.id === agent.id);
-    if (idx >= 0) {
-      this.memAgents[idx] = agent;
-    } else {
-      this.memAgents.push(agent);
+    // Auto-provision the dedicated /memory-bank/agents/[agent-id]/ virtual files in Vault
+    try {
+      await provisionAgentMemoryBank(this, agent);
+    } catch (err) {
+      console.warn(`Memory bank auto-provisioning skipped for ${agent.id}:`, err);
     }
   }
 

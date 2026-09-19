@@ -2,6 +2,7 @@ import { db } from '@/lib/db/opfs-adapter';
 import { AgentRecord, TaskRecord, DocumentRecord } from '@/lib/db/adapter';
 import { LLMConfig } from '@/lib/settings/settings-context';
 import { assembleContext } from '@/lib/ai/orchestrator';
+import { syncAgentMemoryBankAfterTask } from '@/lib/crew/agent-memory';
 
 export interface ExecutionEvent {
   id: string;
@@ -231,6 +232,15 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
       };
 
       await db.saveDocument(newDoc);
+
+      // Automatically sync agent's isolated Memory Bank (activeContext.md & progress.md)
+      if (agent) {
+        try {
+          await syncAgentMemoryBankAfterTask(db, agent, task, newDoc.title);
+        } catch (memSyncErr) {
+          console.warn(`Failed to sync memory bank for ${agent.id} after task:`, memSyncErr);
+        }
+      }
 
       // 4. Mark task as completed in SQLite
       if (db.updateTaskStatus) {

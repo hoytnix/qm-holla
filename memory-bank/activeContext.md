@@ -1,29 +1,32 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
-- Updated agent instruction files (`GEMINI.md`, `AGENTS.md`, `CLAUDE.md`) to establish strict tool usage efficiency rules limiting `grep`, `find`, and shell searches to at most 30 lines per request.
-- Maintained global system-level prompt setting in application settings with browser-secured OPFS SQLite persistence (`llm_system_prompt`), fast localStorage cache, and default sovereign operating rules.
+- Implemented individual, isolated Memory Banks and universal dynamic provisioning for all crew agents (Luffy, Robin, Franky, Nami, Chopper, Sanji, Usopp, and newly recruited specialists) directly mirroring the Casper system-level memory architecture in both physical workspace directories and the local OPFS SQLite virtual filesystem Vault (`/memory-bank/agents/[agent-id]/`).
 
 ## Recent Changes
-- **Agent Instruction Files (`GEMINI.md`, `AGENTS.md`, `CLAUDE.md`)**:
-  - Enforced a strict rule across all agent instructions requiring terminal search tools (`grep`, `find`) to limit output to at most 30 lines per request (e.g., piping to `head -n 30`).
-  - Added strict failure condition in `GEMINI.md` barring unbounded or overly permissive searches to protect context limits and minimize token costs.
-- **Settings Context & State Layer (`lib/settings/settings-context.tsx`)**:
-  - Added `systemPrompt` to `LLMConfig`, `DEFAULT_GLOBAL_SYSTEM_PROMPT` constant, and `DEFAULT_CONFIG`.
-  - Added SQLite load/save hydration for `llm_system_prompt` and cache synchronization in `quark_llm_config_cache`.
-- **Application Settings UI (`app/settings/page.tsx`)**:
-  - Integrated "Global System-Level Prompt & Directives" textarea section with Lucide `Terminal` and `RotateCcw` vector icons.
-  - Provided direct editing, live character counting, and 1-click reset to default sovereign prompt.
-- **Orchestration & Autonomous Subagent Engine (`lib/ai/orchestrator.ts`, `lib/ai/subagent-engine.ts`, `app/chat/page.tsx`)**:
-  - Enhanced `assembleContext` to accept `customGlobalPrompt` or auto-resolve from SQLite `llm_system_prompt`.
-  - Composed global system directives as top-level framing in `systemInstruction` ahead of domain agent prompts, local FTS5 BM25 retrieval blocks, and separation-of-duties guidelines.
-  - Updated `subagentEngine.executeTask` to pass `config.systemPrompt` into context assembly for all background autonomous tasks.
-  - Updated `app/chat/page.tsx` to pass `config.systemPrompt` into `assembleContext` for all conversational turns.
-- **Production Build Validation**:
-  - Clean TypeScript verification (`npx tsc --noEmit` - 0 errors).
+- **Agent Isolated Memory Bank Generator & Architecture (`lib/crew/agent-memory.ts`)**:
+  - Implemented `generateAgentMemoryBankFiles` producing the 6 standard Casper-style core files (`projectbrief.md`, `productContext.md`, `systemPatterns.md`, `techContext.md`, `activeContext.md`, `progress.md`) tailored to each agent's persona and domain responsibilities.
+  - Implemented `createMemoryBankDocumentRecords` converting memory files to virtual filesystem records with `/memory-bank/agents/[agent-id]/[file].md` file paths.
+  - Created `provisionAgentMemoryBank`, `loadAgentMemoryBank`, and `syncAgentMemoryBankAfterTask` lifecycle handlers for dynamic provisioning, re-hydration, and task execution persistence.
+- **Physical Workspace Seeding (`memory-bank/agents/[agent-id]/`)**:
+  - Provisioned and seeded dedicated folders and all 6 core files for all 7 Straw Hat crew members: `captain-core`, `scholar-robin`, `shipwright-franky`, `navigator-nami`, `doctor-chopper`, `chef-sanji`, and `sniper-usopp`.
+- **Default Crew Roster Integration (`lib/crew/default-crew.ts`)**:
+  - Integrated `DEFAULT_CREW_MEMORY_DOCUMENTS` into `DEFAULT_DOCUMENTS` so all agent Memory Banks are seeded into OPFS SQLite upon initialization.
+- **Database Adapter Auto-Provisioning (`lib/db/opfs-adapter.ts`)**:
+  - Updated `saveAgent` to automatically provision the dedicated `/memory-bank/agents/[agent-id]/` virtual vault files whenever custom officers or specialists are recruited or updated.
+- **Orchestration Context Rehydration (`lib/ai/orchestrator.ts`)**:
+  - Enhanced `assembleContext` to automatically load the target agent's isolated Memory Bank from the local Vault and inject rehydrated context (`projectbrief.md`, `activeContext.md`, `progress.md`) into `systemInstruction` ahead of each conversation or execution.
+- **Subagent Autonomous Engine Task Synchronization (`lib/ai/subagent-engine.ts`)**:
+  - Integrated `syncAgentMemoryBankAfterTask` into `SubagentExecutionEngine.executeTask` to auto-update the executing agent's `activeContext.md` and `progress.md` in the local Vault upon task completion.
+- **Roster & Vault UI Integration (`app/crew/page.tsx`, `app/vault/page.tsx`)**:
+  - Added "Isolated Memory Bank" inspection section to the role instructions modal in `/crew` with a direct link to open the agent's Memory Bank in the Vault.
+  - Added Memory Bank filtering (`Isolated Memory Banks (/memory-bank/agents/*)` and `General Vault Notes & Manifesto`) in the Vault collection filter, along with virtual filesystem path badges (`/memory-bank/agents/[id]/[file].md`) on document cards.
+- **Production Validation**:
+  - Verified with `npx tsc --noEmit` (0 errors).
   - Next.js production build (`pnpm build`) compiled cleanly (exit code 0, 9 static routes generated).
 
 ## Invariants Maintained
-1. Local-First SQLite storage guarantee (zero cloud database bills, all state stored client-side in IndexedDB/OPFS).
-2. Zero unbundled emojis law across all UI elements (all vector Lucide SVG icons).
-3. 375px+ responsive mobile touch targets and `pb-safe` drawer layouts.
+1. Local-First SQLite storage guarantee (zero cloud database bills, all agent memory banks stored in local OPFS/IndexedDB Vault).
+2. Strict isolation: Each agent retains dedicated domain memory files without cross-agent pollution.
+3. Zero unbundled emojis law across all UI elements (all vector Lucide SVG icons).
+4. 375px+ responsive mobile touch targets and clean layout navigation.

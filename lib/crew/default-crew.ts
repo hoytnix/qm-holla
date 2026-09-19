@@ -1,4 +1,5 @@
 import { AgentRecord, ProjectRecord, TaskRecord, DocumentRecord } from '@/lib/db/adapter';
+import { createMemoryBankDocumentRecords } from './agent-memory';
 
 export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
   {
@@ -232,7 +233,12 @@ export const DEFAULT_TASKS: TaskRecord[] = [
   },
 ];
 
+export const DEFAULT_CREW_MEMORY_DOCUMENTS: DocumentRecord[] = DEFAULT_STRAW_HAT_AGENTS.flatMap((agent) =>
+  createMemoryBankDocumentRecords(agent)
+);
+
 export const DEFAULT_DOCUMENTS: DocumentRecord[] = [
+  ...DEFAULT_CREW_MEMORY_DOCUMENTS,
   {
     id: 'doc-manifesto',
     project_id: 'proj-manifesto',
