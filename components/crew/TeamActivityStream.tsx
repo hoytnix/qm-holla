@@ -139,7 +139,7 @@ export const TeamActivityStream: React.FC<TeamActivityStreamProps> = ({ tasks = 
   };
 
   return (
-    <div className="mt-12 pt-8 border-t border-white/10">
+    <div id="team-activity" className="mt-12 pt-8 border-t border-white/10 scroll-mt-20">
       {/* Section Header */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div>

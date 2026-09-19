@@ -3,12 +3,15 @@
 ## Current Progress Overview
 
 ### Completed & Functional
-- [x] Autonomous Subagent Fleet Sweep Cancellation & Stop Controls:
+- [x] Autonomous Subagent Fleet Sweep Controls & Radial Section Enhancements:
   - Added abort controller tracking (`currentAbortController: AbortController | null`) and active task tracking (`activeTaskId: string | null`) to [`lib/ai/subagent-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/subagent-engine.ts).
   - Implemented `stop(): Promise<void>` on `SubagentExecutionEngine` that clears queued tasks, cancels pacing `setTimeout` timers, aborts active `fetch('/api/chat')` streams via `AbortController.abort()`, reverts interrupted tasks to `'pending'` in OPFS SQLite, and emits a `'cancelled'` event.
   - Handled `AbortError` gracefully in `executeTask()` without false error notifications.
   - Added interactive crimson "Stop Fleet" button with `Square` icon in the Subagent Engine card on [`app/page.tsx`](file:///home/oloty/Dev/qm-holla/app/page.tsx) that immediately interrupts execution.
   - Added `onStopAutonomousTasks` to [`components/canvas/ProjectWorkspaceDrawer.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/ProjectWorkspaceDrawer.tsx) allowing stopping subagents directly from project workspace drawers.
+  - Removed "Engine Specifications" card from [`app/page.tsx`](file:///home/oloty/Dev/qm-holla/app/page.tsx) to eliminate visual clutter.
+  - Expanded Subagent Engine stream in [`app/page.tsx`](file:///home/oloty/Dev/qm-holla/app/page.tsx) to show the last 5 items (`executionLogs.slice(0, 5)`).
+  - Added direct navigation link from the Subagent Engine header in [`app/page.tsx`](file:///home/oloty/Dev/qm-holla/app/page.tsx) to `/crew#team-activity` with smooth anchor target in [`components/crew/TeamActivityStream.tsx`](file:///home/oloty/Dev/qm-holla/components/crew/TeamActivityStream.tsx).
 - [x] Custom Gemini Markdowner Tool (`fetch_url_as_markdown`):
   - Created [`lib/ai/tools/web-markdown.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/tools/web-markdown.ts) exporting `fetchUrlAsMarkdownDeclaration` and `executeFetchUrlAsMarkdown(url, llmFilter)` contacting Markdowner service (`https://md.dhr.wtf/?url=...`), with 10s timeout signal, 20k-character token cap, and descriptive markdown error reporting.
   - Registered in [`lib/ai/tools.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/tools.ts): updated `buildGeminiTools` to merge built-in tools (`googleSearch`, `codeExecution`) with custom `functionDeclarations` (`fetchUrlAsMarkdownDeclaration`), and extended `AgentToolsConfig` with `fetchUrlMarkdown?: boolean`.

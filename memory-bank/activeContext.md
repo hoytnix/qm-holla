@@ -1,7 +1,13 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
-- Implemented **Fleet Sweep Cancellation & Stop Controls for Autonomous Subagents**:
+- Implemented **Fleet Sweep Cancellation & Subagent Engine Section Refinements**:
+  - **Radial Page Subagent Section Enhancements (`app/page.tsx`)**:
+    - Removed the redundant "Engine Specifications" card from the Radial page sidebar.
+    - Expanded the "Subagent Engine" activity feed to display the last 5 execution event items (up from 2) with a taller scroll container (`max-h-56`).
+    - Added a direct navigation link next to the "Subagent Engine" title that links directly to `/crew#team-activity` ("Team activity" with right-arrow icon) for complete audit trail inspection.
+  - **Crew Page Activity Stream (`components/crew/TeamActivityStream.tsx`)**:
+    - Added `id="team-activity"` and smooth scroll anchor padding (`scroll-mt-20`) to the root container for seamless in-page jumping.
   - **Cancellation Architecture (`lib/ai/subagent-engine.ts`)**:
     - Added `currentAbortController: AbortController | null` and `activeTaskId: string | null` to track and abort inflight tasks.
     - Added `stop()` method to `SubagentExecutionEngine` which clears queued tasks, clears pacing timers (`clearTimeout`), aborts the active fetch request signal, reverts interrupted tasks back to `'pending'` in OPFS SQLite, and emits a `'cancelled'` event.

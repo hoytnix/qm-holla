@@ -370,7 +370,17 @@ export default function CanvasPage() {
                     <Zap width={16} height={16} />
                   </div>
                   <div>
-                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">Subagent Engine</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">Subagent Engine</h3>
+                      <Link
+                        href="/crew#team-activity"
+                        className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center gap-0.5 transition-colors group font-mono"
+                        title="View Team Activity ledger on the Crew page"
+                      >
+                        <span>Team activity</span>
+                        <ArrowRight width={10} height={10} className="group-hover:translate-x-0.5 transition-transform" />
+                      </Link>
+                    </div>
                     <p className="text-[10px] text-slate-400 font-mono">Paced at {config.requestsPerMinute || 4} RPM</p>
                   </div>
                 </div>
@@ -402,14 +412,14 @@ export default function CanvasPage() {
                 )}
               </div>
 
-              {/* Execution Events Stream */}
-              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+              {/* Execution Events Stream (Showing last 5 items) */}
+              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                 {executionLogs.length === 0 ? (
                   <p className="text-[11px] text-slate-500 italic py-1">
                     Subagents idle. Click 'Sweep Fleet' or open a project workspace to auto-run tasks.
                   </p>
                 ) : (
-                  executionLogs.map((log) => (
+                  executionLogs.slice(0, 5).map((log) => (
                     <div
                       key={log.id}
                       className="p-2 rounded-lg bg-slate-950/70 border border-white/5 text-[11px] flex flex-col gap-0.5"
@@ -422,32 +432,6 @@ export default function CanvasPage() {
                     </div>
                   ))
                 )}
-              </div>
-            </GlassCard>
-
-            {/* Local-First Architecture Specifications */}
-            <GlassCard className="p-5 border-white/10 bg-slate-900/40">
-              <div className="flex items-center gap-2 text-slate-200 text-xs font-semibold uppercase tracking-wider mb-3">
-                <Cpu width={16} height={16} className="text-amber-400" />
-                <span>Engine Specifications</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-2.5 rounded-xl bg-slate-950/50 border border-white/5">
-                  <span className="text-[10px] text-slate-500 block">Database Storage</span>
-                  <span className="font-mono font-medium text-emerald-400">OPFS /quarkmeme.db</span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-slate-950/50 border border-white/5">
-                  <span className="text-[10px] text-slate-500 block">Search Index</span>
-                  <span className="font-mono font-medium text-sky-400">SQLite FTS5 BM25</span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-slate-950/50 border border-white/5">
-                  <span className="text-[10px] text-slate-500 block">Execution Mode</span>
-                  <span className="font-mono font-medium text-amber-400">Local-First PWA</span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-slate-950/50 border border-white/5">
-                  <span className="text-[10px] text-slate-500 block">Cloud Database Bill</span>
-                  <span className="font-mono font-medium text-purple-400">$0.00 / Zero Lock-in</span>
-                </div>
               </div>
             </GlassCard>
           </div>
