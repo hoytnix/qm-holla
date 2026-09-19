@@ -7,3 +7,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# Agent Operational Instructions
+
+## Tool Usage Efficiency & Context Management
+1. **Grep and Find Line-Count Restrictions**:
+   - Whenever using terminal utilities like `grep`, `find`, or shell search commands, the output **MUST be scoped to return at most 30 lines per request** (e.g., pipe output to `head -n 30` or use specific directory and file patterns).
+   - NEVER execute unbounded or overly permissive searches across root directories or build artifacts (`.next`, `node_modules`, cache directories).
+   - This restriction preserves context limits, minimizes latency, and prevents excessive token consumption.

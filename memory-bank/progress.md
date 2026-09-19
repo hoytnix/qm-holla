@@ -3,6 +3,9 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Agent Tool Usage Efficiency & Context Scoping (`GEMINI.md`, `AGENTS.md`, `CLAUDE.md`):
+  - Enforced line-count restriction rules across all instruction files limiting `grep`, `find`, and terminal search utilities to at most 30 lines per request (`| head -n 30`).
+  - Added strict failure conditions in `GEMINI.md` to bar unbounded or permissive searches, prevent context pollution, and optimize token costs.
 - [x] Global System-Level Prompt in Settings & Multi-Agent Engines:
   - Added `systemPrompt` to `LLMConfig`, `DEFAULT_GLOBAL_SYSTEM_PROMPT`, and `DEFAULT_CONFIG` in [`lib/settings/settings-context.tsx`](file:///home/oloty/Dev/qm-holla/lib/settings/settings-context.tsx) with browser-secured OPFS SQLite (`llm_system_prompt`) and local cache hydration.
   - Added responsive textarea control to [`app/settings/page.tsx`](file:///home/oloty/Dev/qm-holla/app/settings/page.tsx) with live character counter, reset-to-default action, and vector icons.

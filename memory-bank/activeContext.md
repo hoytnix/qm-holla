@@ -1,11 +1,13 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
-- Implemented global system-level prompt setting in application settings with browser-secured OPFS SQLite persistence (`llm_system_prompt`), fast localStorage cache, and default sovereign operating rules.
-- Added responsive textarea control in `app/settings/page.tsx` with live character counter and instant "Reset Default" action.
-- Wired orchestrator and autonomous subagent execution engines (`lib/ai/orchestrator.ts`, `lib/ai/subagent-engine.ts`, `app/chat/page.tsx`) to inject the global system prompt across all LLM delegations, task completions, and chat interactions.
+- Updated agent instruction files (`GEMINI.md`, `AGENTS.md`, `CLAUDE.md`) to establish strict tool usage efficiency rules limiting `grep`, `find`, and shell searches to at most 30 lines per request.
+- Maintained global system-level prompt setting in application settings with browser-secured OPFS SQLite persistence (`llm_system_prompt`), fast localStorage cache, and default sovereign operating rules.
 
 ## Recent Changes
+- **Agent Instruction Files (`GEMINI.md`, `AGENTS.md`, `CLAUDE.md`)**:
+  - Enforced a strict rule across all agent instructions requiring terminal search tools (`grep`, `find`) to limit output to at most 30 lines per request (e.g., piping to `head -n 30`).
+  - Added strict failure condition in `GEMINI.md` barring unbounded or overly permissive searches to protect context limits and minimize token costs.
 - **Settings Context & State Layer (`lib/settings/settings-context.tsx`)**:
   - Added `systemPrompt` to `LLMConfig`, `DEFAULT_GLOBAL_SYSTEM_PROMPT` constant, and `DEFAULT_CONFIG`.
   - Added SQLite load/save hydration for `llm_system_prompt` and cache synchronization in `quark_llm_config_cache`.
