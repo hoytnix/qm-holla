@@ -1,14 +1,19 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
-- Completed the multi-tenant, profile-driven workspace architecture with strict LLM gating and granular character memory filtering across Phases 0, 1, 2, and 3:
-  - **Phase 0 (LLM Connection Gateway)**: Enforces mandatory LLM configuration and successful connection test before unlocking profile creation or theme selection.
-  - **Phase 1 (Company Profile Onboarding Wizard)**: First-initiation wizard capturing Company Name, Owner Name(s), Mission/Vision/Principles, and an Initial ToDO List, auto-seeding tasks and generating a Founding Charter markdown document.
-  - **Phase 2 (Multi-Profile Context & Switcher)**: Multi-tenant company workspace support with isolated settings/theme/records, header & settings profile switcher, and double-confirmation profile deletion (requiring typing the exact company name).
-  - **Phase 3 (Granular Character Memory Filtering)**: Upgraded `/vault` selector to filter memory banks by individual crew characters (`/memory-bank/agents/[agent-id]/`), with dedicated Character Memory Bank banner and character badge in [`components/vault/MarkdownDrawer.tsx`](file:///home/oloty/Dev/qm-holla/components/vault/MarkdownDrawer.tsx).
+- Locked the central CEO node to **Luffy** in the Radial Graph and bound the Fleet Destination Auto-Orchestrator to Luffy across all themes:
+  - **Captain/CEO Identity Pinning in `theme-mapper.ts`**: Implemented `resolveCrewMemberForTheme` and `getThemedCrewMember` to hard-pin Captain/CEO to Monkey D. Luffy regardless of active theme, while allowing secondary crew members to adapt dynamically.
+  - **RadialGraph Center Node Invariant**: Enforced `rootNode` identity as Monkey D. Luffy (`ceo-root`, Captain & CEO) in `components/canvas/RadialGraph.tsx`, isolating the central node from theme persona swaps.
+  - **Fleet Destination Auto-Orchestrator**: Added `autoOrchestrateFleetDestination` and `executeAgentPipeline` in `lib/ai/orchestrator.ts` routing top-level auto-orchestration directly to Luffy (`captain-core`).
 
 ## Recent Changes
-- **Database & Storage Layer (`lib/db/adapter.ts`, `lib/db/schema.sql`, `public/sqlite/sqlite-engine.js`, `lib/db/opfs-adapter.ts`)**:
+- **Theme Mapper Layer (`lib/crew/theme-mapper.ts`)**:
+  - Exported `resolveCrewMemberForTheme(role, currentTheme)` and `getThemedCrewMember(role, currentTheme)`.
+- **Canvas Visualization (`components/canvas/RadialGraph.tsx`)**:
+  - Enforced `rootNode` memo with hard-pinned Luffy credentials and pinned `captain` node.
+- **AI Orchestrator (`lib/ai/orchestrator.ts`)**:
+  - Added `autoOrchestrateFleetDestination(taskPayload)` and `executeAgentPipeline(options)`.
+
   - Defined `CompanyProfile` interface and `company_profiles` table.
   - Added `company_id` columns across `projects`, `tasks`, `documents`, `kbs`, and `messages` tables.
   - Implemented `getCompanyProfiles`, `getCompanyProfileById`, `saveCompanyProfile`, and `deleteCompanyProfile`.

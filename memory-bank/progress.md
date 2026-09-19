@@ -3,6 +3,10 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Locked Captain/CEO Identity to Monkey D. Luffy across Themes & Fleet Auto-Orchestrator:
+  - In `lib/crew/theme-mapper.ts`, added `resolveCrewMemberForTheme` and `getThemedCrewMember`, ensuring any transformation logic hard-pins `captain` / `ceo` roles to Monkey D. Luffy across all universes.
+  - In `components/canvas/RadialGraph.tsx`, enforced `rootNode` identity as Monkey D. Luffy (`ceo-root`, Captain & CEO) and pinned `captain` node.
+  - In `lib/ai/orchestrator.ts`, implemented `autoOrchestrateFleetDestination` and `executeAgentPipeline` assigning execution authority directly to `captain-core` (Monkey D. Luffy) with `enforceAnchorCEO: true`.
 - [x] Multi-Tenant Company Profiles, LLM Gateway, and Granular Character Memory Filtering (Phases 0-3):
   - Phase 0: Built blocking [`LlmSetupModal.tsx`](file:///home/oloty/Dev/qm-holla/components/settings/LlmSetupModal.tsx) enforcing mandatory LLM configuration and connection test verification before unlocking profile creation or theme selection.
   - Phase 1: Built [`CompanySetupModal.tsx`](file:///home/oloty/Dev/qm-holla/components/onboarding/CompanySetupModal.tsx) wizard capturing Company Name, Owner Name(s), Mission/Vision/Principles, and dynamic initial tasks list. Automatically seeds tasks and generates a Founding Charter document upon creation.

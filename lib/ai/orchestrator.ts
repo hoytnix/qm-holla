@@ -235,3 +235,59 @@ Respect domain boundaries: Each division lead governs their domain. Reference si
     agentMemoryBank: agentMemory,
   };
 }
+
+/**
+ * Pipeline execution options for agent orchestration tasks.
+ */
+export interface AgentPipelineOptions {
+  orchestrator: {
+    agentId: string;
+    name: string;
+    role: string;
+  };
+  task: any;
+  enforceAnchorCEO?: boolean;
+}
+
+/**
+ * Executes an agent pipeline anchored to the designated orchestrator.
+ */
+export async function executeAgentPipeline(options: AgentPipelineOptions): Promise<any> {
+  const { orchestrator, task, enforceAnchorCEO } = options;
+  const promptText = typeof task === 'string' ? task : task?.title || task?.prompt || task?.content || JSON.stringify(task);
+
+  // If anchor CEO is enforced, route context directly to the captain-core agent
+  const agentId = enforceAnchorCEO ? 'captain-core' : orchestrator.agentId;
+  const context = await assembleContext(promptText, agentId);
+
+  return {
+    success: true,
+    orchestrator: {
+      ...orchestrator,
+      agentId,
+    },
+    delegationPath: context.delegationPath,
+    targetAgent: context.targetAgent,
+    context,
+  };
+}
+
+/**
+ * Pin Fleet Destination Auto-Orchestrate directly to Luffy.
+ * Routes the high-level autoOrchestrate dispatcher directly to the Captain/Luffy
+ * agent context, bypassing theme-based persona swaps for fleet destination actions.
+ */
+export async function autoOrchestrateFleetDestination(taskPayload: any) {
+  // Always assign execution authority to Luffy
+  const primaryOrchestrator = {
+    agentId: 'captain-core',
+    name: 'Monkey D. Luffy',
+    role: 'Captain',
+  };
+
+  return executeAgentPipeline({
+    orchestrator: primaryOrchestrator,
+    task: taskPayload,
+    enforceAnchorCEO: true,
+  });
+}

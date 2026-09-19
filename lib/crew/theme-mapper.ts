@@ -449,3 +449,64 @@ export function getCharacterName(theme: AppTheme, slot: AgentRoleSlot): string {
   if (theme === 'custom') return slot;
   return UNIVERSE_CHARACTERS[theme]?.[slot]?.characterName ?? slot;
 }
+
+/**
+ * Returns a themed crew member representation for a specific role and theme.
+ */
+export function getThemedCrewMember(role: string, currentTheme: string) {
+  const roleLower = role.toLowerCase();
+  // Map common role descriptors to AgentRoleSlot
+  let slot: AgentRoleSlot = 'captain-core';
+  if (roleLower.includes('scholar') || roleLower.includes('research') || roleLower.includes('robin') || roleLower.includes('archaeolog')) {
+    slot = 'scholar-robin';
+  } else if (roleLower.includes('shipwright') || roleLower.includes('systems') || roleLower.includes('franky') || roleLower.includes('dev')) {
+    slot = 'shipwright-franky';
+  } else if (roleLower.includes('navigator') || roleLower.includes('finance') || roleLower.includes('nami')) {
+    slot = 'navigator-nami';
+  } else if (roleLower.includes('doctor') || roleLower.includes('health') || roleLower.includes('chopper')) {
+    slot = 'doctor-chopper';
+  } else if (roleLower.includes('cook') || roleLower.includes('chef') || roleLower.includes('operations') || roleLower.includes('sanji')) {
+    slot = 'chef-sanji';
+  } else if (roleLower.includes('sniper') || roleLower.includes('marketing') || roleLower.includes('usopp')) {
+    slot = 'sniper-usopp';
+  }
+
+  const char = getCharacterForSlot(currentTheme as AppTheme, slot);
+  if (char) {
+    return {
+      id: slot,
+      name: char.characterName,
+      title: char.roleTitle,
+      avatar: `/avatars/${char.characterName.toLowerCase().replace(/\s+/g, '-')}.png`,
+      role: char.roleTitle.toLowerCase(),
+    };
+  }
+
+  return {
+    id: slot,
+    name: slot,
+    title: role,
+    avatar: '/avatars/default.png',
+    role: role.toLowerCase(),
+  };
+}
+
+/**
+ * Resolves a crew member for the given theme, enforcing that Captain/CEO
+ * is always hard-pinned to Monkey D. Luffy across all themes.
+ */
+export function resolveCrewMemberForTheme(role: string, currentTheme: string) {
+  // Hard pin Captain/CEO to Luffy across all themes
+  if (role.toLowerCase() === 'captain' || role.toLowerCase() === 'ceo') {
+    return {
+      id: 'luffy',
+      name: 'Monkey D. Luffy',
+      title: 'Captain / CEO',
+      avatar: '/avatars/luffy.png',
+      role: 'captain',
+    };
+  }
+
+  // Fallback to standard theme mapping for other crew members
+  return getThemedCrewMember(role, currentTheme);
+}

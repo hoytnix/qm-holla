@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ZoomIn,
@@ -225,8 +225,33 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
   const effectiveTasks = tasks.length > 0 ? tasks : DEFAULT_TASKS;
   const effectiveDocs = documents.length > 0 ? documents : DEFAULT_DOCUMENTS;
 
-  const captain = effectiveAgents.find((a) => !a.parent_agent_id) || effectiveAgents[0];
-  const specialistCrew = effectiveAgents.filter((a) => a.id !== captain?.id);
+  // Ensure root/center node always represents Luffy
+  const rootNode = useMemo(() => {
+    return {
+      id: 'ceo-root',
+      role: 'CEO',
+      name: 'Monkey D. Luffy',
+      avatar: '/avatars/luffy.png',
+      status: 'active',
+      isAnchor: true,
+    };
+  }, []);
+
+  // Hard pin captain to Luffy across all themes to enforce Level 0 invariant
+  const captain = useMemo<AgentRecord>(() => {
+    const existingCaptain = effectiveAgents.find((a) => !a.parent_agent_id);
+    return {
+      id: existingCaptain?.id || 'captain-core',
+      name: rootNode.name,
+      role_title: 'Captain/CEO',
+      avatar_url: existingCaptain?.avatar_url || 'crown',
+      system_prompt: existingCaptain?.system_prompt || 'You are Luffy, Captain and CEO of Quarkmeme.',
+      routing_description: existingCaptain?.routing_description || 'Handles top-level strategic queries and fleet leadership.',
+      parent_agent_id: null,
+    };
+  }, [effectiveAgents, rootNode.name]);
+
+  const specialistCrew = effectiveAgents.filter((a) => a.id !== (captain?.id || 'captain-core') && a.parent_agent_id !== null);
 
   // Hierarchy Radii
   const innerRadius = 180; // Level 1
