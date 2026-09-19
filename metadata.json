@@ -1,5 +1,9 @@
 {
-  "name": "The Forge V5",
-  "description": "A simple Hello World application.",
-  "requestFramePermissions": []
+  "name": "Quarkmeme",
+  "short_name": "Quarkmeme",
+  "description": "Local-first offline-ready autonomous multi-agent knowledge canvas powered by SQLite WASM with OPFS.",
+  "domain": "Quarkmeme.com",
+  "display": "standalone",
+  "theme_color": "#0f172a",
+  "background_color": "#020617"
 }
