@@ -107,10 +107,14 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
     if (propDocuments && propDocuments.length > 0) setDocuments(propDocuments);
   }, [propDocuments]);
 
-  // Background OPFS initialization & non-intrusive badge state
+  // Background DB initialization & non-intrusive badge state
   const [badgeState, setBadgeState] = useState<'hidden' | 'hydrating' | 'active' | 'faded'>('hidden');
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     let isMounted = true;
     let fadeTimer: any = null;
 
@@ -121,9 +125,11 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
       }
     }, 500);
 
-    const hydrateFromOpfs = async () => {
+    const hydrateFromDb = async () => {
       try {
         await opfsAdapter.init();
+        if (!isMounted) return;
+
         const [liveAgents, liveProjects, liveTasks, liveDocs] = await Promise.all([
           opfsAdapter.getAgents(),
           opfsAdapter.getProjects(),
@@ -132,10 +138,18 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
         ]);
 
         if (isMounted) {
-          if (liveAgents && liveAgents.length > 0) setAgents(liveAgents);
-          if (liveProjects && liveProjects.length > 0) setProjects(liveProjects);
-          if (liveTasks && liveTasks.length > 0) setTasks(liveTasks);
-          if (liveDocs && liveDocs.length > 0) setDocuments(liveDocs);
+          if (liveAgents && liveAgents.length > 0) {
+            setAgents(liveAgents);
+          }
+          if (liveProjects && liveProjects.length > 0) {
+            setProjects(liveProjects);
+          }
+          if (liveTasks && liveTasks.length > 0) {
+            setTasks(liveTasks);
+          }
+          if (liveDocs && liveDocs.length > 0) {
+            setDocuments(liveDocs);
+          }
 
           setBadgeState('active');
           fadeTimer = setTimeout(() => {
@@ -145,7 +159,7 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
           }, 2000);
         }
       } catch (err) {
-        console.warn('Background OPFS hydration error:', err);
+        console.warn('Background SQLite hydration warning:', err);
         if (isMounted) {
           setBadgeState('active');
           fadeTimer = setTimeout(() => {
@@ -159,14 +173,14 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
       }
     };
 
-    hydrateFromOpfs();
+    hydrateFromDb();
 
     return () => {
       isMounted = false;
       clearTimeout(badgeTimer);
       if (fadeTimer) clearTimeout(fadeTimer);
     };
-  }, []);
+  }, []); // STRICTLY EMPTY ARRAY
 
   // Canvas Transform State: pan (x, y) and zoom scale [0.5, 2.5]
   const [transform, setTransform] = useState<{ x: number; y: number; scale: number }>({

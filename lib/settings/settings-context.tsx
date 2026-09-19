@@ -40,9 +40,12 @@ const STORAGE_CACHE_KEY = 'quark_llm_config_cache';
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [config, setConfig] = useState<LLMConfig>(DEFAULT_CONFIG);
   const [isLoading, setIsLoading] = useState(true);
+  const hasLoadedRef = React.useRef(false);
 
-  // Hydrate settings from local storage cache first, then OPFS SQLite
+  // Hydrate settings from local storage cache first, then SQLite
   useEffect(() => {
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
     let mounted = true;
 
     async function load() {

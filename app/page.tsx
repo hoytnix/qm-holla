@@ -50,7 +50,7 @@ export default function CanvasPage() {
   const [isMorningPlanningOpen, setIsMorningPlanningOpen] = useState(false);
   const [isVoiceHelmOpen, setIsVoiceHelmOpen] = useState(false);
 
-  const [loading, setLoading] = useState(false);
+  const hasLoadedRef = React.useRef(false);
 
   const loadFleetData = async () => {
     try {
@@ -62,24 +62,24 @@ export default function CanvasPage() {
         db.getAllDocuments ? db.getAllDocuments() : Promise.resolve([]),
       ]);
 
-      setAgents(agentList);
-      setProjects(projectList);
-      setTasks(taskList);
-      setDocuments(docList);
+      if (agentList && agentList.length > 0) setAgents(agentList);
+      if (projectList && projectList.length > 0) setProjects(projectList);
+      if (taskList && taskList.length > 0) setTasks(taskList);
+      if (docList && docList.length > 0) setDocuments(docList);
 
       if (agentList.length > 0 && !selectedAgent) {
         setSelectedAgent(agentList[0]);
       }
     } catch (e) {
       console.error('Failed to load fleet data in canvas:', e);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
     loadFleetData();
-  }, []);
+  }, []); // STRICTLY EMPTY ARRAY
 
   // Handle project diamond selection from RadialGraph
   const handleSelectProject = (proj: ProjectRecord) => {

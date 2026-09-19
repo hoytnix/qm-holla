@@ -41,8 +41,8 @@ class OpfsDatabase implements IQuarkDatabase {
     this.isWorkerSupported = typeof window !== 'undefined' && typeof Worker !== 'undefined';
     if (this.isWorkerSupported) {
       try {
-        // Direct static URL points cleanly to /sqlite/db-worker.js
-        this.worker = new Worker('/sqlite/db-worker.js');
+        // Timestamp parameter guarantees a fresh fetch and bypasses PWA service-worker cache
+        this.worker = new Worker(`/sqlite/sqlite-engine.js?t=${Date.now()}`);
 
         this.worker.onmessage = (event: MessageEvent) => {
           const { id, type, success, data, result, error } = event.data || {};
@@ -58,10 +58,10 @@ class OpfsDatabase implements IQuarkDatabase {
         };
 
         this.worker.onerror = (err) => {
-          console.warn('Unhandled error from /sqlite/db-worker.js:', err);
+          console.warn('Unhandled error from /sqlite/sqlite-engine.js:', err);
         };
       } catch (e) {
-        console.warn('Could not instantiate /sqlite/db-worker.js:', e);
+        console.warn('Could not instantiate /sqlite/sqlite-engine.js:', e);
       }
     }
   }

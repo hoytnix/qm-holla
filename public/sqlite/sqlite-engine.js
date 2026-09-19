@@ -1,7 +1,6 @@
-/* Quarkmeme Universal SQLite Worker (IDB-Backed, No COOP/COEP Required) */
+/* Quarkmeme SQLite Engine - IndexedDB Backed */
 'use strict';
 
-// Load sql.js wasm loader from local static assets (with CDN fallback if needed)
 try {
   importScripts('/sql-wasm.js');
 } catch (e) {
@@ -11,15 +10,14 @@ try {
 let db = null;
 let SQL = null;
 let isInitialized = false;
-let saveDebounceTimer = null;
+let saveTimer = null;
 
-// Minimal native IndexedDB helpers
 function openIDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('quarkmeme_db_store', 1);
+    const req = indexedDB.open('quarkmeme_vault_v1', 1);
     req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains('files')) {
-        req.result.createObjectStore('files');
+      if (!req.result.objectStoreNames.contains('db_store')) {
+        req.result.createObjectStore('db_store');
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -27,40 +25,48 @@ function openIDB() {
   });
 }
 
-async function loadDbFromIDB() {
-  const idb = await openIDB();
-  return new Promise((resolve) => {
-    const tx = idb.transaction('files', 'readonly');
-    const store = tx.objectStore('files');
-    const req = store.get('quarkmeme.db');
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => resolve(null);
-  });
+async function loadFromIDB() {
+  try {
+    const idb = await openIDB();
+    return new Promise((resolve) => {
+      const tx = idb.transaction('db_store', 'readonly');
+      const store = tx.objectStore('db_store');
+      const req = store.get('database.sqlite');
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch (_) {
+    return null;
+  }
 }
 
-async function saveDbToIDB(data) {
-  const idb = await openIDB();
-  return new Promise((resolve, reject) => {
-    const tx = idb.transaction('files', 'readwrite');
-    const store = tx.objectStore('files');
-    const req = store.put(data, 'quarkmeme.db');
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
+async function saveToIDB(data) {
+  try {
+    const idb = await openIDB();
+    return new Promise((resolve, reject) => {
+      const tx = idb.transaction('db_store', 'readwrite');
+      const store = tx.objectStore('db_store');
+      const req = store.put(data, 'database.sqlite');
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('[sqlite-engine] IDB write error:', err);
+  }
 }
 
-function scheduleSave() {
-  if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
-  saveDebounceTimer = setTimeout(async () => {
+function persistChanges() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
     if (!db) return;
     try {
       const binary = db.export();
-      await saveDbToIDB(binary);
-      console.log('[db-worker] Database state saved to IndexedDB');
+      await saveToIDB(binary);
+      console.log('[sqlite-engine] State persisted to IndexedDB');
     } catch (err) {
-      console.error('[db-worker] Failed to persist database:', err);
+      console.error('[sqlite-engine] Export failed:', err);
     }
-  }, 250);
+  }, 200);
 }
 
 const SEED_AGENTS = [
@@ -342,6 +348,19 @@ const SEED_DOCUMENTS = [
   },
 ];
 
+function execToObjects(database, sql, bind = []) {
+  const res = database.exec(sql, bind);
+  if (!res || res.length === 0) return [];
+  const { columns, values } = res[0];
+  return values.map((row) => {
+    const obj = {};
+    columns.forEach((col, i) => {
+      obj[col] = row[i];
+    });
+    return obj;
+  });
+}
+
 function runBootstrapMigrations(database) {
   database.run(`
     CREATE TABLE IF NOT EXISTS settings (
@@ -425,7 +444,7 @@ function runBootstrapMigrations(database) {
     const defaultSettings = JSON.stringify({
       provider: 'gemini',
       apiKey: '',
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash-lite',
       baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
       temperature: 0.7,
       maxTokens: 2048,
@@ -490,7 +509,7 @@ function runBootstrapMigrations(database) {
   }
 }
 
-async function initSqlite() {
+async function bootstrap() {
   if (isInitialized) return;
 
   try {
@@ -498,41 +517,28 @@ async function initSqlite() {
       locateFile: () => '/sql-wasm.wasm',
     });
 
-    const savedData = await loadDbFromIDB();
-    if (savedData) {
-      db = new SQL.Database(savedData);
-      console.log('[db-worker] Restored existing database from IndexedDB');
+    const existingBinary = await loadFromIDB();
+    if (existingBinary) {
+      db = new SQL.Database(existingBinary);
+      console.log('[sqlite-engine] Database loaded from IndexedDB storage');
     } else {
       db = new SQL.Database();
-      console.log('[db-worker] Initialized fresh SQLite database');
+      console.log('[sqlite-engine] Created new SQLite database in memory');
     }
 
     runBootstrapMigrations(db);
-    scheduleSave();
+    persistChanges();
 
     isInitialized = true;
     self.postMessage({ type: 'INIT_SUCCESS', success: true });
   } catch (err) {
-    console.error('[db-worker] SQLite initialization failed:', err);
+    console.error('[sqlite-engine] Initialization failed:', err);
     self.postMessage({
       type: 'INIT_ERROR',
       success: false,
       error: err && err.message ? err.message : String(err),
     });
   }
-}
-
-function execToObjects(database, sql, bind = []) {
-  const res = database.exec(sql, bind);
-  if (!res || res.length === 0) return [];
-  const { columns, values } = res[0];
-  return values.map((row) => {
-    const obj = {};
-    columns.forEach((col, i) => {
-      obj[col] = row[i];
-    });
-    return obj;
-  });
 }
 
 self.onmessage = async (e) => {
@@ -542,7 +548,7 @@ self.onmessage = async (e) => {
   const payload = data.payload || {};
 
   if (actionType === 'INIT' || actionType === 'init') {
-    await initSqlite();
+    await bootstrap();
     if (id) {
       self.postMessage({ id, type: 'INIT_SUCCESS', success: true, result: true });
     }
@@ -550,7 +556,7 @@ self.onmessage = async (e) => {
   }
 
   if (!db && !isInitialized) {
-    await initSqlite();
+    await bootstrap();
   }
 
   try {
@@ -563,7 +569,7 @@ self.onmessage = async (e) => {
 
       case 'run': {
         db.run(payload.sql, payload.bind || []);
-        scheduleSave();
+        persistChanges();
         self.postMessage({ id, type: 'SUCCESS', success: true, result: true });
         break;
       }
@@ -576,7 +582,7 @@ self.onmessage = async (e) => {
           self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
         } else {
           db.run(payload.sql, payload.bind || []);
-          scheduleSave();
+          persistChanges();
           self.postMessage({ id, type: 'SUCCESS', success: true, result: [] });
         }
         break;
@@ -585,10 +591,7 @@ self.onmessage = async (e) => {
       case 'GET_SETTING': {
         const stmt = db.prepare('SELECT value FROM settings WHERE key = ?');
         stmt.bind([payload.key]);
-        let val = payload.defaultValue ?? null;
-        if (stmt.step()) {
-          val = stmt.get()[0];
-        }
+        const val = stmt.step() ? stmt.get()[0] : payload.defaultValue ?? null;
         stmt.free();
         self.postMessage({ id, type: 'SUCCESS', success: true, data: val, result: val });
         break;
@@ -599,7 +602,7 @@ self.onmessage = async (e) => {
           'INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
           [payload.key, payload.value]
         );
-        scheduleSave();
+        persistChanges();
         self.postMessage({ id, type: 'SUCCESS', success: true, result: true });
         break;
       }
@@ -636,7 +639,7 @@ self.onmessage = async (e) => {
             doc.file_path || null,
           ]
         );
-        scheduleSave();
+        persistChanges();
         self.postMessage({ id, type: 'SUCCESS', success: true, result: true });
         break;
       }
@@ -678,7 +681,7 @@ self.onmessage = async (e) => {
         const completedAt = nextStatus === 'completed' ? new Date().toISOString() : null;
 
         db.run('UPDATE tasks SET status = ?, completed_at = ? WHERE id = ?', [nextStatus, completedAt, taskId]);
-        scheduleSave();
+        persistChanges();
 
         const updatedTask = {
           ...currentTask,
@@ -690,14 +693,9 @@ self.onmessage = async (e) => {
       }
 
       default:
-        self.postMessage({ id, type: 'ERROR', success: false, error: `Unknown action: ${actionType}` });
+        self.postMessage({ id, type: 'ERROR', success: false, error: `Unknown type: ${actionType}` });
     }
   } catch (err) {
-    self.postMessage({
-      id,
-      type: 'ERROR',
-      success: false,
-      error: err && err.message ? err.message : String(err),
-    });
+    self.postMessage({ id, type: 'ERROR', success: false, error: err?.message || String(err) });
   }
 };
