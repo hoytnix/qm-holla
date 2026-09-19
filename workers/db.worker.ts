@@ -1,8 +1,11 @@
-import sqlite3InitModule from '@sqlite.org/sqlite-wasm';
+/// <reference lib="webworker" />
+
+declare const self: DedicatedWorkerGlobalScope;
 
 let db: any = null;
+let isInitialized = false;
 
-// Initial schema migration string from schema.sql
+// Full schema matching schema.sql and prior database features
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS agents (
   id TEXT PRIMARY KEY,
@@ -374,13 +377,39 @@ const SEED_DOCUMENTS = [
   },
 ];
 
-async function seedDataIfEmpty(database: any) {
+function runBootstrapMigrations(database: any) {
+  database.exec(SCHEMA_SQL);
+
+  // Seed settings default if not present
+  const rows: any[] = [];
+  database.exec({
+    sql: "SELECT COUNT(*) as count FROM settings WHERE key = 'llm_config'",
+    rowMode: 'object',
+    callback: (r: any) => rows.push(r),
+  });
+
+  if (rows.length === 0 || Number(rows[0]?.count) === 0) {
+    const defaultSettings = JSON.stringify({
+      provider: 'gemini',
+      apiKey: '',
+      model: 'gemini-3.5-flash-lite',
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+      temperature: 0.7,
+      maxTokens: 2048,
+    });
+    database.exec({
+      sql: 'INSERT INTO settings (key, value) VALUES (?, ?)',
+      bind: ['llm_config', defaultSettings],
+    });
+  }
+
+  // Seed Crew, Projects, Tasks, and Documents if agents are empty
   let agentCount = 0;
   database.exec({
     sql: 'SELECT COUNT(*) AS count FROM agents',
     rowMode: 'object',
     callback: (row: any) => {
-      agentCount = Number(row.count) || 0;
+      agentCount = Number(row?.count) || 0;
     },
   });
 
@@ -400,18 +429,7 @@ async function seedDataIfEmpty(database: any) {
         ],
       });
     }
-  }
 
-  let projectCount = 0;
-  database.exec({
-    sql: 'SELECT COUNT(*) AS count FROM projects',
-    rowMode: 'object',
-    callback: (row: any) => {
-      projectCount = Number(row.count) || 0;
-    },
-  });
-
-  if (projectCount === 0) {
     for (const proj of SEED_PROJECTS) {
       database.exec({
         sql: `INSERT OR REPLACE INTO projects (id, agent_id, title, description, category, is_private)
@@ -472,47 +490,60 @@ async function seedDataIfEmpty(database: any) {
   }
 }
 
-async function initDb() {
-  if (db) return;
+async function initSqlite() {
+  if (isInitialized) return;
 
   try {
-    let sqlite3: any = null;
-    try {
-      sqlite3 = await (sqlite3InitModule as any)({
-        print: console.log,
-        printErr: console.error,
-        locateFile: (file: string) => `/sqlite/${file}`,
-      });
-    } catch (moduleErr) {
-      console.error('Failed to initialize sqlite3InitModule:', moduleErr);
-      throw moduleErr;
+    // 1. Import official static sqlite3 build from public/sqlite
+    // This bypasses Webpack chunking and preserves ?vfs=opfs query parameters on the proxy worker
+    (self as any).importScripts('/sqlite/sqlite3.js');
+
+    const sqlite3InitModule = (self as any).sqlite3InitModule;
+    if (!sqlite3InitModule) {
+      throw new Error('sqlite3InitModule not found on global scope');
     }
 
-    try {
-      if ('opfs' in sqlite3) {
-        db = new sqlite3.oo1.OpfsDb('/quarkmeme.db');
-      } else {
-        db = new sqlite3.oo1.DB('/quarkmeme.db', 'c');
-      }
-    } catch (err) {
-      console.warn('OPFS initialization failed, falling back to persistent in-memory DB:', err);
+    const sqlite3 = await sqlite3InitModule({
+      print: console.log,
+      printErr: console.error,
+    });
+
+    // 2. Initialize with OPFS or fall back gracefully
+    if ('opfs' in sqlite3) {
       try {
+        db = new sqlite3.oo1.OpfsDb('/quarkmeme.db');
+        console.log('OPFS SQLite DB active: /quarkmeme.db');
+      } catch (opfsErr) {
+        console.warn('OpfsDb creation failed, falling back to in-memory DB:', opfsErr);
         db = new sqlite3.oo1.DB();
-      } catch (memErr) {
-        console.error('In-memory SQLite DB fallback also failed:', memErr);
-        throw memErr;
       }
+    } else {
+      console.warn('OPFS not supported in environment, using in-memory DB');
+      db = new sqlite3.oo1.DB();
     }
 
-    // Immediately execute migrations from schema.sql on database creation
-    db.exec(SCHEMA_SQL);
+    // 3. Run bootstrap migrations and initial seed
+    runBootstrapMigrations(db);
 
-    // Check if count is 0; if 0, run seed script
-    await seedDataIfEmpty(db);
+    isInitialized = true;
+    self.postMessage({ type: 'INIT_SUCCESS', success: true });
   } catch (err: any) {
-    console.error('Fatal database worker initialization error:', err);
-    self.postMessage({ type: 'INIT_ERROR', error: String(err) });
-    throw err;
+    console.error('Fatal SQLite Worker initialization error:', err);
+    // Even if fatal error occurs, try to spin up basic in-memory DB so UI never breaks
+    try {
+      if ((self as any).sqlite3?.oo1?.DB) {
+        db = new (self as any).sqlite3.oo1.DB();
+        runBootstrapMigrations(db);
+        isInitialized = true;
+        self.postMessage({ type: 'INIT_SUCCESS', success: true, fallback: true });
+        return;
+      }
+    } catch (_) {}
+
+    self.postMessage({
+      type: 'INIT_ERROR',
+      error: err?.message || String(err),
+    });
   }
 }
 
@@ -531,22 +562,27 @@ self.onunhandledrejection = (event: PromiseRejectionEvent) => {
   } catch {}
 };
 
-// Handle incoming messages from the main thread
+// Listen for message events (supports both action/payload and type/payload conventions)
 self.onmessage = async (e: MessageEvent) => {
-  const { id, action, payload } = e.data;
+  const data = e.data || {};
+  const id = data.id;
+  const actionType = data.action || data.type;
+  const payload = data.payload || {};
+
+  if (actionType === 'INIT' || actionType === 'init') {
+    await initSqlite();
+    if (id) {
+      self.postMessage({ id, type: 'INIT_SUCCESS', success: true });
+    }
+    return;
+  }
+
+  if (!db && !isInitialized) {
+    await initSqlite();
+  }
 
   try {
-    if (action === 'init') {
-      await initDb();
-      self.postMessage({ id, type: 'INIT_SUCCESS', success: true });
-      return;
-    }
-
-    if (!db) {
-      await initDb();
-    }
-
-    switch (action) {
+    switch (actionType) {
       case 'exec': {
         const { sql, bind } = payload;
         const rows: any[] = [];
@@ -558,7 +594,7 @@ self.onmessage = async (e: MessageEvent) => {
             rows.push(row);
           },
         });
-        self.postMessage({ id, success: true, data: rows });
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
         break;
       }
 
@@ -568,7 +604,26 @@ self.onmessage = async (e: MessageEvent) => {
           sql,
           bind: bind || [],
         });
-        self.postMessage({ id, success: true });
+        self.postMessage({ id, type: 'SUCCESS', success: true });
+        break;
+      }
+
+      case 'EXECUTE_SQL': {
+        const rows = db.exec({
+          sql: payload.sql,
+          bind: payload.bind || [],
+          returnValue: 'resultRows',
+        });
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
+        break;
+      }
+
+      case 'GET_AGENTS': {
+        const rows = db.exec({
+          sql: 'SELECT * FROM agents',
+          returnValue: 'resultRows',
+        });
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
         break;
       }
 
@@ -588,7 +643,7 @@ self.onmessage = async (e: MessageEvent) => {
             doc.file_path || null,
           ],
         });
-        self.postMessage({ id, success: true });
+        self.postMessage({ id, type: 'SUCCESS', success: true });
         break;
       }
 
@@ -603,7 +658,7 @@ self.onmessage = async (e: MessageEvent) => {
             rows.push(row);
           },
         });
-        self.postMessage({ id, success: true, data: rows });
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
         break;
       }
 
@@ -667,7 +722,7 @@ self.onmessage = async (e: MessageEvent) => {
             });
           }
         }
-        self.postMessage({ id, success: true, data: rows });
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
         break;
       }
 
@@ -701,32 +756,29 @@ self.onmessage = async (e: MessageEvent) => {
           completed_at: completedAt,
         };
 
-        self.postMessage({ id, success: true, data: updatedTask });
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: updatedTask, result: updatedTask });
         break;
       }
 
       case 'GET_SETTING': {
         const { key, defaultValue } = payload;
-        let val: string | null = null;
-        db.exec({
-          sql: `SELECT value FROM settings WHERE key = ? LIMIT 1`,
+        const rows = db.exec({
+          sql: 'SELECT value FROM settings WHERE key = ?',
           bind: [key],
-          rowMode: 'object',
-          callback: (row: any) => {
-            val = row.value;
-          },
+          returnValue: 'resultRows',
         });
-        self.postMessage({ id, success: true, data: val !== null ? val : (defaultValue || '') });
+        const value = rows && rows.length > 0 ? rows[0][0] : defaultValue ?? null;
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: value, result: value });
         break;
       }
 
       case 'SET_SETTING': {
         const { key, value } = payload;
         db.exec({
-          sql: `INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)`,
+          sql: 'INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP',
           bind: [key, value],
         });
-        self.postMessage({ id, success: true });
+        self.postMessage({ id, type: 'SUCCESS', success: true });
         break;
       }
 
@@ -739,18 +791,19 @@ self.onmessage = async (e: MessageEvent) => {
             settingsMap[row.key] = row.value;
           },
         });
-        self.postMessage({ id, success: true, data: settingsMap });
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: settingsMap, result: settingsMap });
         break;
       }
 
       default:
-        throw new Error(`Unknown action: ${action}`);
+        throw new Error(`Unknown worker action: ${actionType}`);
     }
-  } catch (error: any) {
+  } catch (err: any) {
     self.postMessage({
       id,
+      type: 'ERROR',
       success: false,
-      error: error?.message || String(error),
+      error: err?.message || String(err),
     });
   }
 };

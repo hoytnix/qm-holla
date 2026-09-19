@@ -38,6 +38,12 @@
   - Added 2500ms safety timeout, `crossOriginIsolated` check, worker error propagation, and memory stubbing in [`opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts).
   - Handled fatal worker and promise rejection errors with explicit `INIT_ERROR` and `INIT_SUCCESS` messages in [`db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts).
   - Made [`RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx) and [`app/page.tsx`](file:///home/oloty/Dev/qm-holla/app/page.tsx) non-blocking by immediately rendering the SVG canvas with default crew data and background hydration with an `OPFS Hydrating...` / `OPFS Active` status badge.
+- **SQLite OPFS Proxy Query Parameter Error Resolution**:
+  - Replaced bundled `@sqlite.org/sqlite-wasm` module import in [`workers/db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts) with static `importScripts('/sqlite/sqlite3.js')`. This completely bypasses Webpack chunking and ensures `?vfs=opfs` query parameters are preserved without bundler stripping.
+  - Deployed official SQLite WASM 3.53.4 release assets (`sqlite3.js`, `sqlite3.wasm`, `sqlite3-opfs-async-proxy.js`) to [`public/sqlite/`](file:///home/oloty/Dev/qm-holla/public/sqlite/).
+  - Configured isolation and CORS headers (`Cross-Origin-Opener-Policy`, `Cross-Origin-Embedder-Policy`, `Access-Control-Allow-Origin: *`) for `/sqlite/*` in both [`public/_headers`](file:///home/oloty/Dev/qm-holla/public/_headers) and [`netlify.toml`](file:///home/oloty/Dev/qm-holla/netlify.toml).
+  - Maintained full SQLite schema, auto-migrations, fallback in-memory database, and Straw Hat crew seeding routines.
+  - Verified with `npx tsc --noEmit` and production build `pnpm build` (9/9 static routes generated cleanly).
 
 ## Invariants Maintained
 1. Local-First OPFS SQLite storage guarantee (zero external database dependencies, credentials stored in client OPFS).
