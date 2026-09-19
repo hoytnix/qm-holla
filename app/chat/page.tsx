@@ -19,7 +19,9 @@ import {
   Trash2,
   RefreshCw,
   Compass,
+  Crown,
 } from 'lucide-react';
+import { AgentIcon } from '@/components/ui/AgentIcon';
 
 function ChatContent() {
   const searchParams = useSearchParams();
@@ -206,10 +208,10 @@ function ChatContent() {
                 onChange={(e) => setSelectedAgentId(e.target.value)}
                 className="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-400"
               >
-                <option value="auto">⚡ Auto-Orchestrate (Captain Luffy)</option>
+                <option value="auto">Auto-Orchestrate (Captain Luffy)</option>
                 {agents.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.avatar_url || '⚡'} {a.name} ({a.role_title.split(' ')[0]})
+                    {a.name} ({a.role_title.split(' ')[0]})
                   </option>
                 ))}
               </select>
@@ -254,8 +256,8 @@ function ChatContent() {
         <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6">
-              <div className="w-16 h-16 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 flex items-center justify-center text-3xl mb-3 shadow-[0_0_30px_rgba(99,102,241,0.2)]">
-                🏴‍☠️
+              <div className="w-16 h-16 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 flex items-center justify-center mb-3 shadow-[0_0_30px_rgba(99,102,241,0.2)] text-amber-400">
+                <Crown width={32} height={32} />
               </div>
               <h2 className="text-xl font-bold text-white mb-1">
                 Grand Line Helm Awaits Your Order
@@ -281,8 +283,8 @@ function ChatContent() {
                   className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
                 >
                   {!isUser && (
-                    <div className="w-8 h-8 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-base shrink-0">
-                      {agent?.avatar_url || '⚡'}
+                    <div className="w-8 h-8 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-cyan-300 shrink-0">
+                      <AgentIcon agentId={agent?.id} role={agent?.role_title} width={18} height={18} />
                     </div>
                   )}
 

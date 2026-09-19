@@ -1,11 +1,12 @@
 import { db } from '@/lib/db/opfs-adapter';
-import { AgentRecord, SearchResult } from '@/lib/db/adapter';
+import { AgentRecord, SearchResult, DocumentRecord } from '@/lib/db/adapter';
 
 export interface OrchestrationResult {
   targetAgent: AgentRecord;
   delegationPath: string[];
   systemInstruction: string;
   contextExcerpts: SearchResult[];
+  crossAgentNotes: DocumentRecord[];
 }
 
 export const CAPTAIN_SYSTEM_PROMPT = `
@@ -73,7 +74,43 @@ export async function routeIntent(
 }
 
 /**
- * Assembles contextual prompt with FTS5 search retrieval and agent personality
+ * Inter-Agent Shared Memory Bus:
+ * Resolves cross-agent context from sibling division leads (e.g. Robin's research made available
+ * to Usopp for marketing copy or Franky for architecture specs).
+ */
+export async function resolveSharedContext(
+  targetAgentId: string,
+  userPrompt: string
+): Promise<DocumentRecord[]> {
+  try {
+    const allDocs = db.getAllDocuments ? await db.getAllDocuments() : [];
+    // Filter documents authored by other agents that share semantic relevance or project ties
+    const siblingDocs = allDocs.filter((d) => d.agent_id && d.agent_id !== targetAgentId);
+
+    const promptTokens = userPrompt.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
+    const scoredDocs = siblingDocs.map((doc) => {
+      const text = `${doc.title} ${doc.content}`.toLowerCase();
+      let matchCount = 0;
+      for (const token of promptTokens) {
+        if (text.includes(token)) matchCount += 1;
+      }
+      return { doc, score: matchCount };
+    });
+
+    return scoredDocs
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map((item) => item.doc);
+  } catch (err) {
+    console.warn('Failed to resolve shared inter-agent context:', err);
+    return [];
+  }
+}
+
+/**
+ * Assembles contextual prompt with FTS5 search retrieval, inter-agent shared memory,
+ * and separation of duties enforcement.
  */
 export async function assembleContext(
   userPrompt: string,
@@ -114,22 +151,40 @@ export async function assembleContext(
     }
   }
 
+  // Resolve inter-agent shared memory
+  const sharedDocs = await resolveSharedContext(targetAgent.id, userPrompt);
+
   // Build composite system prompt
   let contextBlock = '';
   if (combinedExcerpts.length > 0) {
-    contextBlock = `\n\n--- LOCAL KNOWLEDGE VAULT RETRIEVAL (OPFS SQLite FTS5) ---\n` +
+    contextBlock += `\n\n--- LOCAL KNOWLEDGE VAULT RETRIEVAL (OPFS SQLite FTS5) ---\n` +
       combinedExcerpts
         .map((e, idx) => `[Source Document ${idx + 1}: ${e.title}]\n${e.content.slice(0, 1000)}`)
         .join('\n\n') +
       `\n--- END LOCAL KNOWLEDGE RETRIEVAL ---\n`;
   }
 
-  const systemInstruction = `${targetAgent.system_prompt}${contextBlock}\n\nMaintain character and resolve user queries efficiently. Always stay grounded in provided knowledge where applicable.`;
+  if (sharedDocs.length > 0) {
+    contextBlock += `\n\n--- INTER-AGENT SHARED MEMORY BUS (CROSS-DIVISION INTEL) ---\n` +
+      sharedDocs
+        .map((d, idx) => `[Cross-Division Source ${idx + 1} (${d.agent_id}): ${d.title}]\n${d.content.slice(0, 1000)}`)
+        .join('\n\n') +
+      `\n--- END INTER-AGENT SHARED MEMORY BUS ---\n`;
+  }
+
+  const separationOfDuties = `
+--- SEPARATION OF DUTIES & COLLABORATION POLICY ---
+You are operating within a sovereign multi-agent crew.
+Respect domain boundaries: Each division lead governs their domain. Reference sibling research or specifications for context, but do NOT rewrite or contradict their core specs without explicit user delegation.
+`;
+
+  const systemInstruction = `${targetAgent.system_prompt}${contextBlock}${separationOfDuties}\n\nMaintain character and resolve user queries efficiently. Always stay grounded in provided knowledge where applicable.`;
 
   return {
     targetAgent,
     delegationPath,
     systemInstruction,
     contextExcerpts: combinedExcerpts,
+    crossAgentNotes: sharedDocs,
   };
 }
