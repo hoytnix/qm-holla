@@ -1,6 +1,32 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
+- Implemented **100% Client-Side AI Execution Architecture (Direct Browser Execution)**:
+  - **Direct Browser Client Runner (`lib/ai/client-runner.ts`)**:
+    - Created `generateContentClientDirect()` executing direct browser-to-Gemini REST generation via `fetch()` to `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`.
+    - Added full parameter support: `apiKey`, `model`, `prompt`, `messages`, `systemInstruction`, `tools`, `responseSchema`, `temperature`, and `maxTokens`.
+    - Implemented response parsing directly in the browser: text chunks, candidate function call interception, grounding metadata extraction, and executable code / results parsing.
+    - Built multi-turn client-side function calling loop: executes `fetch_url_as_markdown` via direct browser fetch to `https://md.dhr.wtf/?url=...` and feeds `functionResponse` directly back to Gemini.
+    - Implemented `testGeminiConnection(apiKey, model, baseUrl)` running a minimal `"ping"` payload directly in the browser to verify key validity without server proxying.
+    - Implemented `generateCustomThemeDirect(apiKey, showTitle, model, baseUrl)` for structured JSON character casting directly in the browser.
+    - Added `getClientGeminiApiKey()` resolving API keys from `localStorage` (`gemini_api_key`, `llmApiKey`, `quark_llm_config_cache`) or client env vars.
+  - **Subagent Engine Refactor (`lib/ai/subagent-engine.ts`)**:
+    - Replaced all calls to `fetch('/api/chat')` with `generateContentClientDirect()`.
+    - Reads API key directly from configuration or browser storage via `getClientGeminiApiKey()`.
+    - Preserved AbortSignal cancellation support for halting active tasks.
+  - **Orchestrator Refactor (`lib/ai/orchestrator.ts`)**:
+    - Added browser-executable `runOrchestratedAgentClientDirect()` consuming `client-runner.ts` and local API keys rather than server routes.
+  - **Chat Page Refactor (`app/chat/page.tsx`)**:
+    - Replaced `fetch('/api/chat')` with direct `generateContentClientDirect()`.
+    - Handles interactive streaming text accumulation, grounding citations, and collapsible code execution blocks entirely on the client.
+  - **Voice Helm Refactor (`components/voice/VoiceHelmSheet.tsx`)**:
+    - Ensured voice speech-to-text input routes directly to `generateContentClientDirect()` instead of server endpoints.
+  - **LLM Setup Modal & Settings Context (`components/settings/LlmSetupModal.tsx`, `lib/settings/settings-context.tsx`)**:
+    - Updated connection testing to execute `testGeminiConnection()` directly from the browser.
+  - **Custom Universe Theme Generator (`components/settings/ThemeSelectionModal.tsx`, `app/settings/page.tsx`)**:
+    - Replaced calls to `/api/themes/custom` with `generateCustomThemeDirect()`.
+  - **Server Route Deprecation (`app/api/chat/route.ts`, `app/api/themes/custom/route.ts`)**:
+    - Deprecated server routes with HTTP 410 Gone responses to guarantee zero API keys or user prompts ever touch our backend server or server logs.
 - Implemented **Team Activity Stream Real Data Integration**:
   - **Removed Mock Placeholders (`components/crew/TeamActivityStream.tsx`)**:
     - Eliminated hardcoded placeholder activities array (`act-1` through `act-6` mock entries).

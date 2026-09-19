@@ -5,6 +5,7 @@ import { db } from '@/lib/db/opfs-adapter';
 import { AppTheme, ThemeConfig, THEMES, DEFAULT_THEME } from '@/lib/settings/themes';
 import { getThemedAgents } from '@/lib/crew/theme-mapper';
 import { CompanyProfile } from '@/lib/db/adapter';
+import { testGeminiConnection } from '@/lib/ai/client-runner';
 
 export type LLMProvider = 'openrouter' | 'gemini' | 'openai_compatible';
 
@@ -399,50 +400,21 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     latencyMs?: number;
     error?: string;
   }> => {
-    const startTime = Date.now();
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'x-llm-provider': config.provider,
-        'x-llm-api-key': config.apiKey,
-        'x-llm-model': config.model,
-        'x-llm-base-url': config.baseUrl,
-      };
+      const res = await testGeminiConnection(
+        config.apiKey,
+        config.model || 'gemini-2.5-flash',
+        config.baseUrl
+      );
 
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: 'Ping test connection. Reply with "Pong".' }],
-          systemPrompt: 'You are a test diagnostic service. Reply with "Pong" concisely.',
-        }),
-      });
-
-      const latencyMs = Date.now() - startTime;
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        return {
-          success: false,
-          latencyMs,
-          error: errorData.error || `HTTP ${response.status}: ${response.statusText}`,
-        };
-      }
-
-      // Check if we got a valid response
-      const text = await response.text();
-      if (text.includes('data: ') || text.includes('Pong') || response.status === 200) {
-        // Mark verified in state & storage
+      if (res.success) {
         await setIsLlmVerified(true);
-        return { success: true, latencyMs };
       }
 
-      await setIsLlmVerified(true);
-      return { success: true, latencyMs };
+      return res;
     } catch (err: any) {
       return {
         success: false,
-        latencyMs: Date.now() - startTime,
         error: err?.message || 'Connection attempt failed',
       };
     }

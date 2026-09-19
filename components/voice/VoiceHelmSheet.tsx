@@ -21,6 +21,7 @@ import {
 import { speechEngine } from '@/lib/voice/speech-engine';
 import { useSettings } from '@/lib/settings/settings-context';
 import { GlassButton } from '@/components/ui/GlassButton';
+import { generateContentClientDirect, getClientGeminiApiKey } from '@/lib/ai/client-runner';
 
 type VoiceHelmStatus = 'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING';
 
@@ -37,7 +38,7 @@ export const VoiceHelmSheet: React.FC<VoiceHelmSheetProps> = ({
   onDispatchMessage,
   lastAssistantReply = "I'm Luffy, Captain of this vessel! What course are we setting today?",
 }) => {
-  const { isConfigured } = useSettings();
+  const { isConfigured, config } = useSettings();
   const [status, setStatus] = useState<VoiceHelmStatus>('IDLE');
   const [transcript, setTranscript] = useState('');
   const [isMuted, setIsMuted] = useState(false);
@@ -127,23 +128,37 @@ export const VoiceHelmSheet: React.FC<VoiceHelmSheetProps> = ({
 
     setStatus('THINKING');
     try {
+      let reply = '';
       if (onDispatchMessage) {
-        const reply = await onDispatchMessage(transcript.trim());
-        setLatestReply(reply);
-        setStatus('SPEAKING');
-        if (!isMuted) {
-          speechEngine.speakLuffy(reply, {
-            onEnd: () => setStatus('IDLE'),
-            onError: () => setStatus('IDLE'),
+        reply = await onDispatchMessage(transcript.trim());
+      } else {
+        const apiKey = config?.apiKey?.trim() || getClientGeminiApiKey();
+        if (apiKey) {
+          const directRes = await generateContentClientDirect({
+            apiKey,
+            model: config?.model || 'gemini-2.5-flash',
+            baseUrl: config?.baseUrl,
+            prompt: transcript.trim(),
+            systemInstruction: 'You are Luffy, Captain of Quarkmeme. Give a concise, energetic response (maximum 2 sentences).',
           });
+          reply = directRes.text || "Aye aye! I hear you loud and clear. Let's set sail!";
         } else {
-          setStatus('IDLE');
+          reply = `Aye aye! I received your order: "${transcript.trim()}". Setting sail!`;
         }
+      }
+
+      setLatestReply(reply);
+      setStatus('SPEAKING');
+      if (!isMuted) {
+        speechEngine.speakLuffy(reply, {
+          onEnd: () => setStatus('IDLE'),
+          onError: () => setStatus('IDLE'),
+        });
       } else {
         setStatus('IDLE');
       }
     } catch (err) {
-      console.error('Dispatch error:', err);
+      console.error('Voice Helm AI generation error:', err);
       setStatus('IDLE');
     }
   };

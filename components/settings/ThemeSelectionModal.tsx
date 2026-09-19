@@ -7,6 +7,7 @@ import { AppTheme, THEMES, ThemeConfig } from '@/lib/settings/themes';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { GlassButton } from '@/components/ui/GlassButton';
 import { db } from '@/lib/db/opfs-adapter';
+import { generateCustomThemeDirect, getClientGeminiApiKey } from '@/lib/ai/client-runner';
 import {
   Compass,
   Flame,
@@ -112,25 +113,17 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
     setGenerationSuccess(null);
 
     try {
-      const response = await fetch('/api/themes/custom', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-llm-provider': config.provider,
-          'x-llm-api-key': config.apiKey,
-          'x-llm-model': config.model,
-          'x-llm-base-url': config.baseUrl,
-        },
-        body: JSON.stringify({
-          title: queryInput.trim(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate custom universe mapping.');
+      const apiKey = config.apiKey?.trim() || getClientGeminiApiKey();
+      if (!apiKey) {
+        throw new Error('API key is required. Please configure your LLM API key first.');
       }
+
+      const data = await generateCustomThemeDirect(
+        apiKey,
+        queryInput.trim(),
+        config.model || 'gemini-2.5-flash',
+        config.baseUrl
+      );
 
       // Save custom query to context and storage
       await setCustomUniverseQuery(queryInput.trim());

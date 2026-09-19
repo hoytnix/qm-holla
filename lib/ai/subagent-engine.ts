@@ -3,7 +3,10 @@ import { AgentRecord, TaskRecord, DocumentRecord } from '@/lib/db/adapter';
 import { LLMConfig } from '@/lib/settings/settings-context';
 import { assembleContext } from '@/lib/ai/orchestrator';
 import { syncAgentMemoryBankAfterTask } from '@/lib/crew/agent-memory';
-import { readChatStream } from '@/lib/ai/tools';
+import {
+  generateContentClientDirect,
+  getClientGeminiApiKey,
+} from '@/lib/ai/client-runner';
 
 export interface ExecutionEvent {
   id: string;
@@ -211,49 +214,33 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
       let usedFallback = false;
       let fallbackReason = '';
 
+      // Resolve API key directly from config or browser storage
+      const resolvedApiKey = config.apiKey?.trim() || getClientGeminiApiKey();
+
       // Check if API key is configured for live LLM generation
-      if (config.apiKey && config.apiKey.trim()) {
+      if (resolvedApiKey) {
         const activeModel = agent?.model || context.targetAgent?.model || context.customModel || config.model;
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-          'x-llm-provider': config.provider,
-          'x-llm-api-key': config.apiKey,
-          'x-llm-model': activeModel,
-          'x-llm-base-url': config.baseUrl,
-        };
 
         try {
-          const res = await fetch('/api/chat', {
-            method: 'POST',
-            headers,
+          const directResult = await generateContentClientDirect({
+            apiKey: resolvedApiKey,
+            model: activeModel,
+            prompt,
+            systemInstruction: context.systemInstruction,
+            tools: context.tools || agent.tools,
+            temperature: config.temperature,
+            maxTokens: config.maxTokens,
+            baseUrl: config.baseUrl,
             signal: this.currentAbortController.signal,
-            body: JSON.stringify({
-              messages: [{ role: 'user', content: prompt }],
-              systemPrompt: context.systemInstruction,
-              tools: context.tools || agent.tools,
-              temperature: config.temperature,
-              maxTokens: config.maxTokens,
-            }),
           });
 
-          if (res.ok) {
-            const reader = res.body?.getReader();
-            if (reader) {
-              generatedOutput = await readChatStream(reader, () => {});
-            }
-          } else {
-            const errorPayload = await res.json().catch(() => ({}));
-            fallbackReason = errorPayload.error || `HTTP ${res.status}: ${res.statusText}`;
-            console.warn(`LLM fetch failed during subagent run (${fallbackReason}), generating local synthesis fallback`);
-            usedFallback = true;
-            generatedOutput = this.generateLocalSynthesis(agent, task, fallbackReason);
-          }
+          generatedOutput = directResult.text;
         } catch (fetchErr: any) {
           if (fetchErr?.name === 'AbortError' || this.currentAbortController?.signal.aborted) {
             throw fetchErr; // rethrow to be caught by outer catch for cancellation
           }
-          fallbackReason = fetchErr?.message || 'Network/Fetch error';
-          console.warn(`Network error during subagent execution (${fallbackReason}), using local synthesis fallback`);
+          fallbackReason = fetchErr?.message || 'Direct client runner error';
+          console.warn(`Direct LLM execution failed during subagent execution (${fallbackReason}), using local synthesis fallback`);
           usedFallback = true;
           generatedOutput = this.generateLocalSynthesis(agent, task, fallbackReason);
         }

@@ -1,6 +1,7 @@
 import { db } from '@/lib/db/opfs-adapter';
 import { AgentRecord, SearchResult, DocumentRecord, AgentToolsConfig } from '@/lib/db/adapter';
 import { loadAgentMemoryBank } from '@/lib/crew/agent-memory';
+import { generateContentClientDirect, getClientGeminiApiKey } from './client-runner';
 
 export interface OrchestrationResult {
   targetAgent: AgentRecord;
@@ -279,6 +280,47 @@ export async function executeAgentPipeline(options: AgentPipelineOptions): Promi
     delegationPath: context.delegationPath,
     targetAgent: context.targetAgent,
     context,
+  };
+}
+
+/**
+ * Executes an orchestrated agent instruction directly in the browser via generateContentClientDirect.
+ * Handles context assembly, agent routing, client API key resolution, and direct Gemini execution.
+ */
+export async function runOrchestratedAgentClientDirect(options: {
+  prompt: string;
+  agentId?: string;
+  apiKey?: string;
+  model?: string;
+  globalPrompt?: string;
+  signal?: AbortSignal;
+  onChunk?: (text: string) => void;
+}) {
+  const { prompt, agentId, apiKey, model, globalPrompt, signal, onChunk } = options;
+  const context = await assembleContext(prompt, agentId, globalPrompt);
+  const resolvedApiKey = apiKey?.trim() || getClientGeminiApiKey();
+
+  if (!resolvedApiKey) {
+    throw new Error('No Gemini API key configured. Please set your key in Settings.');
+  }
+
+  const activeModel = model || context.targetAgent.model || context.customModel || 'gemini-2.5-flash';
+
+  const result = await generateContentClientDirect({
+    apiKey: resolvedApiKey,
+    model: activeModel,
+    prompt,
+    systemInstruction: context.systemInstruction,
+    tools: context.tools || context.targetAgent.tools,
+    signal,
+    onChunk,
+  });
+
+  return {
+    ...result,
+    context,
+    targetAgent: context.targetAgent,
+    delegationPath: context.delegationPath,
   };
 }
 

@@ -8,6 +8,7 @@ import { useSettings, LLMProvider, DEFAULT_GLOBAL_SYSTEM_PROMPT } from '@/lib/se
 import { AppTheme, THEMES, ThemeConfig } from '@/lib/settings/themes';
 import { db } from '@/lib/db/opfs-adapter';
 import { CompanyProfile } from '@/lib/db/adapter';
+import { generateCustomThemeDirect, getClientGeminiApiKey } from '@/lib/ai/client-runner';
 import {
   Sparkles,
   Bot,
@@ -224,25 +225,17 @@ export default function SettingsPage() {
     setCustomGenSuccess(null);
 
     try {
-      const response = await fetch('/api/themes/custom', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-llm-provider': config.provider,
-          'x-llm-api-key': config.apiKey,
-          'x-llm-model': config.model,
-          'x-llm-base-url': config.baseUrl,
-        },
-        body: JSON.stringify({
-          title: customInputQuery.trim(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to cast custom universe.');
+      const apiKey = config.apiKey?.trim() || getClientGeminiApiKey();
+      if (!apiKey) {
+        throw new Error('Please configure and verify your LLM API Key first.');
       }
+
+      const data = await generateCustomThemeDirect(
+        apiKey,
+        customInputQuery.trim(),
+        config.model || 'gemini-2.5-flash',
+        config.baseUrl
+      );
 
       await setCustomUniverseQuery(customInputQuery.trim());
 

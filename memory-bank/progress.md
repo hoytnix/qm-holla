@@ -3,6 +3,15 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] 100% Client-Side AI Execution Architecture (Direct Browser Execution):
+  - Created [`lib/ai/client-runner.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/client-runner.ts) supporting direct browser `fetch()` to Gemini API with function calling interception, web markdowner tool execution (`https://md.dhr.wtf/?url=...`), grounding citations, code execution blocks, `testGeminiConnection()`, and `generateCustomThemeDirect()`.
+  - Refactored [`lib/ai/subagent-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/subagent-engine.ts) to execute tasks directly client-side with cancellation support and local storage key resolution.
+  - Refactored [`lib/ai/orchestrator.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/orchestrator.ts) with `runOrchestratedAgentClientDirect()`.
+  - Refactored [`app/chat/page.tsx`](file:///home/oloty/Dev/qm-holla/app/chat/page.tsx) to execute direct client generation with live streaming accumulation.
+  - Refactored [`components/voice/VoiceHelmSheet.tsx`](file:///home/oloty/Dev/qm-holla/components/voice/VoiceHelmSheet.tsx) to use client-side generation.
+  - Updated [`components/settings/LlmSetupModal.tsx`](file:///home/oloty/Dev/qm-holla/components/settings/LlmSetupModal.tsx) and [`lib/settings/settings-context.tsx`](file:///home/oloty/Dev/qm-holla/lib/settings/settings-context.tsx) to run direct connection tests.
+  - Updated [`components/settings/ThemeSelectionModal.tsx`](file:///home/oloty/Dev/qm-holla/components/settings/ThemeSelectionModal.tsx) and [`app/settings/page.tsx`](file:///home/oloty/Dev/qm-holla/app/settings/page.tsx) to run `generateCustomThemeDirect()`.
+  - Deprecated [`app/api/chat/route.ts`](file:///home/oloty/Dev/qm-holla/app/api/chat/route.ts) and [`app/api/themes/custom/route.ts`](file:///home/oloty/Dev/qm-holla/app/api/themes/custom/route.ts) with HTTP 410 Gone responses to eliminate all server-side AI processing.
 - [x] Removed Mock Placeholder Data from Team Activity Stream:
   - Eliminated hardcoded placeholder activities (`act-1` to `act-6`) from [`components/crew/TeamActivityStream.tsx`](file:///home/oloty/Dev/qm-holla/components/crew/TeamActivityStream.tsx).
   - Derived live activities exclusively from actual `tasks` records passed as props, resolving agent display names and completion/creation timestamps.

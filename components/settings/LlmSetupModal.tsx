@@ -5,6 +5,7 @@ import { useSettings, LLMProvider } from '@/lib/settings/settings-context';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { GlassButton } from '@/components/ui/GlassButton';
 import { GOOGLE_AI_STUDIO_MODELS } from '@/lib/ai/models';
+import { testGeminiConnection } from '@/lib/ai/client-runner';
 import {
   Sparkles,
   Bot,
@@ -106,7 +107,17 @@ export const LlmSetupModal: React.FC<LlmSetupModalProps> = ({
   const handleTestConnection = async () => {
     if (!config.apiKey.trim()) return;
     setTestStatus({ running: true });
-    const res = await testConnection();
+
+    const res = await testGeminiConnection(
+      config.apiKey,
+      config.model || 'gemini-2.5-flash',
+      config.baseUrl
+    );
+
+    if (res.success) {
+      await setIsLlmVerified(true);
+    }
+
     setTestStatus({
       running: false,
       success: res.success,

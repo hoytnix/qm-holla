@@ -35,10 +35,13 @@ import {
 } from 'lucide-react';
 import { AgentIcon } from '@/components/ui/AgentIcon';
 import {
-  readChatStream,
   GroundingMetadata,
   CodeExecutionBlock,
 } from '@/lib/ai/tools';
+import {
+  generateContentClientDirect,
+  getClientGeminiApiKey,
+} from '@/lib/ai/client-runner';
 
 interface ChatMessage extends MessageRecord {
   groundingMetadata?: GroundingMetadata | null;
@@ -287,7 +290,7 @@ function ChatContent() {
 
       setActiveTrace(orchestration.delegationPath);
 
-      // 3. Initiate Streaming Request to Next.js route handler with ephemeral headers
+      // 3. Direct Browser Execution via generateContentClientDirect
       const assistantMsgId = `msg-${Date.now().toString(36)}-a`;
       let currentGrounding: GroundingMetadata | null = null;
       let currentCodeBlocks: CodeExecutionBlock[] = [];
@@ -305,128 +308,124 @@ function ChatContent() {
 
       setMessages((prev) => [...prev, assistantMsg]);
 
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      const activeModel = orchestration.targetAgent.model || orchestration.customModel || config.model;
-      if (config.apiKey) headers['x-llm-api-key'] = config.apiKey;
-      if (config.provider) headers['x-llm-provider'] = config.provider;
-      if (activeModel) headers['x-llm-model'] = activeModel;
-      if (config.baseUrl) headers['x-llm-base-url'] = config.baseUrl;
+      const activeModel = orchestration.targetAgent.model || orchestration.customModel || config.model || 'gemini-2.5-flash';
+      const resolvedApiKey = config.apiKey?.trim() || getClientGeminiApiKey();
 
-      const activeTools = orchestration.tools || orchestration.targetAgent.tools;
-
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          messages: [...messages, userMsg].map((m) => ({
-            role: m.sender_type === 'user' ? 'user' : 'assistant',
-            content: m.content,
-          })),
-          systemPrompt: orchestration.systemInstruction,
-          tools: activeTools,
-        }),
-      });
-
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.error || `HTTP error ${response.status}`);
+      if (!resolvedApiKey) {
+        throw new Error('No Gemini API key configured. Please configure your API key in Settings.');
       }
 
-      const reader = response.body?.getReader();
+      const activeTools = orchestration.tools || orchestration.targetAgent.tools;
       let accumulated = '';
 
-      if (reader) {
-        accumulated = await readChatStream(reader, (event) => {
-          if (event.type === 'text') {
-            accumulated += event.content;
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMsgId ? { ...m, content: accumulated } : m
-              )
-            );
-          } else if (event.type === 'executable_code') {
-            const codePart = event.executableCode;
-            const existingIdx = codePart.id
-              ? currentCodeBlocks.findIndex((b) => b.id === codePart.id)
-              : -1;
-            if (existingIdx >= 0) {
-              currentCodeBlocks[existingIdx] = {
-                ...currentCodeBlocks[existingIdx],
+      const runnerResult = await generateContentClientDirect({
+        apiKey: resolvedApiKey,
+        model: activeModel,
+        baseUrl: config.baseUrl,
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        systemInstruction: orchestration.systemInstruction,
+        tools: activeTools,
+        messages: [...messages, userMsg].map((m) => ({
+          role: m.sender_type === 'user' ? 'user' : 'assistant',
+          content: m.content,
+        })),
+        onChunk: (chunk) => {
+          accumulated += chunk;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId ? { ...m, content: accumulated } : m
+            )
+          );
+        },
+        onExecutableCode: (codePart) => {
+          const existingIdx = codePart.id
+            ? currentCodeBlocks.findIndex((b) => b.id === codePart.id)
+            : -1;
+          if (existingIdx >= 0) {
+            currentCodeBlocks[existingIdx] = {
+              ...currentCodeBlocks[existingIdx],
+              code: codePart.code || '',
+              language: codePart.language || 'python',
+            };
+          } else {
+            currentCodeBlocks = [
+              ...currentCodeBlocks,
+              {
+                id: codePart.id,
                 code: codePart.code || '',
                 language: codePart.language || 'python',
-              };
-            } else {
-              currentCodeBlocks = [
-                ...currentCodeBlocks,
-                {
-                  id: codePart.id,
-                  code: codePart.code || '',
-                  language: codePart.language || 'python',
-                },
-              ];
-            }
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMsgId
-                  ? { ...m, codeExecutionBlocks: [...currentCodeBlocks] }
-                  : m
-              )
-            );
-          } else if (event.type === 'code_execution_result') {
-            const resPart = event.codeExecutionResult;
-            const existingIdx = resPart.id
-              ? currentCodeBlocks.findIndex((b) => b.id === resPart.id)
-              : currentCodeBlocks.length - 1;
-            if (existingIdx >= 0) {
-              currentCodeBlocks[existingIdx] = {
-                ...currentCodeBlocks[existingIdx],
+              },
+            ];
+          }
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId
+                ? { ...m, codeExecutionBlocks: [...currentCodeBlocks] }
+                : m
+            )
+          );
+        },
+        onCodeExecutionResult: (resPart) => {
+          const existingIdx = resPart.id
+            ? currentCodeBlocks.findIndex((b) => b.id === resPart.id)
+            : currentCodeBlocks.length - 1;
+          if (existingIdx >= 0) {
+            currentCodeBlocks[existingIdx] = {
+              ...currentCodeBlocks[existingIdx],
+              outcome: resPart.outcome,
+              output: resPart.output,
+            };
+          } else {
+            currentCodeBlocks = [
+              ...currentCodeBlocks,
+              {
+                id: resPart.id,
+                code: '',
                 outcome: resPart.outcome,
                 output: resPart.output,
-              };
-            } else {
-              currentCodeBlocks = [
-                ...currentCodeBlocks,
-                {
-                  id: resPart.id,
-                  code: '',
-                  outcome: resPart.outcome,
-                  output: resPart.output,
-                },
-              ];
-            }
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMsgId
-                  ? { ...m, codeExecutionBlocks: [...currentCodeBlocks] }
-                  : m
-              )
-            );
-          } else if (event.type === 'grounding_metadata') {
-            currentGrounding = {
-              ...currentGrounding,
-              ...event.groundingMetadata,
-              webSearchQueries: [
-                ...new Set([
-                  ...(currentGrounding?.webSearchQueries || []),
-                  ...(event.groundingMetadata.webSearchQueries || []),
-                ]),
-              ],
-              groundingChunks: [
-                ...(currentGrounding?.groundingChunks || []),
-                ...(event.groundingMetadata.groundingChunks || []),
-              ],
-            };
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMsgId
-                  ? { ...m, groundingMetadata: currentGrounding }
-                  : m
-              )
-            );
+              },
+            ];
           }
-        });
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId
+                ? { ...m, codeExecutionBlocks: [...currentCodeBlocks] }
+                : m
+            )
+          );
+        },
+        onGroundingMetadata: (grounding) => {
+          currentGrounding = {
+            ...currentGrounding,
+            ...grounding,
+            webSearchQueries: [
+              ...new Set([
+                ...(currentGrounding?.webSearchQueries || []),
+                ...(grounding.webSearchQueries || []),
+              ]),
+            ],
+            groundingChunks: [
+              ...(currentGrounding?.groundingChunks || []),
+              ...(grounding.groundingChunks || []),
+            ],
+          };
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId
+                ? { ...m, groundingMetadata: currentGrounding }
+                : m
+            )
+          );
+        },
+      });
+
+      accumulated = runnerResult.text || accumulated;
+      if (runnerResult.groundingMetadata) {
+        currentGrounding = runnerResult.groundingMetadata;
+      }
+      if (runnerResult.codeExecutionBlocks && runnerResult.codeExecutionBlocks.length > 0) {
+        currentCodeBlocks = runnerResult.codeExecutionBlocks;
       }
 
       // 4. Save completed agent response into SQLite with grounding and code execution
