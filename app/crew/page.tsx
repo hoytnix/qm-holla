@@ -24,8 +24,10 @@ import {
   ArrowRight,
   Terminal,
 } from 'lucide-react';
+import { useSettings } from '@/lib/settings/settings-context';
 
 export default function CrewPage() {
+  const { themeVersion } = useSettings();
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +64,13 @@ export default function CrewPage() {
   useEffect(() => {
     loadAll();
   }, []);
+
+  // Reload crew when theme changes
+  useEffect(() => {
+    if (themeVersion === 0) return;
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themeVersion]);
 
   const openEdit = (agent: AgentRecord) => {
     setEditingAgent(agent);

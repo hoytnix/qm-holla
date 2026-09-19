@@ -31,7 +31,7 @@ function ChatContent() {
   const searchParams = useSearchParams();
   const requestedAgentId = searchParams.get('agent');
 
-  const { config, isConfigured } = useSettings();
+  const { config, isConfigured, themeVersion } = useSettings();
 
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>('auto');
@@ -66,6 +66,18 @@ function ChatContent() {
     }
     init();
   }, [requestedAgentId]);
+
+  // Reload agents when theme changes
+  useEffect(() => {
+    if (themeVersion === 0) return;
+    async function reload() {
+      await db.init();
+      const list = await db.getAgents();
+      setAgents(list);
+    }
+    reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themeVersion]);
 
   const handleClearHistory = async () => {
     if (confirm('Clear local chat history stored in SQLite?')) {

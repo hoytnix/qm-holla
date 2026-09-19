@@ -3,6 +3,12 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Theme Selection Bug Fix & Dynamic Universe Crew Mapping:
+  - Created [`lib/crew/theme-mapper.ts`](file:///home/oloty/Dev/qm-holla/lib/crew/theme-mapper.ts) with character mappings for all 7 built-in universes (One Piece, Naruto, The Office, Game Of Thrones, NCIS, Pokemon, Frieren), translating 7 abstract agent role slots to universe-specific characters with themed names, system prompts, routing descriptions, and avatars.
+  - Rewired `setTheme()` in [`lib/settings/settings-context.tsx`](file:///home/oloty/Dev/qm-holla/lib/settings/settings-context.tsx) to write themed agents to the database via `db.saveAgent()` using `getThemedAgents()`, then bump a reactive `themeVersion` counter so all consuming pages reload.
+  - Eliminated premature One Piece mounting in [`app/page.tsx`](file:///home/oloty/Dev/qm-holla/app/page.tsx) by removing hardcoded `DEFAULT_CREW` initial state and adding `themeVersion`-reactive `useEffect`.
+  - Updated [`components/canvas/RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx) to use theme-aware fallback via `getThemedAgents(currentTheme)` instead of hardcoded One Piece defaults.
+  - Added `themeVersion`-reactive reload effects to [`app/crew/page.tsx`](file:///home/oloty/Dev/qm-holla/app/crew/page.tsx) and [`app/chat/page.tsx`](file:///home/oloty/Dev/qm-holla/app/chat/page.tsx).
 - [x] Custom Universe AI Character Casting & LLM Configuration Vault:
   - Extended [`lib/settings/themes.ts`](file:///home/oloty/Dev/qm-holla/lib/settings/themes.ts) with `'custom'` theme type and custom fallback configuration.
   - Enhanced [`lib/settings/settings-context.tsx`](file:///home/oloty/Dev/qm-holla/lib/settings/settings-context.tsx) with `llmApiKey`, `customUniverseQuery`, `isLlmConfigured`, and dual-layer persistence (`localStorage` + browser OPFS SQLite).

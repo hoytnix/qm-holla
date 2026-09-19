@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { db } from '@/lib/db/opfs-adapter';
 import { AppTheme, ThemeConfig, THEMES, DEFAULT_THEME } from '@/lib/settings/themes';
+import { getThemedAgents } from '@/lib/crew/theme-mapper';
 
 export type LLMProvider = 'openrouter' | 'gemini' | 'openai_compatible';
 
@@ -38,6 +39,8 @@ export interface SettingsContextValue {
   setLlmApiKey: (key: string) => Promise<void>;
   setCustomUniverseQuery: (query: string) => Promise<void>;
   setCustomThemeConfig: (customConfig: ThemeConfig) => Promise<void>;
+  // Reactive version counter: bumps on every theme change so pages can reload agent data
+  themeVersion: number;
 }
 
 export const DEFAULT_GLOBAL_SYSTEM_PROMPT = `You are an elite autonomous AI operating inside Quarkmeme, a sovereign, local-first multi-agent operating system.
@@ -73,6 +76,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [hasSelectedTheme, setHasSelectedTheme] = useState<boolean>(true); // Default true until verified on client to avoid flash
   const [customUniverseQuery, setCustomUniverseQueryState] = useState<string>('');
   const [customThemeConfig, setCustomThemeConfig] = useState<ThemeConfig | null>(null);
+  const [themeVersion, setThemeVersion] = useState(0);
   const hasLoadedRef = React.useRef(false);
 
   // Hydrate settings and theme from local storage cache first, then SQLite
@@ -211,9 +215,21 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await db.init();
       await db.setSetting('app_theme', theme);
       await db.setSetting('has_selected_theme', 'true');
+
+      // Write themed agents to the database (non-custom themes only;
+      // custom themes are written directly by the AI mapper in ThemeSelectionModal)
+      const themedAgents = getThemedAgents(theme);
+      if (themedAgents) {
+        for (const agent of themedAgents) {
+          await db.saveAgent(agent);
+        }
+      }
     } catch (err) {
       console.warn('Failed to persist theme to OPFS SQLite:', err);
     }
+
+    // Bump version so consuming pages reactively reload agents from DB
+    setThemeVersion((v) => v + 1);
   }, []);
 
   const dismissThemeModal = useCallback(() => {
@@ -407,6 +423,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setLlmApiKey,
         setCustomUniverseQuery,
         setCustomThemeConfig: setCustomThemeConfigAction,
+        themeVersion,
       }}
     >
       {children}

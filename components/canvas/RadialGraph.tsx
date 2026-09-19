@@ -27,6 +27,8 @@ import {
   DEFAULT_TASKS,
   DEFAULT_DOCUMENTS,
 } from '@/lib/crew/default-crew';
+import { getThemedAgents } from '@/lib/crew/theme-mapper';
+import { useSettings } from '@/lib/settings/settings-context';
 import { opfsAdapter } from '@/lib/db/opfs-adapter';
 import { AgentIcon } from '@/components/ui/AgentIcon';
 
@@ -95,9 +97,14 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
   const [newNodeProjectId, setNewNodeProjectId] = useState('');
   const [newNodeDescription, setNewNodeDescription] = useState('');
   const [isPersistingNode, setIsPersistingNode] = useState(false);
-  // Initialize agents and projects state directly with DEFAULT_CREW and DEFAULT_PROJECTS for immediate non-blocking render
+
+  // Use theme-aware agent fallback instead of hardcoded One Piece
+  const { currentTheme } = useSettings();
+  const themedFallbackAgents = getThemedAgents(currentTheme) || DEFAULT_CREW;
+
+  // Initialize agents and projects state with theme-aware fallback for immediate non-blocking render
   const [agents, setAgents] = useState<AgentRecord[]>(
-    propAgents && propAgents.length > 0 ? propAgents : DEFAULT_CREW
+    propAgents && propAgents.length > 0 ? propAgents : themedFallbackAgents
   );
   const [projects, setProjects] = useState<ProjectRecord[]>(
     propProjects && propProjects.length > 0 ? propProjects : DEFAULT_PROJECTS
@@ -213,7 +220,7 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Effective data sets
-  const effectiveAgents = agents.length > 0 ? agents : DEFAULT_CREW;
+  const effectiveAgents = agents.length > 0 ? agents : themedFallbackAgents;
   const effectiveProjects = projects.length > 0 ? projects : DEFAULT_PROJECTS;
   const effectiveTasks = tasks.length > 0 ? tasks : DEFAULT_TASKS;
   const effectiveDocs = documents.length > 0 ? documents : DEFAULT_DOCUMENTS;

@@ -4,12 +4,6 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/opfs-adapter';
 import { AgentRecord, ProjectRecord, TaskRecord, DocumentRecord } from '@/lib/db/adapter';
-import {
-  DEFAULT_CREW,
-  DEFAULT_PROJECTS,
-  DEFAULT_TASKS,
-  DEFAULT_DOCUMENTS,
-} from '@/lib/crew/default-crew';
 import { RadialGraph } from '@/components/canvas/RadialGraph';
 import { ProjectWorkspaceDrawer, CanvasLegend } from '@/components/canvas/ProjectWorkspaceDrawer';
 import { MarkdownDrawer } from '@/components/vault/MarkdownDrawer';
@@ -38,13 +32,13 @@ import {
 } from 'lucide-react';
 
 export default function CanvasPage() {
-  const { config, themeConfig } = useSettings();
-  const [agents, setAgents] = useState<AgentRecord[]>(DEFAULT_CREW);
-  const [projects, setProjects] = useState<ProjectRecord[]>(DEFAULT_PROJECTS);
-  const [tasks, setTasks] = useState<TaskRecord[]>(DEFAULT_TASKS);
-  const [documents, setDocuments] = useState<DocumentRecord[]>(DEFAULT_DOCUMENTS);
+  const { config, themeConfig, hasSelectedTheme, themeVersion } = useSettings();
+  const [agents, setAgents] = useState<AgentRecord[]>([]);
+  const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const [tasks, setTasks] = useState<TaskRecord[]>([]);
+  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
 
-  const [selectedAgent, setSelectedAgent] = useState<AgentRecord | null>(DEFAULT_CREW[0]);
+  const [selectedAgent, setSelectedAgent] = useState<AgentRecord | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null);
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
 
@@ -105,19 +99,33 @@ export default function CanvasPage() {
       if (taskList && taskList.length > 0) setTasks(taskList);
       if (docList && docList.length > 0) setDocuments(docList);
 
-      if (agentList.length > 0 && !selectedAgent) {
-        setSelectedAgent(agentList[0]);
+      if (agentList.length > 0) {
+        setSelectedAgent((prev) => {
+          // If no agent selected yet, or the previous selected agent is stale, pick the captain
+          if (!prev) return agentList[0];
+          // Refresh the selected agent's data from the new list (name/prompt may have changed)
+          const refreshed = agentList.find((a) => a.id === prev.id);
+          return refreshed || agentList[0];
+        });
       }
     } catch (e) {
       console.error('Failed to load fleet data in canvas:', e);
     }
   };
 
+  // Initial load on mount
   useEffect(() => {
     if (hasLoadedRef.current) return;
     hasLoadedRef.current = true;
     loadFleetData();
-  }, []); // STRICTLY EMPTY ARRAY
+  }, []); // STRICTLY EMPTY ARRAY — mount-only
+
+  // Reactive reload when theme changes (themeVersion bumps after setTheme writes agents to DB)
+  useEffect(() => {
+    if (themeVersion === 0) return; // Skip the initial mount (handled above)
+    loadFleetData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themeVersion]);
 
   // Handle project diamond selection from RadialGraph
   const handleSelectProject = (proj: ProjectRecord) => {
