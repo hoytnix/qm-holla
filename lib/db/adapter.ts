@@ -91,6 +91,7 @@ export interface IQuarkDatabase {
   getTasks(projectId?: string): Promise<TaskRecord[]>;
   getTasksForProject(projectId: string): Promise<TaskRecord[]>;
   saveTask(task: TaskRecord): Promise<void>;
+  updateTaskStatus?(taskId: string, status: 'pending' | 'in_progress' | 'completed'): Promise<TaskRecord | null>;
   toggleTaskStatus(taskId: string): Promise<TaskRecord | null>;
   deleteTask?(id: string): Promise<void>;
 

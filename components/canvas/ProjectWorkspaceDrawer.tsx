@@ -17,6 +17,8 @@ import {
   Star,
   Square,
   Sparkles,
+  Play,
+  Zap,
 } from 'lucide-react';
 import { ProjectRecord, TaskRecord, DocumentRecord, AgentRecord } from '@/lib/db/adapter';
 import { GlassButton } from '@/components/ui/GlassButton';
@@ -36,6 +38,8 @@ interface ProjectWorkspaceDrawerProps {
   onOpenDocument: (doc: DocumentRecord) => void;
   onNewTask?: () => void;
   onNewDocument?: () => void;
+  onRunAutonomousTasks?: (taskIds: string[]) => void;
+  isExecutingTasks?: boolean;
 }
 
 export const ProjectWorkspaceDrawer: React.FC<ProjectWorkspaceDrawerProps> = ({
@@ -52,10 +56,13 @@ export const ProjectWorkspaceDrawer: React.FC<ProjectWorkspaceDrawerProps> = ({
   onOpenDocument,
   onNewTask,
   onNewDocument,
+  onRunAutonomousTasks,
+  isExecutingTasks,
 }) => {
   if (!isOpen || !project) return null;
 
   const completedCount = tasks.filter((t) => t.status === 'completed').length;
+  const pendingTasks = tasks.filter((t) => t.status !== 'completed');
 
   return (
     <AnimatePresence>
@@ -108,8 +115,8 @@ export const ProjectWorkspaceDrawer: React.FC<ProjectWorkspaceDrawerProps> = ({
           </button>
         </div>
 
-        {/* Action Bar: Dual Responsive Action Buttons */}
-        <div className="grid grid-cols-2 gap-3 my-4">
+        {/* Action Bar: Responsive Action Buttons with Subagent Execution Trigger */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4">
           <GlassButton
             onClick={onToggleExpand}
             variant={isExpanded ? 'secondary' : 'glow'}
@@ -127,6 +134,27 @@ export const ProjectWorkspaceDrawer: React.FC<ProjectWorkspaceDrawerProps> = ({
               </>
             )}
           </GlassButton>
+
+          {onRunAutonomousTasks && (
+            <GlassButton
+              onClick={() => onRunAutonomousTasks(pendingTasks.map((t) => t.id))}
+              disabled={isExecutingTasks || pendingTasks.length === 0}
+              variant="primary"
+              className="flex items-center justify-center gap-2 text-xs py-2.5 min-h-[44px] bg-amber-600 hover:bg-amber-500 border-amber-400/40 text-white font-bold"
+            >
+              {isExecutingTasks ? (
+                <>
+                  <Zap width={16} height={16} className="text-amber-300 animate-bounce" />
+                  <span>Subagent Running...</span>
+                </>
+              ) : (
+                <>
+                  <Play width={15} height={15} className="fill-white" />
+                  <span>Auto-Run Tasks ({pendingTasks.length})</span>
+                </>
+              )}
+            </GlassButton>
+          )}
 
           <GlassButton
             onClick={onBackToUniverse}

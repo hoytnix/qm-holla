@@ -20,6 +20,8 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { GlassButton } from '@/components/ui/GlassButton';
 import { Navbar } from '@/components/layout/Navbar';
 import { AgentIcon } from '@/components/ui/AgentIcon';
+import { subagentEngine, ExecutionEvent } from '@/lib/ai/subagent-engine';
+import { useSettings } from '@/lib/settings/settings-context';
 import {
   Compass,
   MessageSquare,
@@ -31,9 +33,12 @@ import {
   ShieldAlert,
   Mic,
   Maximize2,
+  Play,
+  Zap,
 } from 'lucide-react';
 
 export default function CanvasPage() {
+  const { config } = useSettings();
   const [agents, setAgents] = useState<AgentRecord[]>(DEFAULT_CREW);
   const [projects, setProjects] = useState<ProjectRecord[]>(DEFAULT_PROJECTS);
   const [tasks, setTasks] = useState<TaskRecord[]>(DEFAULT_TASKS);
@@ -43,6 +48,10 @@ export default function CanvasPage() {
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null);
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
 
+  // Subagent execution state & live logs
+  const [isExecutingTasks, setIsExecutingTasks] = useState(false);
+  const [executionLogs, setExecutionLogs] = useState<ExecutionEvent[]>([]);
+
   // Drawers and modals state
   const [isWorkspaceDrawerOpen, setIsWorkspaceDrawerOpen] = useState(false);
   const [isMarkdownDrawerOpen, setIsMarkdownDrawerOpen] = useState(false);
@@ -51,6 +60,35 @@ export default function CanvasPage() {
   const [isVoiceHelmOpen, setIsVoiceHelmOpen] = useState(false);
 
   const hasLoadedRef = React.useRef(false);
+
+  // Subscribe to autonomous subagent engine events
+  useEffect(() => {
+    const unsubscribe = subagentEngine.subscribe(async (evt) => {
+      setExecutionLogs((prev) => [evt, ...prev.slice(0, 19)]);
+      if (evt.type === 'running') {
+        setIsExecutingTasks(true);
+        setTasks((prev) =>
+          prev.map((t) => (t.id === evt.taskId ? { ...t, status: 'in_progress' } : t))
+        );
+      } else if (evt.type === 'completed' || evt.type === 'failed') {
+        setIsExecutingTasks(subagentEngine.isBusy());
+        // Reload tasks and documents to reflect latest SQLite state
+        try {
+          await db.init();
+          const [freshTasks, freshDocs] = await Promise.all([
+            db.getTasks(),
+            db.getAllDocuments ? db.getAllDocuments() : Promise.resolve([]),
+          ]);
+          if (freshTasks && freshTasks.length > 0) setTasks(freshTasks);
+          if (freshDocs && freshDocs.length > 0) setDocuments(freshDocs);
+        } catch (e) {
+          console.warn('Failed to refresh data following subagent event:', e);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const loadFleetData = async () => {
     try {
@@ -221,6 +259,25 @@ export default function CanvasPage() {
                   onToggleExpandProject={handleToggleExpandProject}
                   onToggleTask={handleToggleTask}
                   onOpenDocument={handleOpenDocument}
+                  onNewProject={(newProj) => {
+                    setProjects((prev) => {
+                      if (prev.some((p) => p.id === newProj.id)) return prev;
+                      return [...prev, newProj];
+                    });
+                    setSelectedProject(newProj);
+                  }}
+                  onNewTask={(newTask) => {
+                    setTasks((prev) => {
+                      if (prev.some((t) => t.id === newTask.id)) return prev;
+                      return [...prev, newTask];
+                    });
+                  }}
+                  onNewDocument={(newDoc) => {
+                    setDocuments((prev) => {
+                      if (prev.some((d) => d.id === newDoc.id)) return prev;
+                      return [...prev, newDoc];
+                    });
+                  }}
                 />
               </div>
 
@@ -296,6 +353,56 @@ export default function CanvasPage() {
               </GlassCard>
             )}
 
+            {/* Autonomous Subagent Execution Engine Panel */}
+            <GlassCard className="p-5 border-amber-500/30 bg-slate-900/60 shadow-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center">
+                    <Zap width={16} height={16} />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">Subagent Engine</h3>
+                    <p className="text-[10px] text-slate-400 font-mono">Paced at {config.requestsPerMinute || 4} RPM</p>
+                  </div>
+                </div>
+
+                <GlassButton
+                  onClick={async () => {
+                    setIsExecutingTasks(true);
+                    await subagentEngine.triggerAutonomousSweep(config);
+                  }}
+                  disabled={isExecutingTasks}
+                  variant="primary"
+                  className="text-[11px] py-1.5 px-3 bg-amber-600 hover:bg-amber-500 border-amber-400/40 text-white font-bold flex items-center gap-1.5"
+                >
+                  <Play width={12} height={12} className="fill-white" />
+                  <span>{isExecutingTasks ? 'Processing Fleet...' : 'Sweep Fleet'}</span>
+                </GlassButton>
+              </div>
+
+              {/* Execution Events Stream */}
+              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                {executionLogs.length === 0 ? (
+                  <p className="text-[11px] text-slate-500 italic py-1">
+                    Subagents idle. Click 'Sweep Fleet' or open a project workspace to auto-run tasks.
+                  </p>
+                ) : (
+                  executionLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="p-2 rounded-lg bg-slate-950/70 border border-white/5 text-[11px] flex flex-col gap-0.5"
+                    >
+                      <div className="flex items-center justify-between font-mono text-[10px]">
+                        <span className="font-bold text-amber-300">{log.agentName}</span>
+                        <span className="text-slate-500">{log.timestamp}</span>
+                      </div>
+                      <p className="text-slate-300 line-clamp-2 leading-tight">{log.detail}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </GlassCard>
+
             {/* Local-First Architecture Specifications */}
             <GlassCard className="p-5 border-white/10 bg-slate-900/40">
               <div className="flex items-center gap-2 text-slate-200 text-xs font-semibold uppercase tracking-wider mb-3">
@@ -353,6 +460,11 @@ export default function CanvasPage() {
           setActiveDocument(null);
           setIsMarkdownDrawerOpen(true);
         }}
+        onRunAutonomousTasks={(taskIds) => {
+          subagentEngine.enqueueTasks(taskIds, config);
+          setIsExecutingTasks(true);
+        }}
+        isExecutingTasks={isExecutingTasks}
       />
 
       {/* Phase 2.3: Mobile Markdown Inspection & Creation Drawer */}

@@ -7,18 +7,18 @@
 - Fully operational local IndexedDB persistence via `sql.js` with auto-debounced database state export.
 
 ## Recent Changes
-- **Requests Per Minute (RPM) Rate Limit Setting**:
-  - Updated [`lib/settings/settings-context.tsx`](file:///home/oloty/Dev/qm-holla/lib/settings/settings-context.tsx) to add `requestsPerMinute: number` to `LLMConfig` with default `4`.
-  - Added hydration and persistence support in `SettingsProvider` for key `llm_rpm` in local storage and SQLite.
-  - Updated [`app/settings/page.tsx`](file:///home/oloty/Dev/qm-holla/app/settings/page.tsx) to add dual controls: a synchronized number input and slider for adjusting Requests Per Minute with informative rate-pacing guidance and the Lucide `Gauge` icon.
-- **Mobile Navigation Menu Toggle**:
-  - Updated [`components/layout/Navbar.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/Navbar.tsx) with a visible mobile hamburger menu button (`Menu` / `X` icons).
-  - Wired toggle state to open a slide-out navigation drawer with a darkened backdrop overlay and body scroll-lock.
-  - Enabled full mobile access to navigation routes including `/settings`, `/vault`, `/crew`, `/chat`, and `/`.
-  - Auto-closes mobile drawer on route navigation and backdrop clicks.
+- **Autonomous Subagent Execution Engine & Task Queue**:
+  - Implemented [`lib/ai/subagent-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/subagent-engine.ts) with background queue processing, strict Requests Per Minute (RPM) interval pacing, scoped context assembly (`assembleContext`), and output deliverable persistence to OPFS SQLite documents.
+  - Added `UPDATE_TASK_STATUS` actions in [`workers/db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts) and [`public/sqlite/sqlite-engine.js`](file:///home/oloty/Dev/qm-holla/public/sqlite/sqlite-engine.js) to support `in_progress` and `completed` status transitions with `completed_at` timestamps.
+  - Updated [`lib/db/adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/adapter.ts) and [`lib/db/opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts) with `updateTaskStatus` methods.
+  - Integrated subagent live activity ledger and autonomous fleet sweep trigger in [`app/page.tsx`](file:///home/oloty/Dev/qm-holla/app/page.tsx) and auto-run button in [`components/canvas/ProjectWorkspaceDrawer.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/ProjectWorkspaceDrawer.tsx).
+- **Radial Graph Dynamic Expansion & Persistence**:
+  - Enhanced [`components/canvas/RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx) with an interactive "Add Node" quick modal for dynamically creating projects (diamonds), tasks (checkboxes), and knowledge lore ('K' circles).
+  - Persisted all newly generated nodes directly into local SQLite via `opfsAdapter.saveProject`, `opfsAdapter.saveTask`, and `opfsAdapter.saveDocument`.
+  - Added live node callbacks `onNewProject`, `onNewTask`, and `onNewDocument` to ensure real-time orbital graph updates without reload delays.
 - **Production Build Validation**:
-  - Validated clean TypeScript compilation via `npx tsc --noEmit`.
-  - Validated production build (`pnpm build`) with zero errors across all 9 static routes.
+  - Verified clean TypeScript compilation via `npx tsc --noEmit`.
+  - Verified Next.js production build (`pnpm build`) with all 9 static routes generated cleanly.
 
 ## Invariants Maintained
 1. Local-First SQLite storage guarantee (zero cloud database bills, all state stored client-side in IndexedDB).

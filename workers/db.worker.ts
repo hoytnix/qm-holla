@@ -771,6 +771,39 @@ self.onmessage = async (e: MessageEvent) => {
         break;
       }
 
+      case 'UPDATE_TASK_STATUS': {
+        const { taskId, status } = payload;
+        let currentTask: any = null;
+        db.exec({
+          sql: `SELECT * FROM tasks WHERE id = ? LIMIT 1`,
+          bind: [taskId],
+          rowMode: 'object',
+          callback: (row: any) => {
+            currentTask = row;
+          },
+        });
+
+        if (!currentTask) {
+          throw new Error(`Task with id ${taskId} not found`);
+        }
+
+        const completedAt = status === 'completed' ? new Date().toISOString() : null;
+
+        db.exec({
+          sql: `UPDATE tasks SET status = ?, completed_at = ? WHERE id = ?`,
+          bind: [status, completedAt, taskId],
+        });
+
+        const updatedTask = {
+          ...currentTask,
+          status,
+          completed_at: completedAt,
+        };
+
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: updatedTask, result: updatedTask });
+        break;
+      }
+
       case 'GET_SETTING': {
         const { key, defaultValue } = payload;
         const rows = db.exec({

@@ -391,6 +391,24 @@ class OpfsDatabase implements IQuarkDatabase {
     }
   }
 
+  async updateTaskStatus(
+    taskId: string,
+    status: 'pending' | 'in_progress' | 'completed'
+  ): Promise<TaskRecord | null> {
+    if (!this.usingFallback && this.worker) {
+      try {
+        return await this.sendToWorker<TaskRecord>('UPDATE_TASK_STATUS', { taskId, status });
+      } catch (err) {
+        console.warn('Worker updateTaskStatus failed, updating in memory:', err);
+      }
+    }
+    const task = this.memTasks.find((t) => t.id === taskId);
+    if (!task) return null;
+    task.status = status;
+    task.completed_at = status === 'completed' ? new Date().toISOString() : null;
+    return { ...task };
+  }
+
   async toggleTaskStatus(taskId: string): Promise<TaskRecord | null> {
     if (!this.usingFallback && this.worker) {
       try {

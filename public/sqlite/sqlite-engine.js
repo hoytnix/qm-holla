@@ -692,6 +692,27 @@ self.onmessage = async (e) => {
         break;
       }
 
+      case 'UPDATE_TASK_STATUS': {
+        const { taskId, status } = payload;
+        const tasks = execToObjects(db, 'SELECT * FROM tasks WHERE id = ? LIMIT 1', [taskId]);
+        if (tasks.length === 0) {
+          throw new Error(`Task with id ${taskId} not found`);
+        }
+        const currentTask = tasks[0];
+        const completedAt = status === 'completed' ? new Date().toISOString() : null;
+
+        db.run('UPDATE tasks SET status = ?, completed_at = ? WHERE id = ?', [status, completedAt, taskId]);
+        persistChanges();
+
+        const updatedTask = {
+          ...currentTask,
+          status,
+          completed_at: completedAt,
+        };
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: updatedTask, result: updatedTask });
+        break;
+      }
+
       default:
         self.postMessage({ id, type: 'ERROR', success: false, error: `Unknown type: ${actionType}` });
     }

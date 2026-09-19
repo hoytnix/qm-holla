@@ -15,6 +15,8 @@ import {
   Circle,
   Square,
   Sparkles,
+  Plus,
+  X,
 } from 'lucide-react';
 import { AgentRecord, ProjectRecord, TaskRecord, DocumentRecord } from '@/lib/db/adapter';
 import {
@@ -43,6 +45,9 @@ interface RadialGraphProps {
   onToggleExpandProject?: (projectId: string) => void;
   onToggleTask?: (taskId: string) => void;
   onOpenDocument?: (doc: DocumentRecord) => void;
+  onNewProject?: (project: ProjectRecord) => void;
+  onNewTask?: (task: TaskRecord) => void;
+  onNewDocument?: (doc: DocumentRecord) => void;
 }
 
 // Level 1 Crew angles as mandated by specification:
@@ -78,7 +83,18 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
   onToggleExpandProject,
   onToggleTask,
   onOpenDocument,
+  onNewProject,
+  onNewTask,
+  onNewDocument,
 }) => {
+  // Quick Node Creation Modal State
+  const [isCreatingNode, setIsCreatingNode] = useState(false);
+  const [newNodeType, setNewNodeType] = useState<'project' | 'task' | 'document'>('project');
+  const [newNodeTitle, setNewNodeTitle] = useState('');
+  const [newNodeAgentId, setNewNodeAgentId] = useState('scholar-robin');
+  const [newNodeProjectId, setNewNodeProjectId] = useState('');
+  const [newNodeDescription, setNewNodeDescription] = useState('');
+  const [isPersistingNode, setIsPersistingNode] = useState(false);
   // Initialize agents and projects state directly with DEFAULT_CREW and DEFAULT_PROJECTS for immediate non-blocking render
   const [agents, setAgents] = useState<AgentRecord[]>(
     propAgents && propAgents.length > 0 ? propAgents : DEFAULT_CREW
@@ -281,6 +297,73 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
     }));
   };
 
+  const handleCreateNode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNodeTitle.trim()) return;
+    setIsPersistingNode(true);
+
+    try {
+      await opfsAdapter.init();
+
+      if (newNodeType === 'project') {
+        const newProj: ProjectRecord = {
+          id: `proj-${Date.now().toString(36)}`,
+          agent_id: newNodeAgentId,
+          title: newNodeTitle.trim(),
+          description: newNodeDescription.trim() || 'Dynamic radial project workspace',
+          category: 'research',
+          is_private: 0,
+        };
+        await opfsAdapter.saveProject(newProj);
+        setProjects((prev) => [...prev, newProj]);
+        onNewProject?.(newProj);
+        onSelectProject?.(newProj);
+        onToggleExpandProject?.(newProj.id);
+      } else if (newNodeType === 'task') {
+        const targetProjId = newNodeProjectId || effectiveProjects[0]?.id || 'proj-manifesto';
+        const targetProj = effectiveProjects.find((p) => p.id === targetProjId);
+        const assignedAgentId = targetProj ? targetProj.agent_id : newNodeAgentId;
+
+        const newTask: TaskRecord = {
+          id: `task-${Date.now().toString(36)}`,
+          project_id: targetProjId,
+          agent_id: assignedAgentId,
+          title: newNodeTitle.trim(),
+          status: 'pending',
+          priority: 'medium',
+        };
+        await opfsAdapter.saveTask(newTask);
+        setTasks((prev) => [...prev, newTask]);
+        onNewTask?.(newTask);
+      } else if (newNodeType === 'document') {
+        const targetProjId = newNodeProjectId || effectiveProjects[0]?.id || 'proj-manifesto';
+        const targetProj = effectiveProjects.find((p) => p.id === targetProjId);
+        const assignedAgentId = targetProj ? targetProj.agent_id : newNodeAgentId;
+
+        const newDoc: DocumentRecord = {
+          id: `doc-${Date.now().toString(36)}`,
+          project_id: targetProjId,
+          agent_id: assignedAgentId,
+          title: newNodeTitle.trim().endsWith('.md') ? newNodeTitle.trim() : `${newNodeTitle.trim()}.md`,
+          content: `# ${newNodeTitle.trim()}\n\n${newNodeDescription.trim() || 'Knowledge context anchor linked to radial project.'}`,
+          metadata: JSON.stringify({ tags: ['dynamic-node', 'radial-canvas'] }),
+        };
+        await opfsAdapter.saveDocument(newDoc);
+        setDocuments((prev) => [newDoc, ...prev]);
+        onNewDocument?.(newDoc);
+      }
+
+      // Reset form
+      setNewNodeTitle('');
+      setNewNodeDescription('');
+      setIsCreatingNode(false);
+    } catch (err) {
+      console.error('Failed to persist dynamic radial node:', err);
+    } finally {
+      setIsPersistingNode(false);
+    }
+  };
+
   // Controls
   const zoomIn = () => setTransform((p) => ({ ...p, scale: Math.min(2.5, p.scale + 0.25) }));
   const zoomOut = () => setTransform((p) => ({ ...p, scale: Math.max(0.5, p.scale - 0.25) }));
@@ -317,8 +400,16 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
         </div>
       )}
 
-      {/* Floating Touch Controls (Upper Right) */}
+      {/* Floating Canvas Controls & Dynamic Add Node Trigger (Upper Right) */}
       <div className="absolute top-14 right-4 z-40 flex items-center gap-1.5 bg-slate-900/90 border border-white/10 backdrop-blur-xl p-1.5 rounded-2xl shadow-xl">
+        <button
+          onClick={() => setIsCreatingNode(true)}
+          title="Add Dynamic Node to Canvas"
+          className="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition-all active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+        >
+          <Plus width={15} height={15} />
+          <span className="hidden sm:inline">Add Node</span>
+        </button>
         <button
           onClick={zoomOut}
           title="Zoom Out"
@@ -648,6 +739,174 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
           })}
         </div>
       </motion.div>
+
+      {/* Quick Interactive Node Creation Modal */}
+      <AnimatePresence>
+        {isCreatingNode && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm pointer-events-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 10 }}
+              className="w-full max-w-md bg-slate-900/95 border border-amber-500/30 rounded-2xl shadow-2xl p-6 text-slate-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center">
+                    <Plus width={18} height={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Add Dynamic Node to Canvas</h3>
+                    <p className="text-[11px] text-slate-400">Persists directly to browser OPFS SQLite</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingNode(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-white/5 hover:bg-white/10"
+                >
+                  <X width={16} height={16} />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateNode} className="space-y-4">
+                {/* Node Type Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Node Hierarchy Level
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNewNodeType('project')}
+                      className={`p-2 rounded-xl border text-xs font-medium text-center transition-all ${
+                        newNodeType === 'project'
+                          ? 'bg-amber-500/20 border-amber-500/60 text-amber-300 font-bold'
+                          : 'bg-slate-950 border-white/10 text-slate-400 hover:bg-slate-800'
+                      }`}
+                    >
+                      Diamond (Project)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewNodeType('task')}
+                      className={`p-2 rounded-xl border text-xs font-medium text-center transition-all ${
+                        newNodeType === 'task'
+                          ? 'bg-indigo-500/20 border-indigo-500/60 text-indigo-300 font-bold'
+                          : 'bg-slate-950 border-white/10 text-slate-400 hover:bg-slate-800'
+                      }`}
+                    >
+                      Square (Task)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewNodeType('document')}
+                      className={`p-2 rounded-xl border text-xs font-medium text-center transition-all ${
+                        newNodeType === 'document'
+                          ? 'bg-teal-500/20 border-teal-500/60 text-teal-300 font-bold'
+                          : 'bg-slate-950 border-white/10 text-slate-400 hover:bg-slate-800'
+                      }`}
+                    >
+                      Circle ('K' Lore)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Target Specialist or Parent Project */}
+                {newNodeType === 'project' ? (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Assigned Division Specialist
+                    </label>
+                    <select
+                      value={newNodeAgentId}
+                      onChange={(e) => setNewNodeAgentId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-white/10 text-xs text-white focus:outline-none focus:border-amber-400"
+                    >
+                      {specialistCrew.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name} ({a.role_title})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Parent Project Diamond
+                    </label>
+                    <select
+                      value={newNodeProjectId || effectiveProjects[0]?.id || ''}
+                      onChange={(e) => setNewNodeProjectId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-white/10 text-xs text-white focus:outline-none focus:border-amber-400"
+                    >
+                      {effectiveProjects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Title */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Node Title
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newNodeTitle}
+                    onChange={(e) => setNewNodeTitle(e.target.value)}
+                    placeholder={
+                      newNodeType === 'project'
+                        ? 'e.g. Archeological Stone Translation'
+                        : newNodeType === 'task'
+                        ? 'e.g. Audit cryptographic cipher signatures'
+                        : 'e.g. Grand Line Astrolabe Log'
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 font-mono"
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Description / Content Excerpt
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={newNodeDescription}
+                    onChange={(e) => setNewNodeDescription(e.target.value)}
+                    placeholder="Provide node lore, deliverables, or mission directives..."
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-white/10 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 leading-relaxed font-mono"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatingNode(false)}
+                    className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-slate-300 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isPersistingNode || !newNodeTitle.trim()}
+                    className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-600/30 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <Plus width={14} height={14} />
+                    <span>{isPersistingNode ? 'Persisting...' : 'Persist Node'}</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
