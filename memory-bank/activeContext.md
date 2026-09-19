@@ -1,6 +1,13 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
+- Implemented **Team Activity Stream Real Data Integration**:
+  - **Removed Mock Placeholders (`components/crew/TeamActivityStream.tsx`)**:
+    - Eliminated hardcoded placeholder activities array (`act-1` through `act-6` mock entries).
+    - Refactored component to build the activity stream strictly from genuine `tasks` passed via props (`TaskRecord[]`).
+    - Derived clean agent display name and timestamps (`completed_at` or `created_at`).
+    - Added an empty state card (`No team activity recorded yet`) when no tasks or subagent activities exist.
+    - Cleaned up unused imports and unneeded helper functions (`AlertCircle`, `Send`, `Sparkles`, `getActionIcon`).
 - Implemented **Fleet Sweep Cancellation & Subagent Engine Section Refinements**:
   - **Radial Page Subagent Section Enhancements (`app/page.tsx`)**:
     - Removed the redundant "Engine Specifications" card from the Radial page sidebar.

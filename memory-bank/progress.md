@@ -3,6 +3,11 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Removed Mock Placeholder Data from Team Activity Stream:
+  - Eliminated hardcoded placeholder activities (`act-1` to `act-6`) from [`components/crew/TeamActivityStream.tsx`](file:///home/oloty/Dev/qm-holla/components/crew/TeamActivityStream.tsx).
+  - Derived live activities exclusively from actual `tasks` records passed as props, resolving agent display names and completion/creation timestamps.
+  - Added empty state card when no activities are recorded yet.
+  - Removed unused Lucide icon imports and unused helper methods.
 - [x] Autonomous Subagent Fleet Sweep Controls & Radial Section Enhancements:
   - Added abort controller tracking (`currentAbortController: AbortController | null`) and active task tracking (`activeTaskId: string | null`) to [`lib/ai/subagent-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/subagent-engine.ts).
   - Implemented `stop(): Promise<void>` on `SubagentExecutionEngine` that clears queued tasks, cancels pacing `setTimeout` timers, aborts active `fetch('/api/chat')` streams via `AbortController.abort()`, reverts interrupted tasks to `'pending'` in OPFS SQLite, and emits a `'cancelled'` event.
