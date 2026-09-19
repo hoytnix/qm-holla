@@ -25,6 +25,11 @@
 - **Phase 5: Offline Voice Helm ("Speak with Luffy")**:
   - Built zero-cost offline STT & energetic Luffy persona TTS engine in [`speech-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/voice/speech-engine.ts).
   - Created [`VoiceHelmSheet.tsx`](file:///home/oloty/Dev/qm-holla/components/voice/VoiceHelmSheet.tsx) with animated waveform, 90-second circular countdown ring, and audio controls.
+- **Netlify OPFS SQLite Canvas Hang Fix & Immediate Render**:
+  - Created [`public/_headers`](file:///home/oloty/Dev/qm-holla/public/_headers) and [`netlify.toml`](file:///home/oloty/Dev/qm-holla/netlify.toml) with COOP/COEP isolation and SQLite/WASM content-type headers.
+  - Added 2500ms safety timeout, `crossOriginIsolated` check, worker error propagation, and memory stubbing in [`opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts).
+  - Handled fatal worker and promise rejection errors with explicit `INIT_ERROR` and `INIT_SUCCESS` messages in [`db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts).
+  - Made [`RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx) and [`app/page.tsx`](file:///home/oloty/Dev/qm-holla/app/page.tsx) non-blocking by immediately rendering the SVG canvas with default crew data and background hydration with an `OPFS Hydrating...` / `OPFS Active` status badge.
 
 ## Invariants Maintained
 1. Local-First OPFS SQLite storage guarantee (zero external database dependencies).

@@ -19,17 +19,19 @@ import {
 import { AgentRecord, ProjectRecord, TaskRecord, DocumentRecord } from '@/lib/db/adapter';
 import {
   DEFAULT_STRAW_HAT_AGENTS,
+  DEFAULT_CREW,
   DEFAULT_PROJECTS,
   DEFAULT_PROJECT_NODES,
   DEFAULT_TASKS,
   DEFAULT_DOCUMENTS,
 } from '@/lib/crew/default-crew';
+import { opfsAdapter } from '@/lib/db/opfs-adapter';
 import { AgentIcon } from '@/components/ui/AgentIcon';
 
 export { DEFAULT_STRAW_HAT_AGENTS, DEFAULT_PROJECT_NODES };
 
 interface RadialGraphProps {
-  agents: AgentRecord[];
+  agents?: AgentRecord[];
   projects?: ProjectRecord[];
   tasks?: TaskRecord[];
   documents?: DocumentRecord[];
@@ -64,10 +66,10 @@ function polarToCartesian(radius: number, degrees: number) {
 }
 
 export const RadialGraph: React.FC<RadialGraphProps> = ({
-  agents,
-  projects = DEFAULT_PROJECTS,
-  tasks = DEFAULT_TASKS,
-  documents = DEFAULT_DOCUMENTS,
+  agents: propAgents,
+  projects: propProjects,
+  tasks: propTasks,
+  documents: propDocuments,
   onSelectAgent,
   selectedAgentId,
   selectedProjectId,
@@ -77,6 +79,95 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
   onToggleTask,
   onOpenDocument,
 }) => {
+  // Initialize agents and projects state directly with DEFAULT_CREW and DEFAULT_PROJECTS for immediate non-blocking render
+  const [agents, setAgents] = useState<AgentRecord[]>(
+    propAgents && propAgents.length > 0 ? propAgents : DEFAULT_CREW
+  );
+  const [projects, setProjects] = useState<ProjectRecord[]>(
+    propProjects && propProjects.length > 0 ? propProjects : DEFAULT_PROJECTS
+  );
+  const [tasks, setTasks] = useState<TaskRecord[]>(
+    propTasks && propTasks.length > 0 ? propTasks : DEFAULT_TASKS
+  );
+  const [documents, setDocuments] = useState<DocumentRecord[]>(
+    propDocuments && propDocuments.length > 0 ? propDocuments : DEFAULT_DOCUMENTS
+  );
+
+  // Sync state if props update from parent
+  useEffect(() => {
+    if (propAgents && propAgents.length > 0) setAgents(propAgents);
+  }, [propAgents]);
+  useEffect(() => {
+    if (propProjects && propProjects.length > 0) setProjects(propProjects);
+  }, [propProjects]);
+  useEffect(() => {
+    if (propTasks && propTasks.length > 0) setTasks(propTasks);
+  }, [propTasks]);
+  useEffect(() => {
+    if (propDocuments && propDocuments.length > 0) setDocuments(propDocuments);
+  }, [propDocuments]);
+
+  // Background OPFS initialization & non-intrusive badge state
+  const [badgeState, setBadgeState] = useState<'hidden' | 'hydrating' | 'active' | 'faded'>('hidden');
+
+  useEffect(() => {
+    let isMounted = true;
+    let fadeTimer: any = null;
+
+    // If loading/hydrating takes longer than 500ms, display subtle badge
+    const badgeTimer = setTimeout(() => {
+      if (isMounted) {
+        setBadgeState((prev) => (prev === 'active' || prev === 'faded' ? prev : 'hydrating'));
+      }
+    }, 500);
+
+    const hydrateFromOpfs = async () => {
+      try {
+        await opfsAdapter.init();
+        const [liveAgents, liveProjects, liveTasks, liveDocs] = await Promise.all([
+          opfsAdapter.getAgents(),
+          opfsAdapter.getProjects(),
+          opfsAdapter.getTasks(),
+          opfsAdapter.getAllDocuments ? opfsAdapter.getAllDocuments() : Promise.resolve([]),
+        ]);
+
+        if (isMounted) {
+          if (liveAgents && liveAgents.length > 0) setAgents(liveAgents);
+          if (liveProjects && liveProjects.length > 0) setProjects(liveProjects);
+          if (liveTasks && liveTasks.length > 0) setTasks(liveTasks);
+          if (liveDocs && liveDocs.length > 0) setDocuments(liveDocs);
+
+          setBadgeState('active');
+          fadeTimer = setTimeout(() => {
+            if (isMounted) {
+              setBadgeState('faded');
+            }
+          }, 2000);
+        }
+      } catch (err) {
+        console.warn('Background OPFS hydration error:', err);
+        if (isMounted) {
+          setBadgeState('active');
+          fadeTimer = setTimeout(() => {
+            if (isMounted) {
+              setBadgeState('faded');
+            }
+          }, 2000);
+        }
+      } finally {
+        clearTimeout(badgeTimer);
+      }
+    };
+
+    hydrateFromOpfs();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(badgeTimer);
+      if (fadeTimer) clearTimeout(fadeTimer);
+    };
+  }, []);
+
   // Canvas Transform State: pan (x, y) and zoom scale [0.5, 2.5]
   const [transform, setTransform] = useState<{ x: number; y: number; scale: number }>({
     x: 0,
@@ -91,8 +182,8 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Fallbacks
-  const effectiveAgents = agents.length > 0 ? agents : DEFAULT_STRAW_HAT_AGENTS;
+  // Effective data sets
+  const effectiveAgents = agents.length > 0 ? agents : DEFAULT_CREW;
   const effectiveProjects = projects.length > 0 ? projects : DEFAULT_PROJECTS;
   const effectiveTasks = tasks.length > 0 ? tasks : DEFAULT_TASKS;
   const effectiveDocs = documents.length > 0 ? documents : DEFAULT_DOCUMENTS;
@@ -194,8 +285,20 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
       {/* Subtle Background Radial Radar / Celestial Grid */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.08)_0%,transparent_70%)] pointer-events-none" />
 
+      {/* Subtle non-intrusive OPFS badge in top-right corner */}
+      {badgeState === 'hydrating' && (
+        <div className="absolute top-3 right-3 z-50 text-xs px-2 py-1 rounded bg-slate-800/80 text-slate-400 border border-white/5">
+          OPFS Hydrating...
+        </div>
+      )}
+      {badgeState === 'active' && (
+        <div className="absolute top-3 right-3 z-50 text-xs px-2 py-1 rounded bg-slate-800/80 text-emerald-400 border border-white/5 transition-opacity duration-700">
+          OPFS Active
+        </div>
+      )}
+
       {/* Floating Touch Controls (Upper Right) */}
-      <div className="absolute top-4 right-4 z-40 flex items-center gap-1.5 bg-slate-900/90 border border-white/10 backdrop-blur-xl p-1.5 rounded-2xl shadow-xl">
+      <div className="absolute top-14 right-4 z-40 flex items-center gap-1.5 bg-slate-900/90 border border-white/10 backdrop-blur-xl p-1.5 rounded-2xl shadow-xl">
         <button
           onClick={zoomOut}
           title="Zoom Out"

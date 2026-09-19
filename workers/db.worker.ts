@@ -469,29 +469,61 @@ async function seedDataIfEmpty(database: any) {
 async function initDb() {
   if (db) return;
 
-  const sqlite3 = await (sqlite3InitModule as any)({
-    print: console.log,
-    printErr: console.error,
-    locateFile: (file: string) => `/sqlite/${file}`,
-  });
-
   try {
-    if ('opfs' in sqlite3) {
-      db = new sqlite3.oo1.OpfsDb('/quarkmeme.db');
-    } else {
-      db = new sqlite3.oo1.DB('/quarkmeme.db', 'c');
+    let sqlite3: any = null;
+    try {
+      sqlite3 = await (sqlite3InitModule as any)({
+        print: console.log,
+        printErr: console.error,
+        locateFile: (file: string) => `/sqlite/${file}`,
+      });
+    } catch (moduleErr) {
+      console.error('Failed to initialize sqlite3InitModule:', moduleErr);
+      throw moduleErr;
     }
-  } catch (err) {
-    console.warn('OPFS initialization failed, falling back to persistent in-memory DB:', err);
-    db = new sqlite3.oo1.DB();
+
+    try {
+      if ('opfs' in sqlite3) {
+        db = new sqlite3.oo1.OpfsDb('/quarkmeme.db');
+      } else {
+        db = new sqlite3.oo1.DB('/quarkmeme.db', 'c');
+      }
+    } catch (err) {
+      console.warn('OPFS initialization failed, falling back to persistent in-memory DB:', err);
+      try {
+        db = new sqlite3.oo1.DB();
+      } catch (memErr) {
+        console.error('In-memory SQLite DB fallback also failed:', memErr);
+        throw memErr;
+      }
+    }
+
+    // Immediately execute migrations from schema.sql on database creation
+    db.exec(SCHEMA_SQL);
+
+    // Check if count is 0; if 0, run seed script
+    await seedDataIfEmpty(db);
+  } catch (err: any) {
+    console.error('Fatal database worker initialization error:', err);
+    self.postMessage({ type: 'INIT_ERROR', error: String(err) });
+    throw err;
   }
-
-  // Immediately execute migrations from schema.sql on database creation
-  db.exec(SCHEMA_SQL);
-
-  // Check if count is 0; if 0, run seed script
-  await seedDataIfEmpty(db);
 }
+
+// Global unhandled error handlers to ensure main thread is never left waiting
+self.onerror = (err: any) => {
+  console.error('Unhandled worker error event:', err);
+  try {
+    self.postMessage({ type: 'INIT_ERROR', error: String(err?.message || err) });
+  } catch {}
+};
+
+self.onunhandledrejection = (event: PromiseRejectionEvent) => {
+  console.error('Unhandled worker promise rejection:', event.reason);
+  try {
+    self.postMessage({ type: 'INIT_ERROR', error: String(event.reason?.message || event.reason) });
+  } catch {}
+};
 
 // Handle incoming messages from the main thread
 self.onmessage = async (e: MessageEvent) => {
@@ -500,7 +532,7 @@ self.onmessage = async (e: MessageEvent) => {
   try {
     if (action === 'init') {
       await initDb();
-      self.postMessage({ id, success: true });
+      self.postMessage({ id, type: 'INIT_SUCCESS', success: true });
       return;
     }
 

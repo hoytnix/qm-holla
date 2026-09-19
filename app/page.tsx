@@ -4,6 +4,12 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/opfs-adapter';
 import { AgentRecord, ProjectRecord, TaskRecord, DocumentRecord } from '@/lib/db/adapter';
+import {
+  DEFAULT_CREW,
+  DEFAULT_PROJECTS,
+  DEFAULT_TASKS,
+  DEFAULT_DOCUMENTS,
+} from '@/lib/crew/default-crew';
 import { RadialGraph } from '@/components/canvas/RadialGraph';
 import { ProjectWorkspaceDrawer, CanvasLegend } from '@/components/canvas/ProjectWorkspaceDrawer';
 import { MarkdownDrawer } from '@/components/vault/MarkdownDrawer';
@@ -28,12 +34,12 @@ import {
 } from 'lucide-react';
 
 export default function CanvasPage() {
-  const [agents, setAgents] = useState<AgentRecord[]>([]);
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [tasks, setTasks] = useState<TaskRecord[]>([]);
-  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
+  const [agents, setAgents] = useState<AgentRecord[]>(DEFAULT_CREW);
+  const [projects, setProjects] = useState<ProjectRecord[]>(DEFAULT_PROJECTS);
+  const [tasks, setTasks] = useState<TaskRecord[]>(DEFAULT_TASKS);
+  const [documents, setDocuments] = useState<DocumentRecord[]>(DEFAULT_DOCUMENTS);
 
-  const [selectedAgent, setSelectedAgent] = useState<AgentRecord | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<AgentRecord | null>(DEFAULT_CREW[0]);
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null);
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
 
@@ -44,7 +50,7 @@ export default function CanvasPage() {
   const [isMorningPlanningOpen, setIsMorningPlanningOpen] = useState(false);
   const [isVoiceHelmOpen, setIsVoiceHelmOpen] = useState(false);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const loadFleetData = async () => {
     try {
@@ -195,33 +201,26 @@ export default function CanvasPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 flex-1 items-start">
           {/* Central Interactive Radial Graph Viewport */}
           <div className="lg:col-span-8 flex flex-col rounded-3xl border border-white/10 bg-slate-950/60 relative overflow-hidden shadow-2xl">
-            {loading ? (
-              <div className="h-[580px] sm:h-[640px] flex flex-col items-center justify-center gap-3 text-slate-400">
-                <div className="w-9 h-9 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
-                <span className="text-xs font-mono">Initializing OPFS SQLite Canvas...</span>
-              </div>
-            ) : (
-              <RadialGraph
-                agents={agents}
-                projects={projects}
-                tasks={tasks}
-                documents={documents}
-                onSelectAgent={(agent) => {
-                  setSelectedAgent(agent);
-                  const proj = projects.find((p) => p.agent_id === agent.id);
-                  if (proj) {
-                    setSelectedProject(proj);
-                  }
-                }}
-                selectedAgentId={selectedAgent?.id}
-                selectedProjectId={selectedProject?.id}
-                onSelectProject={handleSelectProject}
-                expandedProjectId={expandedProjectId}
-                onToggleExpandProject={handleToggleExpandProject}
-                onToggleTask={handleToggleTask}
-                onOpenDocument={handleOpenDocument}
-              />
-            )}
+            <RadialGraph
+              agents={agents}
+              projects={projects}
+              tasks={tasks}
+              documents={documents}
+              onSelectAgent={(agent) => {
+                setSelectedAgent(agent);
+                const proj = projects.find((p) => p.agent_id === agent.id);
+                if (proj) {
+                  setSelectedProject(proj);
+                }
+              }}
+              selectedAgentId={selectedAgent?.id}
+              selectedProjectId={selectedProject?.id}
+              onSelectProject={handleSelectProject}
+              expandedProjectId={expandedProjectId}
+              onToggleExpandProject={handleToggleExpandProject}
+              onToggleTask={handleToggleTask}
+              onOpenDocument={handleOpenDocument}
+            />
 
             {/* Persistent Canvas Legend Footer */}
             <CanvasLegend />

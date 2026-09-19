@@ -10,6 +10,7 @@ import {
 } from './adapter';
 import {
   DEFAULT_STRAW_HAT_AGENTS,
+  DEFAULT_CREW,
   DEFAULT_PROJECTS,
   DEFAULT_TASKS,
   DEFAULT_DOCUMENTS,
@@ -23,6 +24,9 @@ class OpfsDatabase implements IQuarkDatabase {
   >();
   private initialized = false;
   private initPromise: Promise<void> | null = null;
+
+  public isReady = false;
+  public usingFallback = false;
 
   // Fallback in-memory storage for SSR or environments without Web Worker
   private memAgents: AgentRecord[] = [];
@@ -42,34 +46,88 @@ class OpfsDatabase implements IQuarkDatabase {
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = (async () => {
+      if (typeof window !== 'undefined' && !window.crossOriginIsolated) {
+        console.warn('crossOriginIsolated is false; OPFS sync unavailable, switching to in-memory/fallback mode.');
+        this.isReady = true;
+        this.usingFallback = true;
+        this.initialized = true;
+        await this.seedDefaultDataIfEmpty();
+        return;
+      }
+
       if (this.isWorkerSupported) {
         try {
-          this.worker = new Worker(new URL('../../workers/db.worker.ts', import.meta.url), {
-            type: 'module',
+          const workerInitPromise = new Promise<void>((resolve, reject) => {
+            try {
+              this.worker = new Worker(new URL('../../workers/db.worker.ts', import.meta.url), {
+                type: 'module',
+              });
+
+              this.worker.onerror = (err) => {
+                console.warn('OPFS SQLite Web Worker emitted an error:', err);
+                reject(err);
+              };
+
+              this.worker.onmessage = (event: MessageEvent) => {
+                const { id, type, success, data, error } = event.data || {};
+                if (type === 'INIT_SUCCESS') {
+                  resolve();
+                } else if (type === 'INIT_ERROR') {
+                  reject(new Error(error || 'Worker init error'));
+                }
+
+                if (id) {
+                  const pending = this.pendingRequests.get(id);
+                  if (pending) {
+                    this.pendingRequests.delete(id);
+                    if (success || type === 'INIT_SUCCESS') {
+                      pending.resolve(data);
+                    } else {
+                      pending.reject(new Error(error || 'Worker request failed'));
+                    }
+                  }
+                }
+              };
+
+              this.sendToWorker('init').then(
+                () => resolve(),
+                (err) => reject(err)
+              );
+            } catch (createErr) {
+              reject(createErr);
+            }
           });
 
-          this.worker.onmessage = (event: MessageEvent) => {
-            const { id, success, data, error } = event.data;
-            const pending = this.pendingRequests.get(id);
-            if (pending) {
-              this.pendingRequests.delete(id);
-              if (success) {
-                pending.resolve(data);
-              } else {
-                pending.reject(new Error(error));
-              }
-            }
-          };
+          // 2500ms safety timeout
+          let timeoutHandle: any = null;
+          const timeoutPromise = new Promise<void>((_, reject) => {
+            timeoutHandle = setTimeout(() => {
+              reject(new Error('Worker init timed out after 2500ms'));
+            }, 2500);
+          });
 
-          await this.sendToWorker('init');
+          await Promise.race([workerInitPromise, timeoutPromise]);
+          clearTimeout(timeoutHandle);
+          this.isReady = true;
           this.initialized = true;
           return;
         } catch (err) {
-          console.warn('Failed to start OPFS SQLite Web Worker, using memory fallback:', err);
-          this.worker = null;
+          console.warn('Failed to initialize OPFS SQLite Web Worker, switching gracefully to in-memory fallback:', err);
+          if (this.worker) {
+            try {
+              this.worker.terminate();
+            } catch {}
+            this.worker = null;
+          }
+          for (const pending of this.pendingRequests.values()) {
+            pending.reject(new Error('Worker terminated'));
+          }
+          this.pendingRequests.clear();
         }
       }
 
+      this.isReady = true;
+      this.usingFallback = true;
       this.initialized = true;
       await this.seedDefaultDataIfEmpty();
     })();
@@ -78,20 +136,25 @@ class OpfsDatabase implements IQuarkDatabase {
   }
 
   private sendToWorker<T = any>(action: string, payload?: any): Promise<T> {
-    if (!this.worker) {
+    if (!this.worker || this.usingFallback) {
       return Promise.reject(new Error('Worker not available'));
     }
 
     const id = Math.random().toString(36).substring(2, 9);
     return new Promise((resolve, reject) => {
       this.pendingRequests.set(id, { resolve, reject });
-      this.worker!.postMessage({ id, action, payload });
+      try {
+        this.worker!.postMessage({ id, action, payload });
+      } catch (postErr) {
+        this.pendingRequests.delete(id);
+        reject(postErr);
+      }
     });
   }
 
   private async query<T = any>(sql: string, bind: any[] = []): Promise<T[]> {
     await this.init();
-    if (this.worker) {
+    if (!this.usingFallback && this.worker) {
       return this.sendToWorker<T[]>('exec', { sql, bind });
     }
     return [];
@@ -99,14 +162,14 @@ class OpfsDatabase implements IQuarkDatabase {
 
   private async run(sql: string, bind: any[] = []): Promise<void> {
     await this.init();
-    if (this.worker) {
+    if (!this.usingFallback && this.worker) {
       await this.sendToWorker('run', { sql, bind });
     }
   }
 
   private async seedDefaultDataIfEmpty() {
     if (this.memAgents.length === 0) {
-      this.memAgents = [...DEFAULT_STRAW_HAT_AGENTS];
+      this.memAgents = [...DEFAULT_CREW];
     }
     if (this.memProjects.length === 0) {
       this.memProjects = [...DEFAULT_PROJECTS];
@@ -129,16 +192,31 @@ class OpfsDatabase implements IQuarkDatabase {
 
   // --- Agents ---
   async getAgents(): Promise<AgentRecord[]> {
-    if (this.worker) {
-      return this.query<AgentRecord>('SELECT * FROM agents ORDER BY created_at ASC');
+    if (!this.usingFallback && this.worker) {
+      try {
+        const rows = await this.query<AgentRecord>('SELECT * FROM agents ORDER BY created_at ASC');
+        if (rows && rows.length > 0) return rows;
+      } catch (err) {
+        console.warn('Worker getAgents failed, falling back to memory/defaults:', err);
+      }
+    }
+    if (this.memAgents.length === 0) {
+      await this.seedDefaultDataIfEmpty();
     }
     return [...this.memAgents];
   }
 
   async getAgentById(id: string): Promise<AgentRecord | null> {
-    if (this.worker) {
-      const rows = await this.query<AgentRecord>('SELECT * FROM agents WHERE id = ? LIMIT 1', [id]);
-      return rows[0] || null;
+    if (!this.usingFallback && this.worker) {
+      try {
+        const rows = await this.query<AgentRecord>('SELECT * FROM agents WHERE id = ? LIMIT 1', [id]);
+        return rows[0] || null;
+      } catch (err) {
+        console.warn('Worker getAgentById failed, falling back to memory:', err);
+      }
+    }
+    if (this.memAgents.length === 0) {
+      await this.seedDefaultDataIfEmpty();
     }
     return this.memAgents.find((a) => a.id === id) || null;
   }
@@ -179,42 +257,68 @@ class OpfsDatabase implements IQuarkDatabase {
 
   // --- Projects ---
   async getProjects(): Promise<ProjectRecord[]> {
-    if (this.worker) {
-      return this.query<ProjectRecord>('SELECT * FROM projects ORDER BY created_at ASC');
+    if (!this.usingFallback && this.worker) {
+      try {
+        const rows = await this.query<ProjectRecord>('SELECT * FROM projects ORDER BY created_at ASC');
+        if (rows && rows.length > 0) return rows;
+      } catch (err) {
+        console.warn('Worker getProjects failed, falling back to memory/defaults:', err);
+      }
+    }
+    if (this.memProjects.length === 0) {
+      await this.seedDefaultDataIfEmpty();
     }
     return [...this.memProjects];
   }
 
   async getProjectsForAgent(agentId: string): Promise<ProjectRecord[]> {
-    if (this.worker) {
-      return this.query<ProjectRecord>('SELECT * FROM projects WHERE agent_id = ? ORDER BY created_at ASC', [agentId]);
+    if (!this.usingFallback && this.worker) {
+      try {
+        return await this.query<ProjectRecord>('SELECT * FROM projects WHERE agent_id = ? ORDER BY created_at ASC', [agentId]);
+      } catch (err) {
+        console.warn('Worker getProjectsForAgent failed, falling back to memory:', err);
+      }
+    }
+    if (this.memProjects.length === 0) {
+      await this.seedDefaultDataIfEmpty();
     }
     return this.memProjects.filter((p) => p.agent_id === agentId);
   }
 
   async getProjectById(id: string): Promise<ProjectRecord | null> {
-    if (this.worker) {
-      const rows = await this.query<ProjectRecord>('SELECT * FROM projects WHERE id = ? LIMIT 1', [id]);
-      return rows[0] || null;
+    if (!this.usingFallback && this.worker) {
+      try {
+        const rows = await this.query<ProjectRecord>('SELECT * FROM projects WHERE id = ? LIMIT 1', [id]);
+        return rows[0] || null;
+      } catch (err) {
+        console.warn('Worker getProjectById failed, falling back to memory:', err);
+      }
+    }
+    if (this.memProjects.length === 0) {
+      await this.seedDefaultDataIfEmpty();
     }
     return this.memProjects.find((p) => p.id === id) || null;
   }
 
   async saveProject(project: ProjectRecord): Promise<void> {
-    if (this.worker) {
-      await this.run(
-        `INSERT OR REPLACE INTO projects (id, agent_id, title, description, category, is_private, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [
-          project.id,
-          project.agent_id,
-          project.title,
-          project.description || null,
-          project.category,
-          project.is_private ? 1 : 0,
-        ]
-      );
-      return;
+    if (!this.usingFallback && this.worker) {
+      try {
+        await this.run(
+          `INSERT OR REPLACE INTO projects (id, agent_id, title, description, category, is_private, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+          [
+            project.id,
+            project.agent_id,
+            project.title,
+            project.description || null,
+            project.category,
+            project.is_private ? 1 : 0,
+          ]
+        );
+        return;
+      } catch (err) {
+        console.warn('Worker saveProject failed, saving in memory:', err);
+      }
     }
     const idx = this.memProjects.findIndex((p) => p.id === project.id);
     if (idx >= 0) {
@@ -225,20 +329,32 @@ class OpfsDatabase implements IQuarkDatabase {
   }
 
   async deleteProject(id: string): Promise<void> {
-    if (this.worker) {
-      await this.run('DELETE FROM projects WHERE id = ?', [id]);
-      return;
+    if (!this.usingFallback && this.worker) {
+      try {
+        await this.run('DELETE FROM projects WHERE id = ?', [id]);
+        return;
+      } catch (err) {
+        console.warn('Worker deleteProject failed, deleting in memory:', err);
+      }
     }
     this.memProjects = this.memProjects.filter((p) => p.id !== id);
   }
 
   // --- Tasks ---
   async getTasks(projectId?: string): Promise<TaskRecord[]> {
-    if (this.worker) {
-      if (projectId) {
-        return this.query<TaskRecord>('SELECT * FROM tasks WHERE project_id = ? ORDER BY created_at ASC', [projectId]);
+    if (!this.usingFallback && this.worker) {
+      try {
+        if (projectId) {
+          return await this.query<TaskRecord>('SELECT * FROM tasks WHERE project_id = ? ORDER BY created_at ASC', [projectId]);
+        }
+        const rows = await this.query<TaskRecord>('SELECT * FROM tasks ORDER BY created_at ASC');
+        if (rows && rows.length > 0) return rows;
+      } catch (err) {
+        console.warn('Worker getTasks failed, falling back to memory/defaults:', err);
       }
-      return this.query<TaskRecord>('SELECT * FROM tasks ORDER BY created_at ASC');
+    }
+    if (this.memTasks.length === 0) {
+      await this.seedDefaultDataIfEmpty();
     }
     if (projectId) {
       return this.memTasks.filter((t) => t.project_id === projectId);
@@ -251,21 +367,25 @@ class OpfsDatabase implements IQuarkDatabase {
   }
 
   async saveTask(task: TaskRecord): Promise<void> {
-    if (this.worker) {
-      await this.run(
-        `INSERT OR REPLACE INTO tasks (id, project_id, agent_id, title, status, priority, completed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          task.id,
-          task.project_id,
-          task.agent_id,
-          task.title,
-          task.status || 'pending',
-          task.priority || 'medium',
-          task.completed_at || null,
-        ]
-      );
-      return;
+    if (!this.usingFallback && this.worker) {
+      try {
+        await this.run(
+          `INSERT OR REPLACE INTO tasks (id, project_id, agent_id, title, status, priority, completed_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            task.id,
+            task.project_id,
+            task.agent_id,
+            task.title,
+            task.status || 'pending',
+            task.priority || 'medium',
+            task.completed_at || null,
+          ]
+        );
+        return;
+      } catch (err) {
+        console.warn('Worker saveTask failed, saving in memory:', err);
+      }
     }
     const idx = this.memTasks.findIndex((t) => t.id === task.id);
     if (idx >= 0) {
@@ -276,8 +396,12 @@ class OpfsDatabase implements IQuarkDatabase {
   }
 
   async toggleTaskStatus(taskId: string): Promise<TaskRecord | null> {
-    if (this.worker) {
-      return this.sendToWorker<TaskRecord>('TOGGLE_TASK_STATUS', { taskId });
+    if (!this.usingFallback && this.worker) {
+      try {
+        return await this.sendToWorker<TaskRecord>('TOGGLE_TASK_STATUS', { taskId });
+      } catch (err) {
+        console.warn('Worker toggleTaskStatus failed, toggling in memory:', err);
+      }
     }
     const task = this.memTasks.find((t) => t.id === taskId);
     if (!task) return null;
@@ -470,3 +594,4 @@ class OpfsDatabase implements IQuarkDatabase {
 
 // Global singleton instance
 export const db = new OpfsDatabase();
+export const opfsAdapter = db;

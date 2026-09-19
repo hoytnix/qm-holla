@@ -66,6 +66,8 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
   },
 ];
 
+export const DEFAULT_CREW = DEFAULT_STRAW_HAT_AGENTS;
+
 export const DEFAULT_PROJECTS: ProjectRecord[] = [
   {
     id: 'proj-manifesto',

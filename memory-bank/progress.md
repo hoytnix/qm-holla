@@ -17,6 +17,7 @@
 - [x] Phase 5: Zero-cost offline speech engine in [`speech-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/voice/speech-engine.ts) with STT and energetic Luffy TTS persona.
 - [x] Phase 5: Voice Helm interface in [`VoiceHelmSheet.tsx`](file:///home/oloty/Dev/qm-holla/components/voice/VoiceHelmSheet.tsx) with animated waveform, 90-second countdown ring, and audio controls.
 - [x] Strict vector icon enforcement: Replaced all unbundled Unicode emojis across the UI with `lucide-react` SVG vector icons.
+- [x] Netlify deployment OPFS hang fix: Added [`public/_headers`](file:///home/oloty/Dev/qm-holla/public/_headers) and [`netlify.toml`](file:///home/oloty/Dev/qm-holla/netlify.toml), 2500ms safety timeout & graceful memory fallback in [`opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts), worker error reporting in [`db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts), and non-blocking immediate canvas render with status badge in [`RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx).
 - [x] TypeScript validation (`npx tsc --noEmit`) and production build verification (`pnpm build`).
 
 ### In Progress / Roadmap
