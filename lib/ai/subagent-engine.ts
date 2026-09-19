@@ -152,6 +152,8 @@ Please execute this task thoroughly according to your domain responsibilities. D
 Format your output cleanly in Markdown with clear sections, actionable findings, or complete draft artifacts.`;
 
       let generatedOutput = '';
+      let usedFallback = false;
+      let fallbackReason = '';
 
       // Check if API key is configured for live LLM generation
       if (config.apiKey && config.apiKey.trim()) {
@@ -163,32 +165,51 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
           'x-llm-base-url': config.baseUrl,
         };
 
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            messages: [{ role: 'user', content: prompt }],
-            systemPrompt: context.systemInstruction,
-          }),
-        });
+        try {
+          const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              messages: [{ role: 'user', content: prompt }],
+              systemPrompt: context.systemInstruction,
+              temperature: config.temperature,
+              maxTokens: config.maxTokens,
+            }),
+          });
 
-        if (res.ok) {
-          const reader = res.body?.getReader();
-          const decoder = new TextDecoder();
-          if (reader) {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              generatedOutput += decoder.decode(value, { stream: true });
+          if (res.ok) {
+            const reader = res.body?.getReader();
+            const decoder = new TextDecoder();
+            if (reader) {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                generatedOutput += decoder.decode(value, { stream: true });
+              }
             }
+          } else {
+            const errorPayload = await res.json().catch(() => ({}));
+            fallbackReason = errorPayload.error || `HTTP ${res.status}: ${res.statusText}`;
+            console.warn(`LLM fetch failed during subagent run (${fallbackReason}), generating local synthesis fallback`);
+            usedFallback = true;
+            generatedOutput = this.generateLocalSynthesis(agent, task, fallbackReason);
           }
-        } else {
-          console.warn('LLM fetch failed during subagent run, generating local synthesis');
-          generatedOutput = this.generateLocalSynthesis(agent, task);
+        } catch (fetchErr: any) {
+          fallbackReason = fetchErr?.message || 'Network/Fetch error';
+          console.warn(`Network error during subagent execution (${fallbackReason}), using local synthesis fallback`);
+          usedFallback = true;
+          generatedOutput = this.generateLocalSynthesis(agent, task, fallbackReason);
         }
       } else {
         // Deterministic local simulation if API key is unconfigured
-        generatedOutput = this.generateLocalSynthesis(agent, task);
+        usedFallback = true;
+        fallbackReason = 'No API key configured (offline mode)';
+        generatedOutput = this.generateLocalSynthesis(agent, task, fallbackReason);
+      }
+
+      // Ensure generated output is not empty
+      if (!generatedOutput || !generatedOutput.trim()) {
+        generatedOutput = this.generateLocalSynthesis(agent, task, 'Empty LLM response received');
       }
 
       // 3. Persist output artifact document to OPFS SQLite
@@ -204,6 +225,8 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
           executedBy: agent?.name || task.agent_id,
           completedAt: new Date().toISOString(),
           tags: ['autonomous-deliverable', task.priority || 'medium'],
+          usedFallback,
+          fallbackReason: fallbackReason || undefined,
         }),
       };
 
@@ -221,6 +244,10 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
       }
 
       // 5. Notify completion
+      const completionDetail = usedFallback
+        ? `${agentName} completed "${task.title}" using local synthesis (${fallbackReason}). Output saved to vault.`
+        : `${agentName} completed "${task.title}". Persisted output deliverable to local vault.`;
+
       this.notify({
         id: `evt-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
         taskId: task.id,
@@ -228,7 +255,7 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
         agentName,
         taskTitle: task.title,
         type: 'completed',
-        detail: `${agentName} completed "${task.title}". Persisted output deliverable to local vault.`,
+        detail: completionDetail,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       });
     } catch (err: any) {
@@ -249,14 +276,14 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
     }
   }
 
-  private generateLocalSynthesis(agent: AgentRecord | undefined, task: TaskRecord): string {
+  private generateLocalSynthesis(agent: AgentRecord | undefined, task: TaskRecord, notice?: string): string {
     const agentName = agent?.name || 'Subagent Specialist';
     const role = agent?.role_title || 'Lead Specialist';
 
     return `# Autonomous Deliverable: ${task.title}
 *Executed by ${agentName} (${role}) via Local Autonomous Subagent Engine*
 *Completed at: ${new Date().toLocaleString()}*
-
+${notice ? `\n> **Notice**: Processed via deterministic local synthesis (${notice}).\n` : ''}
 ---
 
 ### Executive Summary

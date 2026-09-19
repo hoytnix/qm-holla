@@ -1,27 +1,23 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
-- Eliminated React infinite re-render / `postMessage` waterfall loops by guarding background hydration across components (`RadialGraph`, `CanvasPage`, `SettingsProvider`).
-- Cache-busted the SQLite worker by renaming from `db-worker.js` to `/sqlite/sqlite-engine.js` with timestamp busting (`?t=${Date.now()}`) and purged old worker files.
-- Verified production build (`pnpm build`) with zero compilation or lint errors across 9 static routes.
-- Fully operational local IndexedDB persistence via `sql.js` with auto-debounced database state export.
+- Resolved the 500 Internal Server Error in `/api/chat` and stabilized the autonomous subagent execution pipeline.
+- Replaced outdated `@ai-sdk/google` integration with the official, installed `@google/genai` SDK (`GoogleGenAI`), eliminating the `AI_UnsupportedModelVersionError` (unsupported model version v4 error with AI SDK 5).
+- Hardened `/api/chat` with structured error status parsing (HTTP 401 for invalid/missing keys, HTTP 429 for rate limits/quota exhaustion, and detailed human-readable error messages).
+- Fortified `lib/ai/subagent-engine.ts` with comprehensive try/catch blocks, error logging, and seamless fallback to deterministic local synthesis with persisted audit notes in vault deliverables.
 
 ## Recent Changes
-- **Google AI Studio Models Registry**:
-  - Defined [`lib/ai/models.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/models.ts) containing the full specified Google AI Studio model suite (excluding Antigravity): Gemini 3.8 Flash, Gemini 3.6 Flash, Deep Research Pro Preview, Gemini 2 Flash, Gemini 2 Flash Lite, Computer Use Preview, Gemini 2.5 Flash, Nano Banana (Gemini 2.5 Flash Preview Image), Gemini 2.5 Flash Lite, Gemini 2.5 Flash TTS, Gemini 2.5 Pro, Gemini 2.5 Pro TTS, Gemini 3 Flash, Nano Banana Pro (Gemini 3 Pro Image), Gemini 3.1 Pro, Nano Banana 2 (Gemini 3.1 Flash Image), Gemini 3.1 Flash Lite, Nano Banana 2 Lite (Gemini 3.1 Flash Lite Image), Gemini 3.1 Flash TTS, Gemini 3.5 Flash, and Gemini 3.5 Flash Lite.
-  - Linked `GOOGLE_AI_STUDIO_MODELS` into [`app/settings/page.tsx`](file:///home/oloty/Dev/qm-holla/app/settings/page.tsx) with organized categories and selection presets.
-- **Autonomous Subagent Execution Engine & Task Queue**:
-  - Implemented [`lib/ai/subagent-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/subagent-engine.ts) with background queue processing, strict Requests Per Minute (RPM) interval pacing, scoped context assembly (`assembleContext`), and output deliverable persistence to OPFS SQLite documents.
-  - Added `UPDATE_TASK_STATUS` actions in [`workers/db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts) and [`public/sqlite/sqlite-engine.js`](file:///home/oloty/Dev/qm-holla/public/sqlite/sqlite-engine.js) to support `in_progress` and `completed` status transitions with `completed_at` timestamps.
-  - Updated [`lib/db/adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/adapter.ts) and [`lib/db/opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts) with `updateTaskStatus` methods.
-  - Integrated subagent live activity ledger and autonomous fleet sweep trigger in [`app/page.tsx`](file:///home/oloty/Dev/qm-holla/app/page.tsx) and auto-run button in [`components/canvas/ProjectWorkspaceDrawer.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/ProjectWorkspaceDrawer.tsx).
-- **Radial Graph Dynamic Expansion & Persistence**:
-  - Enhanced [`components/canvas/RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx) with an interactive "Add Node" quick modal for dynamically creating projects (diamonds), tasks (checkboxes), and knowledge lore ('K' circles).
-  - Persisted all newly generated nodes directly into local SQLite via `opfsAdapter.saveProject`, `opfsAdapter.saveTask`, and `opfsAdapter.saveDocument`.
-  - Added live node callbacks `onNewProject`, `onNewTask`, and `onNewDocument` to ensure real-time orbital graph updates without reload delays.
+- **Chat Route (`app/api/chat/route.ts`)**:
+  - Migrated Gemini provider to `@google/genai` with streaming `generateContentStream`, `systemInstruction`, `temperature`, and `maxOutputTokens`.
+  - Added robust nested JSON error extraction in `parseErrorMessage` to cleanly surface Google RPC / API errors without 500 crashes.
+  - Retained OpenRouter and OpenAI-compatible provider integrations via `@ai-sdk/openai`.
+- **Subagent Execution Engine (`lib/ai/subagent-engine.ts`)**:
+  - Wrapped LLM streaming requests in dedicated try/catch with fallback reason tracking.
+  - Forwarded `temperature` and `maxTokens` from `config`.
+  - Persisted fallback metadata into generated deliverables to ensure transparent auditing without queue halting.
 - **Production Build Validation**:
-  - Verified clean TypeScript compilation via `npx tsc --noEmit`.
-  - Verified Next.js production build (`pnpm build`) with all 9 static routes generated cleanly.
+  - Clean TypeScript typecheck (`npx tsc --noEmit`).
+  - Next.js production build (`pnpm build`) compiled cleanly.
 
 ## Invariants Maintained
 1. Local-First SQLite storage guarantee (zero cloud database bills, all state stored client-side in IndexedDB).
