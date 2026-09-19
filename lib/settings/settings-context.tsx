@@ -12,6 +12,7 @@ export interface LLMConfig {
   baseUrl: string;
   temperature: number;
   maxTokens: number;
+  requestsPerMinute: number;
 }
 
 export interface SettingsContextValue {
@@ -31,6 +32,7 @@ export const DEFAULT_CONFIG: LLMConfig = {
   baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
   temperature: 0.7,
   maxTokens: 2048,
+  requestsPerMinute: 4,
 };
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(undefined);
@@ -76,6 +78,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (settings['llm_base_url'] !== undefined) loaded.baseUrl = settings['llm_base_url'];
           if (settings['llm_temperature']) loaded.temperature = parseFloat(settings['llm_temperature']);
           if (settings['llm_max_tokens']) loaded.maxTokens = parseInt(settings['llm_max_tokens'], 10);
+          if (settings['llm_rpm']) loaded.requestsPerMinute = parseInt(settings['llm_rpm'], 10);
 
           setConfig((prev) => {
             const merged = { ...prev, ...loaded };
@@ -120,6 +123,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (partial.baseUrl !== undefined) await db.setSetting('llm_base_url', partial.baseUrl);
       if (partial.temperature !== undefined) await db.setSetting('llm_temperature', String(partial.temperature));
       if (partial.maxTokens !== undefined) await db.setSetting('llm_max_tokens', String(partial.maxTokens));
+      if (partial.requestsPerMinute !== undefined) await db.setSetting('llm_rpm', String(partial.requestsPerMinute));
     } catch (err) {
       console.warn('Failed to persist settings to OPFS SQLite:', err);
     }

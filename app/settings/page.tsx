@@ -21,6 +21,7 @@ import {
   HardDrive,
   ShieldCheck,
   Zap,
+  Gauge,
 } from 'lucide-react';
 
 const MODEL_PRESETS: Record<LLMProvider, { label: string; value: string; desc: string }[]> = {
@@ -346,6 +347,49 @@ export default function SettingsPage() {
                 placeholder={DEFAULT_BASE_URLS[config.provider]}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 font-mono"
               />
+            </div>
+
+            {/* Requests Per Minute (RPM) Rate Limit Setting */}
+            <div className="space-y-3 pt-2 border-t border-white/5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-slate-300 flex items-center gap-2">
+                  <Gauge width={16} height={16} className="text-amber-400" />
+                  <span>Requests Per Minute (RPM)</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={120}
+                    value={config.requestsPerMinute ?? 4}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val) && val >= 1) {
+                        updateConfig({ requestsPerMinute: Math.min(120, Math.max(1, val)) });
+                      }
+                    }}
+                    className="w-20 px-2.5 py-1 text-right rounded-lg bg-slate-950 border border-white/10 text-sm font-mono text-amber-300 focus:outline-none focus:border-amber-400"
+                  />
+                  <span className="text-xs text-slate-400 font-mono">RPM</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min={1}
+                  max={60}
+                  step={1}
+                  value={config.requestsPerMinute ?? 4}
+                  onChange={(e) => updateConfig({ requestsPerMinute: parseInt(e.target.value, 10) })}
+                  className="w-full h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-amber-500 border border-white/10"
+                />
+                <span className="text-xs font-mono text-slate-400 shrink-0 w-12 text-right">
+                  {config.requestsPerMinute ?? 4}/min
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Paces automated crew delegations and tool calls to remain safely within provider rate limits (default: 4 RPM for Gemini free tier).
+              </p>
             </div>
 
             {/* Actions: Test Transmission & Save Settings */}
