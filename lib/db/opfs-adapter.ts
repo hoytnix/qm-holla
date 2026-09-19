@@ -42,11 +42,19 @@ class OpfsDatabase implements IQuarkDatabase {
   }
 
   public async init(): Promise<void> {
-    if (this.initialized) return;
+    if (this.isReady) return;
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = (async () => {
-      if (typeof window !== 'undefined' && !window.crossOriginIsolated) {
+      if (typeof window === 'undefined') {
+        this.isReady = true;
+        this.usingFallback = true;
+        this.initialized = true;
+        await this.seedDefaultDataIfEmpty();
+        return;
+      }
+
+      if (!window.crossOriginIsolated) {
         console.warn('crossOriginIsolated is false; OPFS sync unavailable, switching to in-memory/fallback mode.');
         this.isReady = true;
         this.usingFallback = true;
@@ -57,7 +65,33 @@ class OpfsDatabase implements IQuarkDatabase {
 
       if (this.isWorkerSupported) {
         try {
-          const workerInitPromise = new Promise<void>((resolve, reject) => {
+          await new Promise<void>((resolve) => {
+            const safetyTimeout = setTimeout(() => {
+              console.warn('OPFS initialization timed out after 3s, using in-memory fallback.');
+              this.isReady = true;
+              this.usingFallback = true;
+              resolve();
+            }, 3000);
+
+            const handleSuccess = () => {
+              clearTimeout(safetyTimeout);
+              this.isReady = true;
+              this.usingFallback = false;
+              this.initialized = true;
+              resolve();
+            };
+
+            const handleFallback = (errReason?: any) => {
+              clearTimeout(safetyTimeout);
+              if (errReason) {
+                console.warn('Worker reported INIT_ERROR or failed, activating fallback:', errReason);
+              }
+              this.isReady = true;
+              this.usingFallback = true;
+              this.initialized = true;
+              resolve();
+            };
+
             try {
               this.worker = new Worker(new URL('../../workers/db.worker.ts', import.meta.url), {
                 type: 'module',
@@ -65,15 +99,19 @@ class OpfsDatabase implements IQuarkDatabase {
 
               this.worker.onerror = (err) => {
                 console.warn('OPFS SQLite Web Worker emitted an error:', err);
-                reject(err);
+                handleFallback(err);
               };
 
               this.worker.onmessage = (event: MessageEvent) => {
-                const { id, type, success, data, error } = event.data || {};
+                const { id, type, success, data, error, fallback } = event.data || {};
                 if (type === 'INIT_SUCCESS') {
-                  resolve();
+                  if (fallback) {
+                    handleFallback();
+                  } else {
+                    handleSuccess();
+                  }
                 } else if (type === 'INIT_ERROR') {
-                  reject(new Error(error || 'Worker init error'));
+                  handleFallback(error);
                 }
 
                 if (id) {
@@ -89,40 +127,19 @@ class OpfsDatabase implements IQuarkDatabase {
                 }
               };
 
-              this.sendToWorker('init').then(
-                () => resolve(),
-                (err) => reject(err)
-              );
+              this.worker.postMessage({ type: 'INIT', action: 'init' });
             } catch (createErr) {
-              reject(createErr);
+              handleFallback(createErr);
             }
           });
 
-          // 2500ms safety timeout
-          let timeoutHandle: any = null;
-          const timeoutPromise = new Promise<void>((_, reject) => {
-            timeoutHandle = setTimeout(() => {
-              reject(new Error('Worker init timed out after 2500ms'));
-            }, 2500);
-          });
-
-          await Promise.race([workerInitPromise, timeoutPromise]);
-          clearTimeout(timeoutHandle);
-          this.isReady = true;
-          this.initialized = true;
-          return;
+          if (!this.usingFallback) {
+            this.isReady = true;
+            this.initialized = true;
+            return;
+          }
         } catch (err) {
           console.warn('Failed to initialize OPFS SQLite Web Worker, switching gracefully to in-memory fallback:', err);
-          if (this.worker) {
-            try {
-              this.worker.terminate();
-            } catch {}
-            this.worker = null;
-          }
-          for (const pending of this.pendingRequests.values()) {
-            pending.reject(new Error('Worker terminated'));
-          }
-          this.pendingRequests.clear();
         }
       }
 

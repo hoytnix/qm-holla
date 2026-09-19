@@ -44,6 +44,11 @@
   - Configured isolation and CORS headers (`Cross-Origin-Opener-Policy`, `Cross-Origin-Embedder-Policy`, `Access-Control-Allow-Origin: *`) for `/sqlite/*` in both [`public/_headers`](file:///home/oloty/Dev/qm-holla/public/_headers) and [`netlify.toml`](file:///home/oloty/Dev/qm-holla/netlify.toml).
   - Maintained full SQLite schema, auto-migrations, fallback in-memory database, and Straw Hat crew seeding routines.
   - Verified with `npx tsc --noEmit` and production build `pnpm build` (9/9 static routes generated cleanly).
+- **SQLite WASM 404 Compile Error & Client Init Memoization**:
+  - Configured explicit `locateFile: (file: string) => /sqlite/${file}` inside `sqlite3InitModule` in [`workers/db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts) to force Emscripten to fetch `/sqlite/sqlite3.wasm` from static public assets rather than resolving relative to the worker script origin.
+  - Hardened `OpfsDatabase.init()` in [`lib/db/opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts): memoized `initPromise`, added `this.isReady` short-circuit guard, 3000ms timeout with fallback activation, and cleanly handled `INIT_SUCCESS` / `INIT_ERROR` message routing to prevent infinite initialization re-entry.
+  - Configured explicit `Content-Type: application/wasm`, `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`, and `Access-Control-Allow-Origin: *` headers for `/sqlite/*.wasm` in both [`public/_headers`](file:///home/oloty/Dev/qm-holla/public/_headers) and [`netlify.toml`](file:///home/oloty/Dev/qm-holla/netlify.toml).
+  - Verified clean TypeScript checks (`npx tsc --noEmit`) and production build compilation (`pnpm build`).
 
 ## Invariants Maintained
 1. Local-First OPFS SQLite storage guarantee (zero external database dependencies, credentials stored in client OPFS).

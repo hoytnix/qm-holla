@@ -506,6 +506,17 @@ async function initSqlite() {
     const sqlite3 = await sqlite3InitModule({
       print: console.log,
       printErr: console.error,
+      locateFile: (file: string) => {
+        // Force sqlite3.wasm to load from public/sqlite/
+        if (file.startsWith('sqlite3.wasm')) {
+          return `/sqlite/${file}`;
+        }
+        // Preserve proxy worker path and query parameters (e.g. ?vfs=opfs)
+        if (file.startsWith('sqlite3-opfs-async-proxy.js')) {
+          return `/sqlite/${file}`;
+        }
+        return `/sqlite/${file}`;
+      },
     });
 
     // 2. Initialize with OPFS or fall back gracefully
