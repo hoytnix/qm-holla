@@ -22,6 +22,9 @@
     - Main layout styled with `pb-16 md:pb-0` to guarantee zero overlap with the bottom quick navbar on mobile.
 
 ## Recent Changes
+- **Project Documentation & Polsia FLOSS Positioning (`README.md`)**:
+  - Authored comprehensive documentation highlighting Quarkmeme as a 100% FLOSS browser-native alternative to Polsia.
+  - Detailed zero cloud database bills invariant, client-side OPFS SQLite WASM architecture, 7-universe crew hierarchy, isolated character memory banks, and setup guide.
 - **Mobile Bottom Navigation (`components/layout/BottomNav.tsx`, `app/layout.tsx`)**:
   - Created persistent, icons-only bottom tab bar for Canvas, Chat, Crew, Vault, and Settings.
   - Injected `BottomNav` into `app/layout.tsx` so it is persistently available across all mobile routes.

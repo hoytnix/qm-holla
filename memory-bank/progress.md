@@ -3,6 +3,10 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Comprehensive Documentation & Polsia FLOSS Positioning:
+  - Authored a documentation suite in [`README.md`](file:///home/oloty/Dev/qm-holla/README.md) spotlighting Quarkmeme as a FLOSS, browser-native alternative to Polsia.
+  - Detailed the comparison matrix (proprietary vs FLOSS, cloud lock-in vs client-side OPFS SQLite, recurring database subscriptions vs $0/mo bills, server threads vs isolated character memory banks).
+  - Documented ASCII system architecture, hierarchical multi-agent crew (Level 0-2), Grand Line radial canvas, 7-universe crew engine, and local developer setup with pnpm.
 - [x] Mobile Navigation Theme Architecture:
   - Created [`components/layout/BottomNav.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/BottomNav.tsx) providing a fixed quick navbar at the bottom of mobile viewports (`inset-x-0 bottom-0 z-40 md:hidden`) for thumb reach, strictly icons-only (no text) with tabs for Canvas (`/`), Chat (`/chat`), Crew (`/crew`), Vault (`/vault`), and Settings (`/settings`).
   - Integrated persistent `BottomNav` into [`app/layout.tsx`](file:///home/oloty/Dev/qm-holla/app/layout.tsx) with body bottom padding (`pb-16 md:pb-0`) ensuring fluid viewport scrolling.
