@@ -112,4 +112,9 @@ export interface IQuarkDatabase {
   saveMessage(message: MessageRecord): Promise<void>;
   getMessages(threadId: string): Promise<MessageRecord[]>;
   clearMessages?(threadId?: string): Promise<void>;
+
+  // Settings & BYOK
+  getSetting(key: string, defaultValue?: string): Promise<string>;
+  setSetting(key: string, value: string): Promise<void>;
+  getAllSettings(): Promise<Record<string, string>>;
 }

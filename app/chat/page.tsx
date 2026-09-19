@@ -2,9 +2,11 @@
 
 import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { db } from '@/lib/db/opfs-adapter';
 import { AgentRecord, MessageRecord } from '@/lib/db/adapter';
 import { assembleContext, routeIntent } from '@/lib/ai/orchestrator';
+import { useSettings } from '@/lib/settings/settings-context';
 import { Navbar } from '@/components/layout/Navbar';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { GlassButton } from '@/components/ui/GlassButton';
@@ -20,6 +22,8 @@ import {
   RefreshCw,
   Compass,
   Crown,
+  AlertTriangle,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { AgentIcon } from '@/components/ui/AgentIcon';
 
@@ -27,13 +31,13 @@ function ChatContent() {
   const searchParams = useSearchParams();
   const requestedAgentId = searchParams.get('agent');
 
+  const { config, isConfigured } = useSettings();
+
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>('auto');
   const [messages, setMessages] = useState<MessageRecord[]>([]);
   const [inputPrompt, setInputPrompt] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  const [showKeyModal, setShowKeyModal] = useState(false);
   const [activeTrace, setActiveTrace] = useState<string[]>([]);
 
   const threadId = 'grand-line-main-thread';
@@ -59,17 +63,9 @@ function ChatContent() {
 
       const history = await db.getMessages(threadId);
       setMessages(history);
-
-      const savedKey = localStorage.getItem('quark_api_key') || '';
-      setApiKey(savedKey);
     }
     init();
   }, [requestedAgentId]);
-
-  const saveKey = (key: string) => {
-    setApiKey(key);
-    localStorage.setItem('quark_api_key', key);
-  };
 
   const handleClearHistory = async () => {
     if (confirm('Clear local chat history stored in SQLite?')) {
@@ -106,7 +102,7 @@ function ChatContent() {
 
       setActiveTrace(orchestration.delegationPath);
 
-      // 3. Initiate SSE Streaming Request to Next.js route handler
+      // 3. Initiate Streaming Request to Next.js route handler with ephemeral headers
       const assistantMsgId = `msg-${Date.now().toString(36)}-a`;
       const assistantMsg: MessageRecord = {
         id: assistantMsgId,
@@ -119,16 +115,23 @@ function ChatContent() {
 
       setMessages((prev) => [...prev, assistantMsg]);
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (config.apiKey) headers['x-llm-api-key'] = config.apiKey;
+      if (config.provider) headers['x-llm-provider'] = config.provider;
+      if (config.model) headers['x-llm-model'] = config.model;
+      if (config.baseUrl) headers['x-llm-base-url'] = config.baseUrl;
+
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           messages: [...messages, userMsg].map((m) => ({
             role: m.sender_type === 'user' ? 'user' : 'assistant',
             content: m.content,
           })),
           systemPrompt: orchestration.systemInstruction,
-          apiKey: apiKey || undefined,
         }),
       });
 
@@ -142,32 +145,17 @@ function ChatContent() {
       let accumulated = '';
 
       if (reader) {
-        let buffer = '';
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const dataStr = line.slice(6).trim();
-              if (dataStr === '[DONE]') continue;
-              try {
-                const parsed = JSON.parse(dataStr);
-                if (parsed.text) {
-                  accumulated += parsed.text;
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === assistantMsgId ? { ...m, content: accumulated } : m
-                    )
-                  );
-                }
-              } catch {}
-            }
-          }
+          const chunk = decoder.decode(value, { stream: true });
+          accumulated += chunk;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId ? { ...m, content: accumulated } : m
+            )
+          );
         }
       }
 
@@ -225,13 +213,16 @@ function ChatContent() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowKeyModal(true)}
+            <Link
+              href="/settings"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-slate-300 hover:text-white transition-all"
             >
-              <Key className="w-3.5 h-3.5 text-amber-400" />
-              <span>{apiKey ? 'API Key Configured' : 'Set API Key'}</span>
-            </button>
+              <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
+              <span>{isConfigured ? 'Fuel Settings' : 'Configure Key'}</span>
+              {!isConfigured && (
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse ml-0.5" />
+              )}
+            </Link>
 
             <button
               onClick={handleClearHistory}
@@ -242,6 +233,24 @@ function ChatContent() {
             </button>
           </div>
         </div>
+
+        {/* Unconfigured Key Interceptor Notification Card */}
+        {!isConfigured && (
+          <div className="my-3 p-3.5 rounded-2xl bg-amber-950/30 border border-amber-500/30 flex items-center justify-between gap-3 text-xs text-amber-200">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>
+                Engine offline: Configure your API Key in Settings to speak with Luffy and activate live LLM streaming.
+              </span>
+            </div>
+            <Link
+              href="/settings"
+              className="px-3 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 transition-colors"
+            >
+              Configure Fuel
+            </Link>
+          </div>
+        )}
 
         {/* Trace banner */}
         {activeTrace.length > 0 && (
@@ -353,33 +362,6 @@ function ChatContent() {
             <span className="hidden sm:inline">Dispatch</span>
           </GlassButton>
         </form>
-
-        {/* API Key Modal */}
-        {showKeyModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-            <GlassCard className="p-6 max-w-md w-full border-white/20 bg-slate-900/95 shadow-2xl">
-              <h3 className="text-base font-bold text-white mb-2 flex items-center gap-2">
-                <Key className="w-4 h-4 text-amber-400" />
-                <span>Client Inference Key (Optional)</span>
-              </h3>
-              <p className="text-xs text-slate-400 mb-4">
-                Keys are stored strictly inside your browser's <code className="text-indigo-300">localStorage</code>. If blank, Quarkmeme runs in local offline simulation mode with OPFS SQLite.
-              </p>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => saveKey(e.target.value)}
-                placeholder="sk-... (OpenAI) or AIza... (Gemini)"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-400 mb-4"
-              />
-              <div className="flex justify-end gap-2">
-                <GlassButton variant="primary" onClick={() => setShowKeyModal(false)}>
-                  Done
-                </GlassButton>
-              </div>
-            </GlassCard>
-          </div>
-        )}
       </main>
     </div>
   );

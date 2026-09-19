@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic,
@@ -15,8 +16,10 @@ import {
   Sparkles,
   AlertCircle,
   Radio,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { speechEngine } from '@/lib/voice/speech-engine';
+import { useSettings } from '@/lib/settings/settings-context';
 import { GlassButton } from '@/components/ui/GlassButton';
 
 type VoiceHelmStatus = 'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING';
@@ -34,6 +37,7 @@ export const VoiceHelmSheet: React.FC<VoiceHelmSheetProps> = ({
   onDispatchMessage,
   lastAssistantReply = "I'm Luffy, Captain of this vessel! What course are we setting today?",
 }) => {
+  const { isConfigured } = useSettings();
   const [status, setStatus] = useState<VoiceHelmStatus>('IDLE');
   const [transcript, setTranscript] = useState('');
   const [isMuted, setIsMuted] = useState(false);
@@ -229,6 +233,23 @@ export const VoiceHelmSheet: React.FC<VoiceHelmSheetProps> = ({
           <div className="my-3 p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-200 flex items-center gap-2">
             <AlertCircle width={16} height={16} className="text-rose-400 shrink-0" />
             <span>{errorNotice}</span>
+          </div>
+        )}
+
+        {/* Unconfigured Key Notice */}
+        {!isConfigured && (
+          <div className="my-3 p-3 rounded-2xl bg-amber-950/30 border border-amber-500/30 text-xs text-amber-200 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle width={16} height={16} className="text-amber-400 shrink-0" />
+              <span>Engine offline: Configure your API Key in Settings to speak with Luffy.</span>
+            </div>
+            <Link
+              href="/settings"
+              onClick={onClose}
+              className="px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 transition-colors"
+            >
+              Settings
+            </Link>
           </div>
         )}
 

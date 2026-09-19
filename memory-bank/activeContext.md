@@ -6,6 +6,14 @@
 - Enforced zero unbundled Unicode emojis across all UI components and replaced with deterministic `lucide-react` vector icons with explicit dimensions.
 
 ## Recent Changes
+- **BYOK & Model Provider Settings Engine (Local-First OPFS SQLite)**:
+  - Added `settings` table schema in [`schema.sql`](file:///home/oloty/Dev/qm-holla/lib/db/schema.sql) and [`db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts) for local key-value configuration storage.
+  - Implemented `GET_SETTING`, `SET_SETTING`, and `GET_ALL_SETTINGS` worker handlers in [`db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts) and accessor methods in [`opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts).
+  - Created [`settings-context.tsx`](file:///home/oloty/Dev/qm-holla/lib/settings/settings-context.tsx) providing `useSettings()` with fast local cache hydration, OPFS SQLite persistence, transmission latency pinging, vault JSON export, and local storage flushing.
+  - Refactored [`app/api/chat/route.ts`](file:///home/oloty/Dev/qm-holla/app/api/chat/route.ts) with Vercel AI SDK (`ai`, `@ai-sdk/openai`, `@ai-sdk/google`) to support runtime provider selection (OpenRouter, Google Gemini, OpenAI/Self-Hosted) from ephemeral client request headers (`x-llm-provider`, `x-llm-api-key`, `x-llm-base-url`, `x-llm-model`).
+  - Built [`app/settings/page.tsx`](file:///home/oloty/Dev/qm-holla/app/settings/page.tsx) ("Ship's Engine & Settings") with provider selector cards, model preset dropdowns, hide/reveal password input with clipboard pasting, test ping latency verification, and local sovereign vault export.
+  - Integrated Settings navigation link with amber unconfigured pulse badge in [`Navbar.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/Navbar.tsx).
+  - Added inline unconfigured warning cards with direct quick links to `/settings` in [`app/chat/page.tsx`](file:///home/oloty/Dev/qm-holla/app/chat/page.tsx) and [`VoiceHelmSheet.tsx`](file:///home/oloty/Dev/qm-holla/components/voice/VoiceHelmSheet.tsx).
 - **Phase 1: Dynamic Radial Canvas & Mobile Project Workspaces**:
   - Implemented mobile-first gesture engine in [`RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx) supporting single-finger pan and multi-touch pinch-to-zoom (0.5x to 2.5x) with floating touch controls.
   - Implemented Level 0 to Level 3 radial hierarchy math: Luffy at (0, 0), 6 Crew Specialists at radius 180px, Project diamond nodes at radius 320px, and unfurled satellite checkboxes and teal circular 'K' badges at radius 420px+.
@@ -32,6 +40,7 @@
   - Made [`RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx) and [`app/page.tsx`](file:///home/oloty/Dev/qm-holla/app/page.tsx) non-blocking by immediately rendering the SVG canvas with default crew data and background hydration with an `OPFS Hydrating...` / `OPFS Active` status badge.
 
 ## Invariants Maintained
-1. Local-First OPFS SQLite storage guarantee (zero external database dependencies).
-2. Zero unbundled emojis law across all UI elements (all vector Lucide SVG icons).
-3. 375px+ responsive mobile touch targets and `pb-safe` drawer layouts.
+1. Local-First OPFS SQLite storage guarantee (zero external database dependencies, credentials stored in client OPFS).
+2. Ephemeral model routing invariant (keys passed dynamically per request without server storage).
+3. Zero unbundled emojis law across all UI elements (all vector Lucide SVG icons).
+4. 375px+ responsive mobile touch targets and `pb-safe` drawer layouts.

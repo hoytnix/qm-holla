@@ -3,11 +3,12 @@
 ## Current Progress Overview
 
 ### Completed & Functional
-- [x] Next.js App Router architecture and base pages (`/`, `/chat`, `/crew`, `/vault`, `/api/chat`).
+- [x] BYOK & Model Provider Settings: OPFS SQLite `settings` table, `useSettings()` hook, dynamic ephemeral provider headers, `/settings` interface, OpenRouter/Gemini/OpenAI-compatible routing, and unconfigured alerts.
+- [x] Next.js App Router architecture and base pages (`/`, `/chat`, `/crew`, `/vault`, `/settings`, `/api/chat`).
 - [x] Phase 1: Interactive gesture-enabled SVG radial map in [`RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx) with single/multi-touch pan & pinch zoom, floating controls, Level 0-3 radial hierarchy, and animated unfurling.
 - [x] Phase 1: Bottom [`ProjectWorkspaceDrawer.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/ProjectWorkspaceDrawer.tsx) with branch expand/collapse controls and persistent canvas legend footer.
-- [x] Phase 2: Database schema in [`schema.sql`](file:///home/oloty/Dev/qm-holla/lib/db/schema.sql) with `projects`, `documents`, `tasks`, and `documents_fts`.
-- [x] Phase 2: Web Worker actions in [`db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts) and [`opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts) (`SAVE_DOCUMENT`, `GET_DOCUMENTS_BY_PROJECT`, `SEARCH_DOCUMENTS`, `TOGGLE_TASK_STATUS`).
+- [x] Phase 2: Database schema in [`schema.sql`](file:///home/oloty/Dev/qm-holla/lib/db/schema.sql) with `projects`, `documents`, `tasks`, `settings`, and `documents_fts`.
+- [x] Phase 2: Web Worker actions in [`db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts) and [`opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts) (`SAVE_DOCUMENT`, `GET_DOCUMENTS_BY_PROJECT`, `SEARCH_DOCUMENTS`, `TOGGLE_TASK_STATUS`, `GET_SETTING`, `SET_SETTING`, `GET_ALL_SETTINGS`).
 - [x] Phase 2: Mobile [`MarkdownDrawer.tsx`](file:///home/oloty/Dev/qm-holla/components/vault/MarkdownDrawer.tsx) with debounced 500ms auto-save directly to OPFS SQLite.
 - [x] Phase 3: Captain's Log hero dashboard in [`CaptainsLog.tsx`](file:///home/oloty/Dev/qm-holla/components/dashboard/CaptainsLog.tsx) with open commitments counter.
 - [x] Phase 3: 6:00 AM Morning Planning ritual controller in [`MorningPlanningModal.tsx`](file:///home/oloty/Dev/qm-holla/components/planning/MorningPlanningModal.tsx) and crimson trigger button in [`Navbar.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/Navbar.tsx).

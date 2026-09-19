@@ -590,6 +590,45 @@ class OpfsDatabase implements IQuarkDatabase {
       this.memMessages = [];
     }
   }
+
+  // --- Settings & BYOK ---
+  private memSettings: Record<string, string> = {};
+
+  async getSetting(key: string, defaultValue: string = ''): Promise<string> {
+    if (!this.usingFallback && this.worker) {
+      try {
+        const val = await this.sendToWorker<string>('GET_SETTING', { key, defaultValue });
+        return val !== undefined && val !== null ? val : defaultValue;
+      } catch (err) {
+        console.warn('Worker getSetting failed, checking memory:', err);
+      }
+    }
+    return this.memSettings[key] !== undefined ? this.memSettings[key] : defaultValue;
+  }
+
+  async setSetting(key: string, value: string): Promise<void> {
+    this.memSettings[key] = value;
+    if (!this.usingFallback && this.worker) {
+      try {
+        await this.sendToWorker('SET_SETTING', { key, value });
+        return;
+      } catch (err) {
+        console.warn('Worker setSetting failed, saved in memory:', err);
+      }
+    }
+  }
+
+  async getAllSettings(): Promise<Record<string, string>> {
+    if (!this.usingFallback && this.worker) {
+      try {
+        const res = await this.sendToWorker<Record<string, string>>('GET_ALL_SETTINGS');
+        return { ...this.memSettings, ...res };
+      } catch (err) {
+        console.warn('Worker getAllSettings failed, returning memory settings:', err);
+      }
+    }
+    return { ...this.memSettings };
+  }
 }
 
 // Global singleton instance

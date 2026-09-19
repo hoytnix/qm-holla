@@ -76,6 +76,13 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Local Key-Value Configuration Storage (BYOK & Model Settings)
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Triggers to keep FTS index synchronized with documents
 CREATE TRIGGER IF NOT EXISTS documents_ai AFTER INSERT ON documents BEGIN
   INSERT INTO documents_fts(rowid, title, content) VALUES (new.rowid, new.title, new.content);

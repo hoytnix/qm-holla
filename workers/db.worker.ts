@@ -75,6 +75,12 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TRIGGER IF NOT EXISTS documents_ai AFTER INSERT ON documents BEGIN
   INSERT INTO documents_fts(rowid, title, content) VALUES (new.rowid, new.title, new.content);
 END;
@@ -696,6 +702,44 @@ self.onmessage = async (e: MessageEvent) => {
         };
 
         self.postMessage({ id, success: true, data: updatedTask });
+        break;
+      }
+
+      case 'GET_SETTING': {
+        const { key, defaultValue } = payload;
+        let val: string | null = null;
+        db.exec({
+          sql: `SELECT value FROM settings WHERE key = ? LIMIT 1`,
+          bind: [key],
+          rowMode: 'object',
+          callback: (row: any) => {
+            val = row.value;
+          },
+        });
+        self.postMessage({ id, success: true, data: val !== null ? val : (defaultValue || '') });
+        break;
+      }
+
+      case 'SET_SETTING': {
+        const { key, value } = payload;
+        db.exec({
+          sql: `INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)`,
+          bind: [key, value],
+        });
+        self.postMessage({ id, success: true });
+        break;
+      }
+
+      case 'GET_ALL_SETTINGS': {
+        const settingsMap: Record<string, string> = {};
+        db.exec({
+          sql: `SELECT key, value FROM settings`,
+          rowMode: 'object',
+          callback: (row: any) => {
+            settingsMap[row.key] = row.value;
+          },
+        });
+        self.postMessage({ id, success: true, data: settingsMap });
         break;
       }
 

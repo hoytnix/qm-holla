@@ -3,14 +3,16 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Compass, Users, MessageSquare, Database, Sun } from 'lucide-react';
+import { Compass, Users, MessageSquare, Database, Sun, SlidersHorizontal } from 'lucide-react';
 import { MorningPlanningModal } from '@/components/planning/MorningPlanningModal';
+import { useSettings } from '@/lib/settings/settings-context';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Canvas', icon: Compass },
   { href: '/chat', label: 'Helm Chat', icon: MessageSquare },
   { href: '/crew', label: 'Crew Directory', icon: Users },
   { href: '/vault', label: 'Vault & Lore', icon: Database },
+  { href: '/settings', label: 'Settings', icon: SlidersHorizontal },
 ];
 
 interface NavbarProps {
@@ -21,6 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
   const pathname = usePathname();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasReviewedToday, setHasReviewedToday] = useState(false);
+  const { isConfigured } = useSettings();
 
   const handleOpenModal = () => {
     if (onOpenMorningPlanning) {
@@ -55,11 +58,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
+              const isSettingsItem = item.href === '/settings';
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     isActive
                       ? 'bg-amber-600/90 text-white shadow-md shadow-amber-600/30'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -67,6 +71,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
                 >
                   <Icon width={18} height={18} className="shrink-0" />
                   <span>{item.label}</span>
+                  {isSettingsItem && !isConfigured && (
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse ml-0.5 shadow-[0_0_8px_rgba(251,191,36,0.6)]" title="API Key Unconfigured" />
+                  )}
                 </Link>
               );
             })}
