@@ -3,6 +3,10 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Standalone Menu Page & Pop-Out Drawer Retirement:
+  - Created dedicated command center page at [`app/menu/page.tsx`](file:///home/oloty/Dev/qm-holla/app/menu/page.tsx) replacing the mobile pop-out drawer with a full-screen, responsive application hub.
+  - Refactored [`components/layout/Navbar.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/Navbar.tsx) to point the mobile Menu button directly to `/menu` (with active highlighting) and added `Menu` to `NAV_ITEMS` for desktop navigation.
+  - Features fleet navigation grid for all core views, multi-tenant company workspace switcher, OPFS SQLite vitals telemetry ($0/mo bills guarantee, active agents count, indexed documents count), and squad ritual triggers (Morning Planning and Universe Theme switcher).
 - [x] Per-Agent Custom AI Model Assignment:
   - Extended [`AgentRecord`](file:///home/oloty/Dev/qm-holla/lib/db/adapter.ts) schema and [`DEFAULT_STRAW_HAT_AGENTS`](file:///home/oloty/Dev/qm-holla/lib/crew/default-crew.ts) with `model?: string | null`.
   - Added non-destructive database migrations (`ALTER TABLE agents ADD COLUMN model TEXT`) across [`schema.sql`](file:///home/oloty/Dev/qm-holla/lib/db/schema.sql), [`workers/db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts), and [`public/sqlite/sqlite-engine.js`](file:///home/oloty/Dev/qm-holla/public/sqlite/sqlite-engine.js).

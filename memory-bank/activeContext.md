@@ -1,21 +1,15 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
-- Implemented **Per-Agent Model Customization**, enabling users to assign dedicated AI models to individual agents in their crew or fallback to global settings:
-  - **Agent Schema & OPFS SQLite Migration**:
-    - Extended `AgentRecord` interface in `lib/db/adapter.ts` with optional `model?: string | null`.
-    - Added `model TEXT` column to `agents` table across `lib/db/schema.sql`, `workers/db.worker.ts`, and `public/sqlite/sqlite-engine.js` with non-destructive bootstrap migration (`ALTER TABLE agents ADD COLUMN model TEXT`).
-    - Updated `DEFAULT_STRAW_HAT_AGENTS` in `lib/crew/default-crew.ts` and `saveAgent` in `lib/db/opfs-adapter.ts`.
-    - Preserved existing agent model assignments during theme switches in `lib/settings/settings-context.tsx`.
-  - **Crew Directory & Agent Configuration UI (`app/crew/page.tsx`)**:
-    - Added interactive model selection dropdown on each agent card populated with `GOOGLE_AI_STUDIO_MODELS` from `lib/ai/models.ts`.
-    - Added dynamic badge indicating whether an agent has a dedicated model (`Custom`) or inherits the `Global Default`.
-    - Integrated model selection in the agent edit/recruit modal and role instructions inspector modal.
-    - Persisted model selection instantly to browser-local OPFS SQLite via `db.saveAgent()`.
-  - **Execution Engine & Multi-Agent Routing**:
-    - Updated `assembleContext` in `lib/ai/orchestrator.ts` to expose `customModel: targetAgent.model || null` in `OrchestrationResult`.
-    - Updated chat dispatch in `app/chat/page.tsx` to route `x-llm-model` header using `targetAgent.model || customModel || config.model`.
-    - Updated autonomous subagent execution engine in `lib/ai/subagent-engine.ts` to dispatch tasks using `agent.model || context.targetAgent.model || config.model`.
+- Implemented **Standalone Menu Page (`/menu`) and Navigation Refactor**:
+  - Replaced the mobile slide-over/pop-out drawer in `components/layout/Navbar.tsx` with a dedicated, responsive Menu page at `app/menu/page.tsx`.
+  - Updated the navbar Menu button to navigate directly to `/menu` (with active highlighting) across mobile devices, and included `Menu` in `NAV_ITEMS` on desktop.
+  - The dedicated `/menu` command center features:
+    - **Fleet Navigation Grid**: High-craft interactive glass cards for all core modules (Canvas, Helm Chat, Crew Directory, Knowledge Vault, Settings) with accent borders, icons, and direct launchers.
+    - **Company Workspaces Multi-Tenant Grid**: Instant profile hot-switching, active indicators, owner names, mission statements, and workspace creation triggers.
+    - **Sovereignty & Storage Telemetry Vitals**: Real-time OPFS SQLite status, active crew agent count, FTS5 document count, and $0/mo zero-cloud-bills invariant indicator.
+    - **Squad Rituals & Universe Themes**: One-touch launchers for Morning Planning brief and Theme Selection modals.
+  - Retained strict invariants: zero unbundled Unicode emojis (`lucide-react` SVG vector icons throughout), fluid 375px responsive standard, and verified via `pnpm build`.
 
 ## Recent Changes
 - **Agent Schema & Adapter (`lib/db/adapter.ts`, `lib/crew/default-crew.ts`, `lib/db/schema.sql`, `lib/db/opfs-adapter.ts`, `public/sqlite/sqlite-engine.js`, `workers/db.worker.ts`)**:

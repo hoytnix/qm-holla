@@ -35,6 +35,7 @@ const NAV_ITEMS = [
   { href: '/crew', label: 'Crew Directory', icon: Users },
   { href: '/vault', label: 'Vault & Lore', icon: Database },
   { href: '/settings', label: 'Settings', icon: SlidersHorizontal },
+  { href: '/menu', label: 'Menu', icon: Menu },
 ];
 
 const THEME_ICONS: Record<AppTheme, LucideIcon> = {
@@ -57,7 +58,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [hasReviewedToday, setHasReviewedToday] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCompanyDropdownOpen, setIsCompanyDropdownOpen] = useState(false);
   const companyDropdownRef = React.useRef<HTMLDivElement>(null);
 
@@ -86,23 +86,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
     };
   }, []);
 
-  // Close mobile navigation drawer whenever route changes
+  // Close company dropdown whenever route changes
   useEffect(() => {
-    setIsMobileMenuOpen(false);
     setIsCompanyDropdownOpen(false);
   }, [pathname]);
-
-  // Lock background scroll when mobile navigation drawer is open
-  useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isMobileMenuOpen]);
 
   const handleOpenModal = () => {
     if (onOpenMorningPlanning) {
@@ -118,19 +105,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
           {/* Logo & Mobile Menu Toggle */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Mobile Hamburger Button */}
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-              aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-              className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-slate-900/80 border border-white/10 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+            {/* Mobile Menu Page Link Button */}
+            <Link
+              href="/menu"
+              aria-label="Open Menu"
+              className={`md:hidden flex items-center justify-center w-10 h-10 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/40 ${
+                pathname === '/menu'
+                  ? 'bg-amber-600 text-white border-amber-500 shadow-md shadow-amber-600/30 font-bold'
+                  : 'bg-slate-900/80 border-white/10 text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
             >
-              {isMobileMenuOpen ? (
-                <X width={20} height={20} />
-              ) : (
-                <Menu width={20} height={20} />
-              )}
-            </button>
+              <Menu width={20} height={20} />
+            </Link>
 
             {/* Logo & Theme Badge */}
             <Link href="/" className="flex items-center gap-2.5 group shrink-0">
@@ -283,163 +269,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
           </div>
         </div>
       </header>
-
-      {/* Mobile Navigation Drawer & Backdrop */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          {/* Backdrop overlay */}
-          <div
-            className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity"
-            onClick={() => setIsMobileMenuOpen(false)}
-            aria-hidden="true"
-          />
-
-          {/* Slide-over Drawer */}
-          <div className="relative z-10 w-4/5 max-w-xs h-full bg-slate-950 border-r border-white/10 shadow-2xl flex flex-col justify-between p-5">
-            <div>
-              {/* Drawer Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 rounded-xl bg-gradient-to-tr ${themeConfig.accentBg} flex items-center justify-center text-white font-mono font-bold text-base shadow-[0_0_10px_rgba(245,158,11,0.3)]`}>
-                    <ThemeIcon width={16} height={16} />
-                  </div>
-                  <div>
-                    <span className="font-bold text-white text-sm block leading-tight">Quarkmeme</span>
-                    <span className="text-[10px] text-emerald-400 font-mono">{themeConfig.name}</span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
-                  aria-label="Close navigation"
-                >
-                  <X width={18} height={18} />
-                </button>
-              </div>
-
-              {/* Navigation Links List */}
-              <nav className="mt-5 space-y-1.5">
-                {NAV_ITEMS.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.href;
-                  const isSettingsItem = item.href === '/settings';
-
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-amber-600 text-white font-bold shadow-lg shadow-amber-600/30'
-                          : 'text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent hover:border-white/5'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icon width={20} height={20} className="shrink-0" />
-                        <span>{item.label}</span>
-                      </div>
-
-                      {isSettingsItem && !isConfigured && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                          Setup
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </nav>
-
-              {/* Company Switcher within mobile drawer */}
-              {companies.length > 0 && (
-                <div className="mt-5 pt-4 border-t border-white/10 space-y-2">
-                  <div className="text-[10px] font-mono uppercase text-slate-400 px-1 flex items-center justify-between">
-                    <span>Company Workspaces</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        openCompanyModal();
-                      }}
-                      className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
-                    >
-                      <Plus width={12} height={12} />
-                      <span>New</span>
-                    </button>
-                  </div>
-                  <div className="space-y-1 max-h-28 overflow-y-auto">
-                    {companies.map((c) => {
-                      const isActive = c.id === activeCompany?.id;
-                      return (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            switchCompany(c.id);
-                            setIsMobileMenuOpen(false);
-                          }}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs ${
-                            isActive
-                              ? 'bg-indigo-600/30 text-white font-bold border border-indigo-500/40'
-                              : 'text-slate-300 bg-slate-900/60 border border-white/5'
-                          }`}
-                        >
-                          <div className="truncate pr-2">
-                            <div className="truncate font-semibold">{c.name}</div>
-                            <div className="text-[10px] text-slate-400 truncate">{c.owners}</div>
-                          </div>
-                          {isActive && <Check width={14} height={14} className="text-indigo-400 shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Universe Switcher within mobile drawer */}
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    setIsThemeModalOpen(true);
-                  }}
-                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-white/10 hover:border-amber-500/40 text-left text-xs font-mono text-slate-300"
-                >
-                  <div className="flex items-center gap-2">
-                    <ThemeIcon width={16} height={16} className={themeConfig.accentColor} />
-                    <span>Theme: {themeConfig.name}</span>
-                  </div>
-                  <span className="text-[10px] text-amber-400">Change</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Mobile Drawer Footer */}
-            <div className="pt-4 border-t border-white/10 space-y-3">
-              <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5 space-y-1 text-xs">
-                <div className="flex items-center justify-between text-slate-300 font-medium">
-                  <span>Squad Vessel</span>
-                  <span className="text-emerald-400 font-mono text-[11px]">{themeConfig.defaultGroup}</span>
-                </div>
-                <p className="text-[11px] text-slate-500">
-                  Zero cloud database bills. Sovereign local memory.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between px-1 text-[11px] text-slate-500 font-mono">
-                <span>Quarkmeme v1.0.0</span>
-                <span className="inline-flex items-center gap-1.5 text-amber-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                  Fleet Online
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Internal Modal Fallback if not controlled by parent */}
       <MorningPlanningModal
