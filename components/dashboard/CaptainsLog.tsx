@@ -16,6 +16,7 @@ const THEME_ICONS: Record<AppTheme, LucideIcon> = {
   'ncis': Shield,
   'pokemon': Zap,
   'frieren': Sparkles,
+  'custom': Sparkles,
 };
 
 interface CaptainsLogProps {

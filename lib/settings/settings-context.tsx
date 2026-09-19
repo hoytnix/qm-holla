@@ -31,6 +31,13 @@ export interface SettingsContextValue {
   hasSelectedTheme: boolean;
   setTheme: (theme: AppTheme) => Promise<void>;
   dismissThemeModal: () => void;
+  // Custom Universe & LLM API Key helpers
+  llmApiKey: string;
+  customUniverseQuery: string;
+  isLlmConfigured: boolean;
+  setLlmApiKey: (key: string) => Promise<void>;
+  setCustomUniverseQuery: (query: string) => Promise<void>;
+  setCustomThemeConfig: (customConfig: ThemeConfig) => Promise<void>;
 }
 
 export const DEFAULT_GLOBAL_SYSTEM_PROMPT = `You are an elite autonomous AI operating inside Quarkmeme, a sovereign, local-first multi-agent operating system.
@@ -56,12 +63,16 @@ const SettingsContext = createContext<SettingsContextValue | undefined>(undefine
 const STORAGE_CACHE_KEY = 'quark_llm_config_cache';
 const STORAGE_THEME_KEY = 'quark_app_theme';
 const STORAGE_THEME_SELECTED_KEY = 'quark_has_selected_theme';
+const STORAGE_CUSTOM_QUERY_KEY = 'quark_custom_universe_query';
+const STORAGE_CUSTOM_THEME_CONFIG_KEY = 'quark_custom_theme_config';
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [config, setConfig] = useState<LLMConfig>(DEFAULT_CONFIG);
   const [isLoading, setIsLoading] = useState(true);
   const [currentTheme, setCurrentThemeState] = useState<AppTheme>(DEFAULT_THEME);
   const [hasSelectedTheme, setHasSelectedTheme] = useState<boolean>(true); // Default true until verified on client to avoid flash
+  const [customUniverseQuery, setCustomUniverseQueryState] = useState<string>('');
+  const [customThemeConfig, setCustomThemeConfig] = useState<ThemeConfig | null>(null);
   const hasLoadedRef = React.useRef(false);
 
   // Hydrate settings and theme from local storage cache first, then SQLite
@@ -76,8 +87,20 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         try {
           const cachedTheme = localStorage.getItem(STORAGE_THEME_KEY) as AppTheme | null;
           const cachedHasSelected = localStorage.getItem(STORAGE_THEME_SELECTED_KEY);
+          const cachedCustomQuery = localStorage.getItem(STORAGE_CUSTOM_QUERY_KEY);
+          const cachedCustomTheme = localStorage.getItem(STORAGE_CUSTOM_THEME_CONFIG_KEY);
 
-          if (cachedTheme && THEMES[cachedTheme]) {
+          if (cachedCustomTheme && mounted) {
+            try {
+              setCustomThemeConfig(JSON.parse(cachedCustomTheme));
+            } catch {}
+          }
+
+          if (cachedCustomQuery && mounted) {
+            setCustomUniverseQueryState(cachedCustomQuery);
+          }
+
+          if (cachedTheme && (THEMES[cachedTheme] || cachedTheme === 'custom')) {
             if (mounted) setCurrentThemeState(cachedTheme);
           }
 
@@ -115,7 +138,24 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (settings['llm_rpm']) loaded.requestsPerMinute = parseInt(settings['llm_rpm'], 10);
           if (settings['llm_system_prompt'] !== undefined) loaded.systemPrompt = settings['llm_system_prompt'];
 
-          if (settings['app_theme'] && THEMES[settings['app_theme'] as AppTheme]) {
+          if (settings['custom_universe_query'] !== undefined) {
+            setCustomUniverseQueryState(settings['custom_universe_query']);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(STORAGE_CUSTOM_QUERY_KEY, settings['custom_universe_query']);
+            }
+          }
+
+          if (settings['custom_theme_config'] !== undefined) {
+            try {
+              const parsedConfig = JSON.parse(settings['custom_theme_config']);
+              setCustomThemeConfig(parsedConfig);
+              if (typeof window !== 'undefined') {
+                localStorage.setItem(STORAGE_CUSTOM_THEME_CONFIG_KEY, settings['custom_theme_config']);
+              }
+            } catch {}
+          }
+
+          if (settings['app_theme'] && (THEMES[settings['app_theme'] as AppTheme] || settings['app_theme'] === 'custom')) {
             const themeVal = settings['app_theme'] as AppTheme;
             setCurrentThemeState(themeVal);
             if (typeof window !== 'undefined') {
@@ -265,15 +305,53 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [config]);
 
+  const setLlmApiKey = useCallback(async (key: string) => {
+    await updateConfig({ apiKey: key.trim() });
+  }, [updateConfig]);
+
+  const setCustomUniverseQuery = useCallback(async (query: string) => {
+    setCustomUniverseQueryState(query);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_CUSTOM_QUERY_KEY, query);
+      } catch {}
+    }
+    try {
+      await db.init();
+      await db.setSetting('custom_universe_query', query);
+    } catch (err) {
+      console.warn('Failed to persist custom universe query to OPFS SQLite:', err);
+    }
+  }, []);
+
+  const setCustomThemeConfigAction = useCallback(async (customConfig: ThemeConfig) => {
+    setCustomThemeConfig(customConfig);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_CUSTOM_THEME_CONFIG_KEY, JSON.stringify(customConfig));
+      } catch {}
+    }
+    try {
+      await db.init();
+      await db.setSetting('custom_theme_config', JSON.stringify(customConfig));
+    } catch (err) {
+      console.warn('Failed to persist custom theme config to OPFS SQLite:', err);
+    }
+  }, []);
+
   const flushLocalStorage = useCallback(async () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_CACHE_KEY);
       localStorage.removeItem(STORAGE_THEME_KEY);
       localStorage.removeItem(STORAGE_THEME_SELECTED_KEY);
+      localStorage.removeItem(STORAGE_CUSTOM_QUERY_KEY);
+      localStorage.removeItem(STORAGE_CUSTOM_THEME_CONFIG_KEY);
       localStorage.removeItem('quark_api_key');
     }
     setConfig(DEFAULT_CONFIG);
     setCurrentThemeState(DEFAULT_THEME);
+    setCustomUniverseQueryState('');
+    setCustomThemeConfig(null);
     setHasSelectedTheme(false);
   }, []);
 
@@ -290,6 +368,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       exportedAt: new Date().toISOString(),
       version: '1.0.0',
       currentTheme,
+      customUniverseQuery,
+      customThemeConfig,
       agents,
       projects,
       tasks,
@@ -297,10 +377,14 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     return JSON.stringify(exportPayload, null, 2);
-  }, [currentTheme]);
+  }, [currentTheme, customUniverseQuery, customThemeConfig]);
 
   const isConfigured = Boolean(config.apiKey && config.apiKey.trim().length > 0);
-  const themeConfig = THEMES[currentTheme] || THEMES[DEFAULT_THEME];
+  const isLlmConfigured = isConfigured;
+  const themeConfig =
+    currentTheme === 'custom' && customThemeConfig
+      ? customThemeConfig
+      : THEMES[currentTheme] || THEMES[DEFAULT_THEME];
 
   return (
     <SettingsContext.Provider
@@ -317,6 +401,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         hasSelectedTheme,
         setTheme,
         dismissThemeModal,
+        llmApiKey: config.apiKey,
+        customUniverseQuery,
+        isLlmConfigured,
+        setLlmApiKey,
+        setCustomUniverseQuery,
+        setCustomThemeConfig: setCustomThemeConfigAction,
       }}
     >
       {children}

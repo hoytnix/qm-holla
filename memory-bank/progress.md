@@ -3,6 +3,12 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Custom Universe AI Character Casting & LLM Configuration Vault:
+  - Extended [`lib/settings/themes.ts`](file:///home/oloty/Dev/qm-holla/lib/settings/themes.ts) with `'custom'` theme type and custom fallback configuration.
+  - Enhanced [`lib/settings/settings-context.tsx`](file:///home/oloty/Dev/qm-holla/lib/settings/settings-context.tsx) with `llmApiKey`, `customUniverseQuery`, `isLlmConfigured`, and dual-layer persistence (`localStorage` + browser OPFS SQLite).
+  - Built structured AI Character Mapper API [`app/api/themes/custom/route.ts`](file:///home/oloty/Dev/qm-holla/app/api/themes/custom/route.ts) supporting Google Gemini (`@google/genai` with schema) and OpenRouter/OpenAI-compatible models to dynamically map any movie or TV show to the 7 core agent roles.
+  - Added conditional gating and prompt modal in [`components/settings/ThemeSelectionModal.tsx`](file:///home/oloty/Dev/qm-holla/components/settings/ThemeSelectionModal.tsx) when LLM is not configured, plus one-click casting UI.
+  - Updated [`app/settings/page.tsx`](file:///home/oloty/Dev/qm-holla/app/settings/page.tsx) with Custom Theme selector card, active LLM status indicator, and dynamic casting interface.
 - [x] Multi-Universe Theme Selection System across 7 Universes:
   - Created [`lib/settings/themes.ts`](file:///home/oloty/Dev/qm-holla/lib/settings/themes.ts) with `AppTheme` union, `ThemeConfig` interface, and `THEMES` registry for 7 universes: One Piece, Naruto, The Office, Game Of Thrones, NCIS, Pokemon, and Frieren.
   - Extended [`lib/settings/settings-context.tsx`](file:///home/oloty/Dev/qm-holla/lib/settings/settings-context.tsx) with `currentTheme`, `themeConfig`, `hasSelectedTheme`, `setTheme()`, and `dismissThemeModal()` backed by local storage and browser-secured OPFS SQLite (`app_theme`, `has_selected_theme`).

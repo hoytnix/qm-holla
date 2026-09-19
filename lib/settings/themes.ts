@@ -5,14 +5,15 @@ export type AppTheme =
   | 'game-of-thrones'
   | 'ncis'
   | 'pokemon'
-  | 'frieren';
+  | 'frieren'
+  | 'custom';
 
 export interface ThemeConfig {
   id: AppTheme;
   name: string;
   defaultGroup: string; // e.g., Straw Hat Pirates vs. Team 7 vs. Dunder Mifflin
   tagline: string;
-  leaderTitle: string; // Captain, Hokage, Regional Manager, Lord Commander / King, Special Agent in Charge, Champion, Mage
+  leaderTitle: string; // Captain, Hokage, Regional Manager, Lord Commander / King, Special Agent in Charge, Champion, Mage, Leader
   accentColor: string;
   accentBg: string;
   accentBorder: string;
@@ -112,6 +113,19 @@ export const THEMES: Record<AppTheme, ThemeConfig> = {
     badgeBg: 'bg-sky-500/10',
     badgeText: 'text-sky-300',
     description: 'Contemplate time, unravel ancient grimoires, and cherish everyday human connections.',
+  },
+  'custom': {
+    id: 'custom',
+    name: 'Custom Universe',
+    defaultGroup: 'Custom Ensemble',
+    tagline: 'Infinite universes dynamically mapped to your autonomous crew.',
+    leaderTitle: 'Leader',
+    accentColor: 'text-purple-400',
+    accentBg: 'from-purple-600 to-pink-600',
+    accentBorder: 'border-purple-500/40',
+    badgeBg: 'bg-purple-500/10',
+    badgeText: 'text-purple-300',
+    description: 'Input any TV Show, Movie, or Book to dynamically cast agent roles via structured LLM output.',
   },
 };
 

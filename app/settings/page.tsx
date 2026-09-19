@@ -5,7 +5,8 @@ import { Navbar } from '@/components/layout/Navbar';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { GlassButton } from '@/components/ui/GlassButton';
 import { useSettings, LLMProvider, DEFAULT_GLOBAL_SYSTEM_PROMPT } from '@/lib/settings/settings-context';
-import { AppTheme, THEMES } from '@/lib/settings/themes';
+import { AppTheme, THEMES, ThemeConfig } from '@/lib/settings/themes';
+import { db } from '@/lib/db/opfs-adapter';
 import {
   Sparkles,
   Bot,
@@ -31,6 +32,10 @@ import {
   Crown,
   Shield,
   Palette,
+  Lock,
+  Wand2,
+  Film,
+  KeyRound,
   LucideIcon,
 } from 'lucide-react';
 
@@ -44,6 +49,7 @@ const THEME_ICONS: Record<AppTheme, LucideIcon> = {
   'ncis': Shield,
   'pokemon': Zap,
   'frieren': Sparkles,
+  'custom': Sparkles,
 };
 
 const MODEL_PRESETS: Record<LLMProvider, { label: string; value: string; desc: string; category?: string }[]> = {
@@ -73,6 +79,11 @@ export default function SettingsPage() {
     config,
     updateConfig,
     isConfigured,
+    isLlmConfigured,
+    setLlmApiKey,
+    customUniverseQuery,
+    setCustomUniverseQuery,
+    setCustomThemeConfig,
     testConnection,
     exportVaultData,
     flushLocalStorage,
@@ -93,6 +104,19 @@ export default function SettingsPage() {
   const [showFlushModal, setShowFlushModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
+  // Custom universe inline casting state
+  const [customInputQuery, setCustomInputQuery] = useState(customUniverseQuery || '');
+  const [isGeneratingCustom, setIsGeneratingCustom] = useState(false);
+  const [customGenError, setCustomGenError] = useState<string | null>(null);
+  const [customGenSuccess, setCustomGenSuccess] = useState<string | null>(null);
+  const [showKeyRequiredAlert, setShowKeyRequiredAlert] = useState(false);
+
+  React.useEffect(() => {
+    if (customUniverseQuery) {
+      setCustomInputQuery(customUniverseQuery);
+    }
+  }, [customUniverseQuery]);
+
   const handleProviderSelect = (provider: LLMProvider) => {
     const presets = MODEL_PRESETS[provider];
     updateConfig({
@@ -106,7 +130,7 @@ export default function SettingsPage() {
     try {
       const clipText = await navigator.clipboard.readText();
       if (clipText) {
-        updateConfig({ apiKey: clipText.trim() });
+        await setLlmApiKey(clipText.trim());
       }
     } catch (err) {
       console.warn('Clipboard read failed:', err);
@@ -127,6 +151,95 @@ export default function SettingsPage() {
   const handleSaveSettings = () => {
     setSaveFeedback('Engine settings safely written to browser OPFS SQLite.');
     setTimeout(() => setSaveFeedback(null), 3500);
+  };
+
+  const handleThemeCardClick = (themeId: AppTheme) => {
+    if (themeId === 'custom' && !isLlmConfigured) {
+      setShowKeyRequiredAlert(true);
+      // Smoothly scroll down to LLM Configuration Card
+      const elem = document.getElementById('llm-config-section');
+      if (elem) {
+        elem.scrollIntoView({ behavior: 'smooth' });
+      }
+      return;
+    }
+    setShowKeyRequiredAlert(false);
+    setTheme(themeId);
+  };
+
+  const handleGenerateCustomUniverse = async () => {
+    if (!customInputQuery.trim()) {
+      setCustomGenError('Please enter a movie, TV show, or book title.');
+      return;
+    }
+
+    setIsGeneratingCustom(true);
+    setCustomGenError(null);
+    setCustomGenSuccess(null);
+
+    try {
+      const response = await fetch('/api/themes/custom', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-llm-provider': config.provider,
+          'x-llm-api-key': config.apiKey,
+          'x-llm-model': config.model,
+          'x-llm-base-url': config.baseUrl,
+        },
+        body: JSON.stringify({
+          title: customInputQuery.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to cast custom universe.');
+      }
+
+      await setCustomUniverseQuery(customInputQuery.trim());
+
+      const customConfig: ThemeConfig = {
+        id: 'custom',
+        name: data.universeName || customInputQuery.trim(),
+        defaultGroup: data.defaultGroup || `${customInputQuery.trim()} Squad`,
+        tagline: data.tagline || 'Custom AI-generated crew',
+        leaderTitle: data.leaderTitle || 'Leader',
+        accentColor: data.accentColor || 'text-purple-400',
+        accentBg: data.accentBg || 'from-purple-600 to-pink-600',
+        accentBorder: data.accentBorder || 'border-purple-500/40',
+        badgeBg: data.badgeBg || 'bg-purple-500/10',
+        badgeText: data.badgeText || 'text-purple-300',
+        description: data.description || 'Custom pop-culture universe mapping.',
+      };
+
+      await setCustomThemeConfig(customConfig);
+
+      // Persist characters to OPFS/IndexedDB SQLite agents table
+      if (Array.isArray(data.characters) && data.characters.length > 0) {
+        await db.init();
+        for (const char of data.characters) {
+          await db.saveAgent({
+            id: char.id,
+            name: `${char.characterName} (${char.thematicTitle})`,
+            role_title: char.role,
+            avatar_url: char.avatarIcon || null,
+            system_prompt: char.systemPrompt,
+            routing_description: char.routingDescription,
+            parent_agent_id: char.id === 'captain-core' ? null : 'captain-core',
+          });
+        }
+      }
+
+      await setTheme('custom');
+      setCustomGenSuccess(`Successfully cast ${customConfig.name}! All 7 agent roles updated.`);
+    } catch (err: any) {
+      console.error('Custom universe generation failed:', err);
+      setCustomGenError(err?.message || 'Failed to generate custom universe');
+    } finally {
+      setIsGeneratingCustom(false);
+    }
   };
 
   const handleExportData = async () => {
@@ -174,13 +287,13 @@ export default function SettingsPage() {
                 </h1>
               </div>
               <p className="text-sm text-slate-400">
-                Configure your LLM fuel. Your keys are encrypted and stored exclusively in browser-secured OPFS storage.
+                Configure your LLM fuel. Your keys are stored exclusively in browser-secured OPFS storage.
               </p>
             </div>
 
             {/* Status Badge */}
-            <div className="shrink-0">
-              {isConfigured ? (
+            <div className="shrink-0 flex items-center gap-2">
+              {isLlmConfigured ? (
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-medium">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span>Ready · Fuel Loaded</span>
@@ -213,21 +326,45 @@ export default function SettingsPage() {
               </span>
             </div>
 
+            {showKeyRequiredAlert && (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 flex items-center justify-between gap-3 animate-in fade-in duration-200">
+                <div className="flex items-center gap-2.5">
+                  <Lock width={16} height={16} className="text-amber-400 shrink-0" />
+                  <span>
+                    <strong>Custom Universe Locked:</strong> Please configure your LLM Provider API key below in Section 3 to enable custom AI character mapping.
+                  </span>
+                </div>
+                <GlassButton
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    const elem = document.getElementById('llm-config-section');
+                    if (elem) elem.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="shrink-0 text-xs py-1 px-2.5"
+                >
+                  Configure Below
+                </GlassButton>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {Object.values(THEMES).map((theme) => {
                 const isSelected = currentTheme === theme.id;
+                const isCustom = theme.id === 'custom';
+                const isLocked = isCustom && !isLlmConfigured;
                 const Icon = THEME_ICONS[theme.id] || Compass;
 
                 return (
                   <button
                     key={theme.id}
                     type="button"
-                    onClick={() => setTheme(theme.id)}
+                    onClick={() => handleThemeCardClick(theme.id)}
                     className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
                       isSelected
                         ? 'bg-slate-900/90 border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.2)] ring-1 ring-amber-500/50'
                         : 'bg-slate-900/50 border-white/10 hover:border-white/20 hover:bg-slate-900/80'
-                    }`}
+                    } ${isLocked ? 'opacity-75' : ''}`}
                   >
                     <div
                       className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${theme.accentBg} ${
@@ -243,18 +380,32 @@ export default function SettingsPage() {
                           <Icon width={16} height={16} />
                         </div>
                         <div className="flex items-center gap-1">
-                          <span
-                            className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold uppercase ${theme.badgeBg} ${theme.badgeText}`}
-                          >
-                            {theme.leaderTitle}
-                          </span>
+                          {isLocked ? (
+                            <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                              <Lock width={9} height={9} />
+                              <span>Key Req</span>
+                            </span>
+                          ) : (
+                            <span
+                              className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold uppercase ${theme.badgeBg} ${theme.badgeText}`}
+                            >
+                              {theme.leaderTitle}
+                            </span>
+                          )}
                           {isSelected && (
                             <CheckCircle2 width={14} height={14} className="text-amber-400" />
                           )}
                         </div>
                       </div>
 
-                      <h3 className="text-sm font-bold text-white mb-0.5">{theme.name}</h3>
+                      <h3 className="text-sm font-bold text-white mb-0.5 flex items-center gap-1.5">
+                        <span>{theme.name}</span>
+                        {isCustom && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono">
+                            AI
+                          </span>
+                        )}
+                      </h3>
                       <p className="text-xs font-mono text-slate-300 mb-1.5">{theme.defaultGroup}</p>
                       <p className="text-[11px] text-slate-400 line-clamp-2">{theme.tagline}</p>
                     </div>
@@ -262,6 +413,77 @@ export default function SettingsPage() {
                 );
               })}
             </div>
+
+            {/* Custom Universe Generator Card when 'custom' is active */}
+            {currentTheme === 'custom' && (
+              <GlassCard className="p-5 border-purple-500/40 bg-purple-950/20 space-y-3 rounded-2xl animate-in fade-in duration-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-purple-300 font-bold text-sm">
+                    <Film width={18} height={18} className="text-purple-400" />
+                    <span>AI Character Mapping: Cast Any Universe</span>
+                  </div>
+                  <span className="text-xs font-mono text-purple-400/80">
+                    Engine: {config.provider} ({config.model})
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-300">
+                  Type any TV show, movie, or franchise title. The structured AI model will cast its characters to Captain, Scholar, Shipwright, Navigator, Doctor, Cook, and Sniper.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    value={customInputQuery}
+                    onChange={(e) => {
+                      setCustomInputQuery(e.target.value);
+                      setCustomGenError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !isGeneratingCustom) {
+                        e.preventDefault();
+                        handleGenerateCustomUniverse();
+                      }
+                    }}
+                    placeholder="e.g. Breaking Bad, Ted Lasso, Interstellar, The Matrix..."
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-purple-500/30 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-purple-400 font-medium"
+                  />
+                  <GlassButton
+                    type="button"
+                    variant="primary"
+                    onClick={handleGenerateCustomUniverse}
+                    disabled={isGeneratingCustom || !customInputQuery.trim()}
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold border-none shadow-lg shadow-purple-500/25 shrink-0"
+                  >
+                    {isGeneratingCustom ? (
+                      <>
+                        <RefreshCw width={16} height={16} className="animate-spin" />
+                        <span>Casting Universe...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 width={16} height={16} />
+                        <span>Cast Universe</span>
+                      </>
+                    )}
+                  </GlassButton>
+                </div>
+
+                {customGenError && (
+                  <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300 font-mono flex items-center gap-2">
+                    <AlertTriangle width={15} height={15} className="text-rose-400 shrink-0" />
+                    <span>{customGenError}</span>
+                  </div>
+                )}
+
+                {customGenSuccess && (
+                  <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-300 font-mono flex items-center gap-2">
+                    <CheckCircle2 width={15} height={15} className="text-emerald-400 shrink-0" />
+                    <span>{customGenSuccess}</span>
+                  </div>
+                )}
+              </GlassCard>
+            )}
           </section>
 
           {/* Provider Selector Tab Cards */}
@@ -338,11 +560,29 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          {/* Configuration Fields */}
-          <GlassCard className="p-6 space-y-6 border-white/10 bg-slate-900/80">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              3. Provider Engine Configuration
-            </h2>
+          {/* LLM Configuration Card */}
+          <GlassCard id="llm-config-section" className="p-6 space-y-6 border-white/10 bg-slate-900/80">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <KeyRound width={16} height={16} className="text-amber-400" />
+                <span>3. LLM Configuration Vault</span>
+              </h2>
+
+              {/* Status Indicator showing whether LLM is active and ready for Custom Themes */}
+              <div className="flex items-center gap-2">
+                {isLlmConfigured ? (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-medium">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>LLM Active · Ready for Custom Themes</span>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono font-medium">
+                    <Lock width={12} height={12} className="text-amber-400" />
+                    <span>Key Required for Custom Themes</span>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* API Key */}
             <div className="space-y-2">
@@ -358,7 +598,7 @@ export default function SettingsPage() {
                 <input
                   type={showApiKey ? 'text' : 'password'}
                   value={config.apiKey}
-                  onChange={(e) => updateConfig({ apiKey: e.target.value.trim() })}
+                  onChange={(e) => setLlmApiKey(e.target.value)}
                   placeholder={
                     config.provider === 'gemini'
                       ? 'AIzaSy...'
