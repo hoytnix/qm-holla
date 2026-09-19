@@ -116,9 +116,11 @@ export const NotionRichEditor: React.FC<NotionRichEditorProps> = ({
           id: id || `doc-${Date.now().toString(36)}`,
           title: newTitle.trim() || 'Untitled Document.md',
           content: newContent,
+          file_path: initialDocument?.file_path || null,
           kb_id: newKbId || null,
           agent_id: newAgentId || null,
           project_id: initialDocument?.project_id || null,
+          company_id: initialDocument?.company_id || null,
           metadata: JSON.stringify({
             tags: newTags,
             updatedBy: 'NotionRichEditor',

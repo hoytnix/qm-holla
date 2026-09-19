@@ -16,6 +16,7 @@ export interface ProjectRecord {
   description?: string | null;
   category: string; // 'dev', 'marketing', 'finance', 'health', 'operations', 'research'
   is_private?: number; // 0 | 1
+  company_id?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -27,6 +28,7 @@ export interface TaskRecord {
   title: string;
   status: 'pending' | 'in_progress' | 'completed';
   priority?: 'low' | 'medium' | 'high';
+  company_id?: string | null;
   completed_at?: string | null;
   created_at?: string;
 }
@@ -36,6 +38,7 @@ export interface KbRecord {
   agent_id: string;
   name: string;
   description?: string | null;
+  company_id?: string | null;
   created_at?: string;
 }
 
@@ -48,6 +51,7 @@ export interface DocumentRecord {
   content: string;
   metadata?: string | null; // JSON string for tags, frontmatter, and source context
   file_path?: string | null;
+  company_id?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -70,7 +74,20 @@ export interface MessageRecord {
   agent_id?: string | null;
   content: string;
   delegation_trace?: string | null; // JSON string
+  company_id?: string | null;
   created_at?: string;
+}
+
+export interface CompanyProfile {
+  id: string;
+  name: string;
+  owners: string;
+  mission_vision: string;
+  theme: string;
+  custom_universe_query?: string | null;
+  custom_theme_config?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface IQuarkDatabase {
@@ -80,15 +97,23 @@ export interface IQuarkDatabase {
   saveAgent(agent: AgentRecord): Promise<void>;
   deleteAgent?(id: string): Promise<void>;
 
+  // Company Profiles
+  getCompanyProfiles?(): Promise<CompanyProfile[]>;
+  getCompanyProfileById?(id: string): Promise<CompanyProfile | null>;
+  saveCompanyProfile?(profile: CompanyProfile): Promise<void>;
+  deleteCompanyProfile?(id: string): Promise<void>;
+  getActiveCompanyProfileId?(): Promise<string | null>;
+  setActiveCompanyProfileId?(id: string): Promise<void>;
+
   // Projects
-  getProjects(): Promise<ProjectRecord[]>;
-  getProjectsForAgent(agentId: string): Promise<ProjectRecord[]>;
+  getProjects(companyId?: string): Promise<ProjectRecord[]>;
+  getProjectsForAgent(agentId: string, companyId?: string): Promise<ProjectRecord[]>;
   getProjectById(id: string): Promise<ProjectRecord | null>;
   saveProject(project: ProjectRecord): Promise<void>;
   deleteProject?(id: string): Promise<void>;
 
   // Tasks
-  getTasks(projectId?: string): Promise<TaskRecord[]>;
+  getTasks(projectId?: string, companyId?: string): Promise<TaskRecord[]>;
   getTasksForProject(projectId: string): Promise<TaskRecord[]>;
   saveTask(task: TaskRecord): Promise<void>;
   updateTaskStatus?(taskId: string, status: 'pending' | 'in_progress' | 'completed'): Promise<TaskRecord | null>;
@@ -96,13 +121,13 @@ export interface IQuarkDatabase {
   deleteTask?(id: string): Promise<void>;
 
   // Knowledge Bases & Documents
-  getKbs(): Promise<KbRecord[]>;
+  getKbs(companyId?: string): Promise<KbRecord[]>;
   getKbsForAgent(agentId: string): Promise<KbRecord[]>;
   saveKb(kb: KbRecord): Promise<void>;
   getDocumentsForAgent(agentId: string): Promise<DocumentRecord[]>;
   getDocumentsForKb?(kbId: string): Promise<DocumentRecord[]>;
   getDocumentsByProject(projectId: string): Promise<DocumentRecord[]>;
-  getAllDocuments?(): Promise<DocumentRecord[]>;
+  getAllDocuments?(companyId?: string): Promise<DocumentRecord[]>;
   getDocumentById?(id: string): Promise<DocumentRecord | null>;
   saveDocument(doc: DocumentRecord): Promise<void>;
   deleteDocument?(id: string): Promise<void>;

@@ -23,9 +23,12 @@ import {
   Layers,
   Shield,
   Folder,
+  Briefcase,
 } from 'lucide-react';
+import { useSettings } from '@/lib/settings/settings-context';
 
 export default function VaultPage() {
+  const { activeCompany, activeCompanyId } = useSettings();
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [kbs, setKbs] = useState<KbRecord[]>([]);
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
@@ -49,8 +52,8 @@ export default function VaultPage() {
     try {
       await db.init();
       const loadedAgents = await db.getAgents();
-      const loadedKbs = await db.getKbs();
-      const loadedDocs = db.getAllDocuments ? await db.getAllDocuments() : [];
+      const loadedKbs = await db.getKbs(activeCompanyId || undefined);
+      const loadedDocs = db.getAllDocuments ? await db.getAllDocuments(activeCompanyId || undefined) : [];
 
       setAgents(loadedAgents);
       setKbs(loadedKbs);
@@ -68,7 +71,7 @@ export default function VaultPage() {
 
   useEffect(() => {
     loadAll();
-  }, []);
+  }, [activeCompanyId]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,20 +85,24 @@ export default function VaultPage() {
   };
 
   const handleSaveDoc = async (doc: DocumentRecord) => {
-    await db.saveDocument(doc);
+    const docWithCompany: DocumentRecord = {
+      ...doc,
+      company_id: doc.company_id || activeCompanyId || null,
+    };
+    await db.saveDocument(docWithCompany);
     // Refresh document list in state
     setDocuments((prev) => {
-      const idx = prev.findIndex((d) => d.id === doc.id);
+      const idx = prev.findIndex((d) => d.id === docWithCompany.id);
       if (idx >= 0) {
         const next = [...prev];
-        next[idx] = doc;
+        next[idx] = docWithCompany;
         return next;
       }
-      return [doc, ...prev];
+      return [docWithCompany, ...prev];
     });
 
-    if (activeDoc && activeDoc.id === doc.id) {
-      setActiveDoc(doc);
+    if (activeDoc && activeDoc.id === docWithCompany.id) {
+      setActiveDoc(docWithCompany);
     }
   };
 
@@ -118,6 +125,7 @@ export default function VaultPage() {
 
     const newKb: KbRecord = {
       id: `kb-${Date.now().toString(36)}`,
+      company_id: activeCompanyId || null,
       agent_id: kbAgentId,
       name: kbName.trim(),
       description: kbDesc.trim() || null,
@@ -146,6 +154,14 @@ export default function VaultPage() {
           doc.id.startsWith('mem-')
         );
         if (!isMem) return false;
+      } else if (selectedKbId.startsWith('mem-agent-')) {
+        const targetAgentId = selectedKbId.replace('mem-agent-', '');
+        const isTargetMem = Boolean(
+          (doc.file_path && doc.file_path.startsWith(`/memory-bank/agents/${targetAgentId}/`)) ||
+          doc.agent_id === targetAgentId ||
+          doc.id.startsWith(`mem-${targetAgentId}-`)
+        );
+        if (!isTargetMem) return false;
       } else if (selectedKbId === 'notes-only') {
         const isMem = Boolean(
           (doc.file_path && doc.file_path.startsWith('/memory-bank/agents/')) ||
@@ -159,6 +175,14 @@ export default function VaultPage() {
       return true;
     });
   }, [documents, selectedAgentId, selectedKbId, kbs]);
+
+  const activeFilterAgent = useMemo(() => {
+    if (selectedKbId.startsWith('mem-agent-')) {
+      const targetAgentId = selectedKbId.replace('mem-agent-', '');
+      return agents.find((a) => a.id === targetAgentId) || null;
+    }
+    return null;
+  }, [selectedKbId, agents]);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
@@ -187,10 +211,16 @@ export default function VaultPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="text-xs uppercase tracking-widest text-indigo-400 font-mono font-semibold">
                     Local-First OPFS SQLite
                   </span>
+                  {activeCompany && (
+                    <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5">
+                      <Briefcase width={12} height={12} />
+                      <span>{activeCompany.name}</span>
+                    </span>
+                  )}
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
                   <Database className="w-7 h-7 sm:w-8 sm:h-8 text-indigo-400" />
@@ -259,8 +289,15 @@ export default function VaultPage() {
                   className="px-3 py-2 rounded-xl bg-slate-950/70 border border-white/10 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-indigo-400"
                 >
                   <option value="all">All Vault Documents</option>
-                  <option value="memory-bank">Isolated Memory Banks (/memory-bank/agents/*)</option>
+                  <option value="memory-bank">All Character Memory Banks (/memory-bank/agents/*)</option>
                   <option value="notes-only">General Vault Notes & Manifesto</option>
+                  <optgroup label="Character Memory Banks">
+                    {agents.map((a) => (
+                      <option key={a.id} value={`mem-agent-${a.id}`}>
+                        Memory Bank: {a.name} ({a.role_title})
+                      </option>
+                    ))}
+                  </optgroup>
                   <optgroup label="Knowledge Collections">
                     {kbs.map((k) => (
                       <option key={k.id} value={k.id}>
@@ -381,6 +418,49 @@ export default function VaultPage() {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Active Character Memory Filter Banner */}
+                {activeFilterAgent && (
+                  <GlassCard className="p-4 sm:p-5 border-amber-500/40 bg-gradient-to-r from-amber-950/30 via-slate-900/60 to-indigo-950/30 shadow-lg">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 text-xl font-black shadow-inner shadow-amber-500/20 shrink-0 overflow-hidden">
+                          {activeFilterAgent.avatar_url ? (
+                            <img src={activeFilterAgent.avatar_url} alt={activeFilterAgent.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Shield className="w-6 h-6 text-amber-400" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-bold font-mono uppercase tracking-widest text-amber-400">
+                              Character Memory Bank
+                            </span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                              /memory-bank/agents/{activeFilterAgent.id}/*
+                            </span>
+                          </div>
+                          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 mt-0.5">
+                            <span>{activeFilterAgent.name}</span>
+                            <span className="text-xs font-normal text-slate-400 font-mono">
+                              ({activeFilterAgent.role_title})
+                            </span>
+                          </h2>
+                          <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                            Viewing isolated persistent memory files (<code className="text-amber-300">projectbrief.md</code>, <code className="text-amber-300">productContext.md</code>, <code className="text-amber-300">systemPatterns.md</code>, <code className="text-amber-300">techContext.md</code>, <code className="text-amber-300">activeContext.md</code>, <code className="text-amber-300">progress.md</code>) scoped to this character.
+                          </p>
+                        </div>
+                      </div>
+                      <GlassButton
+                        variant="secondary"
+                        onClick={() => setSelectedKbId('all')}
+                        className="text-xs shrink-0 self-end sm:self-center"
+                      >
+                        Clear Character Filter
+                      </GlassButton>
+                    </div>
+                  </GlassCard>
+                )}
+
                 <div className="flex items-center justify-between">
                   <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                     <BookOpen className="w-5 h-5 text-indigo-400" />

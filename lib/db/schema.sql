@@ -1,3 +1,16 @@
+-- Company Profiles (Multi-Tenant Workspaces)
+CREATE TABLE IF NOT EXISTS company_profiles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  owners TEXT NOT NULL,
+  mission_vision TEXT NOT NULL,
+  theme TEXT NOT NULL DEFAULT 'one-piece',
+  custom_universe_query TEXT,
+  custom_theme_config TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Agents & Hierarchy
 CREATE TABLE IF NOT EXISTS agents (
   id TEXT PRIMARY KEY,
@@ -18,6 +31,7 @@ CREATE TABLE IF NOT EXISTS projects (
   description TEXT,
   category TEXT NOT NULL, -- 'dev', 'marketing', 'finance', 'health', 'operations', 'research'
   is_private INTEGER DEFAULT 0,
+  company_id TEXT REFERENCES company_profiles(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -28,6 +42,7 @@ CREATE TABLE IF NOT EXISTS kbs (
   agent_id TEXT NOT NULL REFERENCES agents(id),
   name TEXT NOT NULL,
   description TEXT,
+  company_id TEXT REFERENCES company_profiles(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -41,6 +56,7 @@ CREATE TABLE IF NOT EXISTS documents (
   content TEXT NOT NULL,
   metadata TEXT, -- JSON string for tags, frontmatter, and source context
   file_path TEXT,
+  company_id TEXT REFERENCES company_profiles(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -53,6 +69,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   title TEXT NOT NULL,
   status TEXT DEFAULT 'pending', -- 'pending' | 'in_progress' | 'completed'
   priority TEXT DEFAULT 'medium',
+  company_id TEXT REFERENCES company_profiles(id),
   completed_at DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -73,6 +90,7 @@ CREATE TABLE IF NOT EXISTS messages (
   agent_id TEXT REFERENCES agents(id),
   content TEXT NOT NULL,
   delegation_trace TEXT, -- JSON payload of sub-agent hops
+  company_id TEXT REFERENCES company_profiles(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

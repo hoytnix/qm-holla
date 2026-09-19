@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 
 export default function CanvasPage() {
-  const { config, themeConfig, hasSelectedTheme, themeVersion } = useSettings();
+  const { config, themeConfig, hasSelectedTheme, themeVersion, activeCompanyId } = useSettings();
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
@@ -70,8 +70,8 @@ export default function CanvasPage() {
         try {
           await db.init();
           const [freshTasks, freshDocs] = await Promise.all([
-            db.getTasks(),
-            db.getAllDocuments ? db.getAllDocuments() : Promise.resolve([]),
+            db.getTasks(activeCompanyId || undefined),
+            db.getAllDocuments ? db.getAllDocuments(activeCompanyId || undefined) : Promise.resolve([]),
           ]);
           if (freshTasks && freshTasks.length > 0) setTasks(freshTasks);
           if (freshDocs && freshDocs.length > 0) setDocuments(freshDocs);
@@ -82,16 +82,16 @@ export default function CanvasPage() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [activeCompanyId]);
 
   const loadFleetData = async () => {
     try {
       await db.init();
       const [agentList, projectList, taskList, docList] = await Promise.all([
         db.getAgents(),
-        db.getProjects(),
-        db.getTasks(),
-        db.getAllDocuments ? db.getAllDocuments() : Promise.resolve([]),
+        db.getProjects(activeCompanyId || undefined),
+        db.getTasks(activeCompanyId || undefined),
+        db.getAllDocuments ? db.getAllDocuments(activeCompanyId || undefined) : Promise.resolve([]),
       ]);
 
       if (agentList && agentList.length > 0) setAgents(agentList);
@@ -120,12 +120,12 @@ export default function CanvasPage() {
     loadFleetData();
   }, []); // STRICTLY EMPTY ARRAY — mount-only
 
-  // Reactive reload when theme changes (themeVersion bumps after setTheme writes agents to DB)
+  // Reactive reload when theme changes or active company workspace switches
   useEffect(() => {
-    if (themeVersion === 0) return; // Skip the initial mount (handled above)
+    if (!hasLoadedRef.current) return;
     loadFleetData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [themeVersion]);
+  }, [themeVersion, activeCompanyId]);
 
   // Handle project diamond selection from RadialGraph
   const handleSelectProject = (proj: ProjectRecord) => {

@@ -18,6 +18,10 @@ import {
   Crown,
   Shield,
   Zap,
+  Building2,
+  ChevronDown,
+  Check,
+  Plus,
   LucideIcon,
 } from 'lucide-react';
 import { MorningPlanningModal } from '@/components/planning/MorningPlanningModal';
@@ -54,13 +58,38 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [hasReviewedToday, setHasReviewedToday] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isConfigured, currentTheme, themeConfig } = useSettings();
+  const [isCompanyDropdownOpen, setIsCompanyDropdownOpen] = useState(false);
+  const companyDropdownRef = React.useRef<HTMLDivElement>(null);
+
+  const {
+    isConfigured,
+    currentTheme,
+    themeConfig,
+    companies,
+    activeCompany,
+    switchCompany,
+    openCompanyModal,
+  } = useSettings();
 
   const ThemeIcon = THEME_ICONS[currentTheme] || Compass;
+
+  // Close company dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (companyDropdownRef.current && !companyDropdownRef.current.contains(event.target as Node)) {
+        setIsCompanyDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Close mobile navigation drawer whenever route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setIsCompanyDropdownOpen(false);
   }, [pathname]);
 
   // Lock background scroll when mobile navigation drawer is open
@@ -152,6 +181,74 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
 
           {/* Header Actions */}
           <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Company Profile Switcher Dropdown */}
+            {companies.length > 0 && (
+              <div className="relative" ref={companyDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsCompanyDropdownOpen((prev) => !prev)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-white/10 hover:border-indigo-500/40 text-slate-200 text-xs font-medium transition-all"
+                  title="Switch Company Profile"
+                >
+                  <Building2 width={14} height={14} className="text-indigo-400 shrink-0" />
+                  <span className="max-w-[100px] sm:max-w-[130px] truncate font-semibold">
+                    {activeCompany?.name || 'Workspace'}
+                  </span>
+                  <ChevronDown width={13} height={13} className="text-slate-400 shrink-0" />
+                </button>
+
+                {isCompanyDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-slate-900/95 border border-indigo-500/30 shadow-2xl p-2 z-[60] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 space-y-1">
+                    <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                      <span>Company Workspaces</span>
+                      <span className="text-indigo-400 font-bold">{companies.length}</span>
+                    </div>
+
+                    <div className="max-h-48 overflow-y-auto space-y-1">
+                      {companies.map((c) => {
+                        const isActive = c.id === activeCompany?.id;
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              switchCompany(c.id);
+                              setIsCompanyDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs transition-colors ${
+                              isActive
+                                ? 'bg-indigo-600/30 text-white font-bold border border-indigo-500/40'
+                                : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
+                            }`}
+                          >
+                            <div className="truncate pr-2">
+                              <div className="truncate font-semibold">{c.name}</div>
+                              <div className="text-[10px] text-slate-400 truncate">{c.owners}</div>
+                            </div>
+                            {isActive && <Check width={14} height={14} className="text-indigo-400 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="pt-1.5 border-t border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCompanyDropdownOpen(false);
+                          openCompanyModal();
+                        }}
+                        className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 font-semibold transition-colors"
+                      >
+                        <Plus width={13} height={13} />
+                        <span>Create New Company</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Quick Universe Switcher Trigger */}
             <button
               type="button"
@@ -255,8 +352,54 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
                 })}
               </nav>
 
+              {/* Company Switcher within mobile drawer */}
+              {companies.length > 0 && (
+                <div className="mt-5 pt-4 border-t border-white/10 space-y-2">
+                  <div className="text-[10px] font-mono uppercase text-slate-400 px-1 flex items-center justify-between">
+                    <span>Company Workspaces</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        openCompanyModal();
+                      }}
+                      className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                    >
+                      <Plus width={12} height={12} />
+                      <span>New</span>
+                    </button>
+                  </div>
+                  <div className="space-y-1 max-h-28 overflow-y-auto">
+                    {companies.map((c) => {
+                      const isActive = c.id === activeCompany?.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            switchCompany(c.id);
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs ${
+                            isActive
+                              ? 'bg-indigo-600/30 text-white font-bold border border-indigo-500/40'
+                              : 'text-slate-300 bg-slate-900/60 border border-white/5'
+                          }`}
+                        >
+                          <div className="truncate pr-2">
+                            <div className="truncate font-semibold">{c.name}</div>
+                            <div className="text-[10px] text-slate-400 truncate">{c.owners}</div>
+                          </div>
+                          {isActive && <Check width={14} height={14} className="text-indigo-400 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Universe Switcher within mobile drawer */}
-              <div className="mt-6 pt-4 border-t border-white/10">
+              <div className="mt-4 pt-4 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => {

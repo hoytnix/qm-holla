@@ -7,6 +7,7 @@ import {
   DocumentRecord,
   SearchResult,
   MessageRecord,
+  CompanyProfile,
 } from './adapter';
 import {
   DEFAULT_STRAW_HAT_AGENTS,
@@ -36,6 +37,7 @@ class OpfsDatabase implements IQuarkDatabase {
   private memKbs: KbRecord[] = [];
   private memDocs: DocumentRecord[] = [];
   private memMessages: MessageRecord[] = [];
+  private memCompanyProfiles: CompanyProfile[] = [];
   private isWorkerSupported = false;
 
   constructor() {
@@ -258,11 +260,81 @@ class OpfsDatabase implements IQuarkDatabase {
     this.memAgents = this.memAgents.filter((a) => a.id !== id);
   }
 
-  // --- Projects ---
-  async getProjects(): Promise<ProjectRecord[]> {
+  // --- Company Profiles ---
+  async getCompanyProfiles(): Promise<CompanyProfile[]> {
     if (!this.usingFallback && this.worker) {
       try {
-        const rows = await this.query<ProjectRecord>('SELECT * FROM projects ORDER BY created_at ASC');
+        const rows = await this.sendToWorker<CompanyProfile[]>('GET_COMPANY_PROFILES');
+        if (rows) return rows;
+      } catch (err) {
+        console.warn('Worker getCompanyProfiles failed, falling back to memory:', err);
+      }
+    }
+    return [...this.memCompanyProfiles];
+  }
+
+  async getCompanyProfileById(id: string): Promise<CompanyProfile | null> {
+    if (!this.usingFallback && this.worker) {
+      try {
+        return await this.sendToWorker<CompanyProfile | null>('GET_COMPANY_PROFILE_BY_ID', { id });
+      } catch (err) {
+        console.warn('Worker getCompanyProfileById failed, falling back to memory:', err);
+      }
+    }
+    return this.memCompanyProfiles.find((c) => c.id === id) || null;
+  }
+
+  async saveCompanyProfile(profile: CompanyProfile): Promise<void> {
+    if (!this.usingFallback && this.worker) {
+      try {
+        await this.sendToWorker('SAVE_COMPANY_PROFILE', { profile });
+      } catch (err) {
+        console.warn('Worker saveCompanyProfile failed, saving in memory:', err);
+      }
+    }
+    const idx = this.memCompanyProfiles.findIndex((c) => c.id === profile.id);
+    if (idx >= 0) {
+      this.memCompanyProfiles[idx] = profile;
+    } else {
+      this.memCompanyProfiles.push(profile);
+    }
+  }
+
+  async deleteCompanyProfile(id: string): Promise<void> {
+    if (!this.usingFallback && this.worker) {
+      try {
+        await this.sendToWorker('DELETE_COMPANY_PROFILE', { id });
+      } catch (err) {
+        console.warn('Worker deleteCompanyProfile failed, deleting in memory:', err);
+      }
+    }
+    this.memCompanyProfiles = this.memCompanyProfiles.filter((c) => c.id !== id);
+    this.memTasks = this.memTasks.filter((t) => t.company_id !== id);
+    this.memProjects = this.memProjects.filter((p) => p.company_id !== id);
+    this.memDocs = this.memDocs.filter((d) => d.company_id !== id);
+    this.memKbs = this.memKbs.filter((k) => k.company_id !== id);
+  }
+
+  async getActiveCompanyProfileId(): Promise<string | null> {
+    return this.getSetting('active_company_profile_id', '');
+  }
+
+  async setActiveCompanyProfileId(id: string): Promise<void> {
+    await this.setSetting('active_company_profile_id', id);
+  }
+
+  // --- Projects ---
+  async getProjects(companyId?: string): Promise<ProjectRecord[]> {
+    if (!this.usingFallback && this.worker) {
+      try {
+        let sql = 'SELECT * FROM projects';
+        const params: any[] = [];
+        if (companyId) {
+          sql += ' WHERE company_id = ? OR company_id IS NULL';
+          params.push(companyId);
+        }
+        sql += ' ORDER BY created_at ASC';
+        const rows = await this.query<ProjectRecord>(sql, params);
         if (rows && rows.length > 0) return rows;
       } catch (err) {
         console.warn('Worker getProjects failed, falling back to memory/defaults:', err);
@@ -271,13 +343,23 @@ class OpfsDatabase implements IQuarkDatabase {
     if (this.memProjects.length === 0) {
       await this.seedDefaultDataIfEmpty();
     }
+    if (companyId) {
+      return this.memProjects.filter((p) => !p.company_id || p.company_id === companyId);
+    }
     return [...this.memProjects];
   }
 
-  async getProjectsForAgent(agentId: string): Promise<ProjectRecord[]> {
+  async getProjectsForAgent(agentId: string, companyId?: string): Promise<ProjectRecord[]> {
     if (!this.usingFallback && this.worker) {
       try {
-        return await this.query<ProjectRecord>('SELECT * FROM projects WHERE agent_id = ? ORDER BY created_at ASC', [agentId]);
+        let sql = 'SELECT * FROM projects WHERE agent_id = ?';
+        const params: any[] = [agentId];
+        if (companyId) {
+          sql += ' AND (company_id = ? OR company_id IS NULL)';
+          params.push(companyId);
+        }
+        sql += ' ORDER BY created_at ASC';
+        return await this.query<ProjectRecord>(sql, params);
       } catch (err) {
         console.warn('Worker getProjectsForAgent failed, falling back to memory:', err);
       }
@@ -285,7 +367,7 @@ class OpfsDatabase implements IQuarkDatabase {
     if (this.memProjects.length === 0) {
       await this.seedDefaultDataIfEmpty();
     }
-    return this.memProjects.filter((p) => p.agent_id === agentId);
+    return this.memProjects.filter((p) => p.agent_id === agentId && (!companyId || !p.company_id || p.company_id === companyId));
   }
 
   async getProjectById(id: string): Promise<ProjectRecord | null> {
@@ -307,8 +389,8 @@ class OpfsDatabase implements IQuarkDatabase {
     if (!this.usingFallback && this.worker) {
       try {
         await this.run(
-          `INSERT OR REPLACE INTO projects (id, agent_id, title, description, category, is_private, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+          `INSERT OR REPLACE INTO projects (id, agent_id, title, description, category, is_private, company_id, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
           [
             project.id,
             project.agent_id,
@@ -316,6 +398,7 @@ class OpfsDatabase implements IQuarkDatabase {
             project.description || null,
             project.category,
             project.is_private ? 1 : 0,
+            project.company_id || null,
           ]
         );
         return;
@@ -344,13 +427,21 @@ class OpfsDatabase implements IQuarkDatabase {
   }
 
   // --- Tasks ---
-  async getTasks(projectId?: string): Promise<TaskRecord[]> {
+  async getTasks(projectId?: string, companyId?: string): Promise<TaskRecord[]> {
     if (!this.usingFallback && this.worker) {
       try {
+        let sql = 'SELECT * FROM tasks WHERE 1=1';
+        const params: any[] = [];
         if (projectId) {
-          return await this.query<TaskRecord>('SELECT * FROM tasks WHERE project_id = ? ORDER BY created_at ASC', [projectId]);
+          sql += ' AND project_id = ?';
+          params.push(projectId);
         }
-        const rows = await this.query<TaskRecord>('SELECT * FROM tasks ORDER BY created_at ASC');
+        if (companyId) {
+          sql += ' AND (company_id = ? OR company_id IS NULL)';
+          params.push(companyId);
+        }
+        sql += ' ORDER BY created_at ASC';
+        const rows = await this.query<TaskRecord>(sql, params);
         if (rows && rows.length > 0) return rows;
       } catch (err) {
         console.warn('Worker getTasks failed, falling back to memory/defaults:', err);
@@ -359,10 +450,14 @@ class OpfsDatabase implements IQuarkDatabase {
     if (this.memTasks.length === 0) {
       await this.seedDefaultDataIfEmpty();
     }
+    let res = [...this.memTasks];
     if (projectId) {
-      return this.memTasks.filter((t) => t.project_id === projectId);
+      res = res.filter((t) => t.project_id === projectId);
     }
-    return [...this.memTasks];
+    if (companyId) {
+      res = res.filter((t) => !t.company_id || t.company_id === companyId);
+    }
+    return res;
   }
 
   async getTasksForProject(projectId: string): Promise<TaskRecord[]> {
@@ -373,8 +468,8 @@ class OpfsDatabase implements IQuarkDatabase {
     if (!this.usingFallback && this.worker) {
       try {
         await this.run(
-          `INSERT OR REPLACE INTO tasks (id, project_id, agent_id, title, status, priority, completed_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT OR REPLACE INTO tasks (id, project_id, agent_id, title, status, priority, company_id, completed_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             task.id,
             task.project_id,
@@ -382,6 +477,7 @@ class OpfsDatabase implements IQuarkDatabase {
             task.title,
             task.status || 'pending',
             task.priority || 'medium',
+            task.company_id || null,
             task.completed_at || null,
           ]
         );
@@ -440,9 +536,19 @@ class OpfsDatabase implements IQuarkDatabase {
   }
 
   // --- Knowledge Bases & Documents ---
-  async getKbs(): Promise<KbRecord[]> {
+  async getKbs(companyId?: string): Promise<KbRecord[]> {
     if (this.worker) {
-      return this.query<KbRecord>('SELECT * FROM kbs ORDER BY created_at ASC');
+      let sql = 'SELECT * FROM kbs';
+      const params: any[] = [];
+      if (companyId) {
+        sql += ' WHERE company_id = ? OR company_id IS NULL';
+        params.push(companyId);
+      }
+      sql += ' ORDER BY created_at ASC';
+      return this.query<KbRecord>(sql, params);
+    }
+    if (companyId) {
+      return this.memKbs.filter((k) => !k.company_id || k.company_id === companyId);
     }
     return [...this.memKbs];
   }
@@ -457,9 +563,9 @@ class OpfsDatabase implements IQuarkDatabase {
   async saveKb(kb: KbRecord): Promise<void> {
     if (this.worker) {
       await this.run(
-        `INSERT OR REPLACE INTO kbs (id, agent_id, name, description)
-         VALUES (?, ?, ?, ?)`,
-        [kb.id, kb.agent_id, kb.name, kb.description || null]
+        `INSERT OR REPLACE INTO kbs (id, agent_id, name, description, company_id)
+         VALUES (?, ?, ?, ?, ?)`,
+        [kb.id, kb.agent_id, kb.name, kb.description || null, kb.company_id || null]
       );
       return;
     }
@@ -497,9 +603,19 @@ class OpfsDatabase implements IQuarkDatabase {
     return this.memDocs.filter((d) => d.project_id === projectId);
   }
 
-  async getAllDocuments(): Promise<DocumentRecord[]> {
+  async getAllDocuments(companyId?: string): Promise<DocumentRecord[]> {
     if (this.worker) {
-      return this.query<DocumentRecord>('SELECT * FROM documents ORDER BY updated_at DESC');
+      let sql = 'SELECT * FROM documents';
+      const params: any[] = [];
+      if (companyId) {
+        sql += ' WHERE company_id = ? OR company_id IS NULL';
+        params.push(companyId);
+      }
+      sql += ' ORDER BY updated_at DESC';
+      return this.query<DocumentRecord>(sql, params);
+    }
+    if (companyId) {
+      return this.memDocs.filter((d) => !d.company_id || d.company_id === companyId);
     }
     return [...this.memDocs];
   }

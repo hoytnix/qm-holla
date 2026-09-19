@@ -363,6 +363,18 @@ function execToObjects(database, sql, bind = []) {
 
 function runBootstrapMigrations(database) {
   database.run(`
+    CREATE TABLE IF NOT EXISTS company_profiles (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      owners TEXT NOT NULL,
+      mission_vision TEXT NOT NULL,
+      theme TEXT NOT NULL DEFAULT 'one-piece',
+      custom_universe_query TEXT,
+      custom_theme_config TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL,
@@ -387,6 +399,7 @@ function runBootstrapMigrations(database) {
       description TEXT,
       category TEXT NOT NULL,
       is_private INTEGER DEFAULT 0,
+      company_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -396,6 +409,7 @@ function runBootstrapMigrations(database) {
       agent_id TEXT NOT NULL,
       name TEXT NOT NULL,
       description TEXT,
+      company_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -406,6 +420,7 @@ function runBootstrapMigrations(database) {
       title TEXT NOT NULL,
       status TEXT DEFAULT 'pending',
       priority TEXT DEFAULT 'medium',
+      company_id TEXT,
       completed_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -419,6 +434,7 @@ function runBootstrapMigrations(database) {
       content TEXT NOT NULL,
       metadata TEXT,
       file_path TEXT,
+      company_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -430,9 +446,26 @@ function runBootstrapMigrations(database) {
       agent_id TEXT,
       content TEXT NOT NULL,
       delegation_trace TEXT,
+      company_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  try {
+    database.run('ALTER TABLE projects ADD COLUMN company_id TEXT');
+  } catch (_) {}
+  try {
+    database.run('ALTER TABLE tasks ADD COLUMN company_id TEXT');
+  } catch (_) {}
+  try {
+    database.run('ALTER TABLE documents ADD COLUMN company_id TEXT');
+  } catch (_) {}
+  try {
+    database.run('ALTER TABLE kbs ADD COLUMN company_id TEXT');
+  } catch (_) {}
+  try {
+    database.run('ALTER TABLE messages ADD COLUMN company_id TEXT');
+  } catch (_) {}
 
   // Default LLM configuration seed
   const stmt = database.prepare("SELECT value FROM settings WHERE key = 'llm_config'");
@@ -617,6 +650,53 @@ self.onmessage = async (e) => {
         break;
       }
 
+      case 'GET_COMPANY_PROFILES': {
+        const rows = execToObjects(db, 'SELECT * FROM company_profiles ORDER BY created_at ASC');
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
+        break;
+      }
+
+      case 'GET_COMPANY_PROFILE_BY_ID': {
+        const rows = execToObjects(db, 'SELECT * FROM company_profiles WHERE id = ? LIMIT 1', [payload.id]);
+        const profile = rows.length > 0 ? rows[0] : null;
+        self.postMessage({ id, type: 'SUCCESS', success: true, data: profile, result: profile });
+        break;
+      }
+
+      case 'SAVE_COMPANY_PROFILE': {
+        const { profile } = payload;
+        db.run(
+          `INSERT OR REPLACE INTO company_profiles (id, name, owners, mission_vision, theme, custom_universe_query, custom_theme_config, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+          [
+            profile.id,
+            profile.name,
+            profile.owners,
+            profile.mission_vision,
+            profile.theme || 'one-piece',
+            profile.custom_universe_query || null,
+            profile.custom_theme_config || null,
+          ]
+        );
+        persistChanges();
+        self.postMessage({ id, type: 'SUCCESS', success: true, result: true });
+        break;
+      }
+
+      case 'DELETE_COMPANY_PROFILE': {
+        const { id: companyId } = payload;
+        db.run('DELETE FROM company_profiles WHERE id = ?', [companyId]);
+        // Also clean up linked projects, tasks, documents
+        db.run('DELETE FROM tasks WHERE company_id = ?', [companyId]);
+        db.run('DELETE FROM documents WHERE company_id = ?', [companyId]);
+        db.run('DELETE FROM projects WHERE company_id = ?', [companyId]);
+        db.run('DELETE FROM kbs WHERE company_id = ?', [companyId]);
+        db.run('DELETE FROM messages WHERE company_id = ?', [companyId]);
+        persistChanges();
+        self.postMessage({ id, type: 'SUCCESS', success: true, result: true });
+        break;
+      }
+
       case 'GET_AGENTS': {
         const rows = execToObjects(db, 'SELECT * FROM agents ORDER BY created_at ASC');
         self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
@@ -626,8 +706,8 @@ self.onmessage = async (e) => {
       case 'SAVE_DOCUMENT': {
         const { doc } = payload;
         db.run(
-          `INSERT OR REPLACE INTO documents (id, project_id, kb_id, agent_id, title, content, metadata, file_path, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+          `INSERT OR REPLACE INTO documents (id, project_id, kb_id, agent_id, title, content, metadata, file_path, company_id, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
           [
             doc.id,
             doc.project_id || null,
@@ -637,6 +717,7 @@ self.onmessage = async (e) => {
             doc.content,
             doc.metadata || null,
             doc.file_path || null,
+            doc.company_id || null,
           ]
         );
         persistChanges();

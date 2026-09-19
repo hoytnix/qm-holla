@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { SettingsProvider } from '@/lib/settings/settings-context';
+import { LlmSetupModal } from '@/components/settings/LlmSetupModal';
+import { CompanySetupModal } from '@/components/onboarding/CompanySetupModal';
 import { ThemeSelectionModal } from '@/components/settings/ThemeSelectionModal';
 
 export const metadata: Metadata = {
@@ -32,6 +34,8 @@ export default function RootLayout({
       <body className="min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500/30">
         <SettingsProvider>
           {children}
+          <LlmSetupModal />
+          <CompanySetupModal />
           <ThemeSelectionModal />
         </SettingsProvider>
       </body>

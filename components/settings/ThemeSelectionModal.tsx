@@ -53,6 +53,8 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
     hasSelectedTheme,
     dismissThemeModal,
     isLlmConfigured,
+    isLlmVerified,
+    companies,
     customUniverseQuery,
     setCustomUniverseQuery,
     setCustomThemeConfig,
@@ -77,8 +79,10 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
     }
   }, [customUniverseQuery]);
 
-  // Modal displays if forceOpen is true, or if user hasn't selected a theme yet
-  const isOpen = forceOpen || !hasSelectedTheme;
+  // Modal displays if forceOpen is true, or if user hasn't selected a theme yet,
+  // but strictly gated behind Phase 0 (LLM Verification) and Phase 1 (Company Setup)
+  const isGated = !isLlmVerified || companies.length === 0;
+  const isOpen = (forceOpen || !hasSelectedTheme) && !isGated;
 
   if (!isOpen) return null;
 

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { db } from '@/lib/db/opfs-adapter';
 import { AppTheme, ThemeConfig, THEMES, DEFAULT_THEME } from '@/lib/settings/themes';
 import { getThemedAgents } from '@/lib/crew/theme-mapper';
+import { CompanyProfile } from '@/lib/db/adapter';
 
 export type LLMProvider = 'openrouter' | 'gemini' | 'openai_compatible';
 
@@ -26,12 +27,15 @@ export interface SettingsContextValue {
   testConnection: () => Promise<{ success: boolean; latencyMs?: number; error?: string }>;
   flushLocalStorage: () => Promise<void>;
   exportVaultData: () => Promise<string>;
+
   // Theme management
   currentTheme: AppTheme;
   themeConfig: ThemeConfig;
   hasSelectedTheme: boolean;
   setTheme: (theme: AppTheme) => Promise<void>;
   dismissThemeModal: () => void;
+  openThemeModal: () => void;
+
   // Custom Universe & LLM API Key helpers
   llmApiKey: string;
   customUniverseQuery: string;
@@ -39,8 +43,34 @@ export interface SettingsContextValue {
   setLlmApiKey: (key: string) => Promise<void>;
   setCustomUniverseQuery: (query: string) => Promise<void>;
   setCustomThemeConfig: (customConfig: ThemeConfig) => Promise<void>;
-  // Reactive version counter: bumps on every theme change so pages can reload agent data
+
+  // Reactive version counter: bumps on every theme or profile change so pages reload agent data
   themeVersion: number;
+
+  // Phase 0: LLM Verification Gate
+  isLlmVerified: boolean;
+  setIsLlmVerified: (verified: boolean) => Promise<void>;
+  isLlmModalOpen: boolean;
+  openLlmModal: () => void;
+  closeLlmModal: () => void;
+
+  // Phase 1 & 2: Multi-Tenant Company Profiles
+  companies: CompanyProfile[];
+  activeCompany: CompanyProfile | null;
+  activeCompanyId: string | null;
+  switchCompany: (companyId: string) => Promise<void>;
+  createCompany: (data: {
+    name: string;
+    owners: string;
+    mission_vision: string;
+    initialTodos?: string[];
+  }) => Promise<CompanyProfile>;
+  updateCompany: (profile: CompanyProfile) => Promise<void>;
+  deleteCompany: (companyId: string) => Promise<void>;
+  refreshCompanies: () => Promise<void>;
+  isCompanyModalOpen: boolean;
+  openCompanyModal: () => void;
+  closeCompanyModal: () => void;
 }
 
 export const DEFAULT_GLOBAL_SYSTEM_PROMPT = `You are an elite autonomous AI operating inside Quarkmeme, a sovereign, local-first multi-agent operating system.
@@ -68,6 +98,8 @@ const STORAGE_THEME_KEY = 'quark_app_theme';
 const STORAGE_THEME_SELECTED_KEY = 'quark_has_selected_theme';
 const STORAGE_CUSTOM_QUERY_KEY = 'quark_custom_universe_query';
 const STORAGE_CUSTOM_THEME_CONFIG_KEY = 'quark_custom_theme_config';
+const STORAGE_IS_LLM_VERIFIED_KEY = 'quark_is_llm_verified';
+const STORAGE_ACTIVE_COMPANY_KEY = 'quark_active_company_id';
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [config, setConfig] = useState<LLMConfig>(DEFAULT_CONFIG);
@@ -77,9 +109,21 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [customUniverseQuery, setCustomUniverseQueryState] = useState<string>('');
   const [customThemeConfig, setCustomThemeConfig] = useState<ThemeConfig | null>(null);
   const [themeVersion, setThemeVersion] = useState(0);
+
+  // Phase 0: LLM Gate state
+  const [isLlmVerified, setIsLlmVerifiedState] = useState<boolean>(false);
+  const [isLlmModalOpen, setIsLlmModalOpen] = useState<boolean>(false);
+
+  // Phase 1 & 2: Company Profiles state
+  const [companies, setCompanies] = useState<CompanyProfile[]>([]);
+  const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
+  const [activeCompany, setActiveCompany] = useState<CompanyProfile | null>(null);
+  const [isCompanyModalOpen, setIsCompanyModalOpen] = useState<boolean>(false);
+  const [isThemeModalForcedOpen, setIsThemeModalForcedOpen] = useState<boolean>(false);
+
   const hasLoadedRef = React.useRef(false);
 
-  // Hydrate settings and theme from local storage cache first, then SQLite
+  // Hydrate settings, theme, verification, and company profiles
   useEffect(() => {
     if (hasLoadedRef.current) return;
     hasLoadedRef.current = true;
@@ -93,6 +137,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const cachedHasSelected = localStorage.getItem(STORAGE_THEME_SELECTED_KEY);
           const cachedCustomQuery = localStorage.getItem(STORAGE_CUSTOM_QUERY_KEY);
           const cachedCustomTheme = localStorage.getItem(STORAGE_CUSTOM_THEME_CONFIG_KEY);
+          const cachedVerified = localStorage.getItem(STORAGE_IS_LLM_VERIFIED_KEY);
+          const cachedActiveCompany = localStorage.getItem(STORAGE_ACTIVE_COMPANY_KEY);
 
           if (cachedCustomTheme && mounted) {
             try {
@@ -109,10 +155,13 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
 
           if (cachedHasSelected === null) {
-            // First time user has never picked a theme
             if (mounted) setHasSelectedTheme(false);
           } else {
             if (mounted) setHasSelectedTheme(cachedHasSelected === 'true');
+          }
+
+          if (cachedActiveCompany && mounted) {
+            setActiveCompanyId(cachedActiveCompany);
           }
 
           const cached = localStorage.getItem(STORAGE_CACHE_KEY);
@@ -120,6 +169,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const parsed = JSON.parse(cached);
             if (mounted) {
               setConfig((prev) => ({ ...prev, ...parsed }));
+              // If API key is present and verified cache is true
+              if (cachedVerified === 'true' && parsed.apiKey) {
+                setIsLlmVerifiedState(true);
+              }
             }
           }
         } catch (e) {
@@ -175,6 +228,14 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
           }
 
+          // Check if LLM was previously verified
+          const verified =
+            (settings['is_llm_verified'] === 'true' ||
+              (typeof window !== 'undefined' && localStorage.getItem(STORAGE_IS_LLM_VERIFIED_KEY) === 'true')) &&
+            Boolean((loaded.apiKey || config.apiKey)?.trim());
+
+          setIsLlmVerifiedState(Boolean(verified));
+
           setConfig((prev) => {
             const merged = { ...prev, ...loaded };
             if (typeof window !== 'undefined') {
@@ -183,8 +244,28 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             return merged;
           });
         }
+
+        // Load Company Profiles from SQLite
+        if (db.getCompanyProfiles) {
+          const loadedProfiles = await db.getCompanyProfiles();
+          if (mounted) {
+            setCompanies(loadedProfiles);
+            const savedActiveId =
+              (await db.getActiveCompanyProfileId?.()) ||
+              (typeof window !== 'undefined' ? localStorage.getItem(STORAGE_ACTIVE_COMPANY_KEY) : null);
+
+            let selected = loadedProfiles.find((p) => p.id === savedActiveId) || loadedProfiles[0] || null;
+            if (selected) {
+              setActiveCompanyId(selected.id);
+              setActiveCompany(selected);
+              if (selected.theme && THEMES[selected.theme as AppTheme]) {
+                setCurrentThemeState(selected.theme as AppTheme);
+              }
+            }
+          }
+        }
       } catch (err) {
-        console.warn('Failed to load settings from OPFS SQLite:', err);
+        console.warn('Failed to load settings or company profiles from OPFS SQLite:', err);
       } finally {
         if (mounted) {
           setIsLoading(false);
@@ -197,43 +278,80 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [config.apiKey]);
 
-  const setTheme = useCallback(async (theme: AppTheme) => {
-    if (!THEMES[theme]) return;
-    setCurrentThemeState(theme);
-    setHasSelectedTheme(true);
-
+  const setIsLlmVerified = useCallback(async (verified: boolean) => {
+    setIsLlmVerifiedState(verified);
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(STORAGE_THEME_KEY, theme);
-        localStorage.setItem(STORAGE_THEME_SELECTED_KEY, 'true');
+        localStorage.setItem(STORAGE_IS_LLM_VERIFIED_KEY, String(verified));
       } catch {}
     }
-
     try {
       await db.init();
-      await db.setSetting('app_theme', theme);
-      await db.setSetting('has_selected_theme', 'true');
-
-      // Write themed agents to the database (non-custom themes only;
-      // custom themes are written directly by the AI mapper in ThemeSelectionModal)
-      const themedAgents = getThemedAgents(theme);
-      if (themedAgents) {
-        for (const agent of themedAgents) {
-          await db.saveAgent(agent);
-        }
-      }
-    } catch (err) {
-      console.warn('Failed to persist theme to OPFS SQLite:', err);
+      await db.setSetting('is_llm_verified', String(verified));
+    } catch (e) {
+      console.warn('Failed to persist is_llm_verified to SQLite:', e);
     }
-
-    // Bump version so consuming pages reactively reload agents from DB
-    setThemeVersion((v) => v + 1);
   }, []);
+
+  const openLlmModal = useCallback(() => setIsLlmModalOpen(true), []);
+  const closeLlmModal = useCallback(() => setIsLlmModalOpen(false), []);
+  const openCompanyModal = useCallback(() => setIsCompanyModalOpen(true), []);
+  const closeCompanyModal = useCallback(() => setIsCompanyModalOpen(false), []);
+  const openThemeModal = useCallback(() => setIsThemeModalForcedOpen(true), []);
+
+  const setTheme = useCallback(
+    async (theme: AppTheme) => {
+      if (!THEMES[theme]) return;
+      setCurrentThemeState(theme);
+      setHasSelectedTheme(true);
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(STORAGE_THEME_KEY, theme);
+          localStorage.setItem(STORAGE_THEME_SELECTED_KEY, 'true');
+        } catch {}
+      }
+
+      try {
+        await db.init();
+        await db.setSetting('app_theme', theme);
+        await db.setSetting('has_selected_theme', 'true');
+
+        // If an active company exists, persist this theme to that company profile
+        if (activeCompany) {
+          const updatedCompany: CompanyProfile = {
+            ...activeCompany,
+            theme,
+            updated_at: new Date().toISOString(),
+          };
+          await db.saveCompanyProfile?.(updatedCompany);
+          setActiveCompany(updatedCompany);
+          setCompanies((prev) => prev.map((c) => (c.id === updatedCompany.id ? updatedCompany : c)));
+        }
+
+        // Write themed agents to the database (non-custom themes only;
+        // custom themes are written directly by the AI mapper in ThemeSelectionModal)
+        const themedAgents = getThemedAgents(theme);
+        if (themedAgents) {
+          for (const agent of themedAgents) {
+            await db.saveAgent(agent);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to persist theme to OPFS SQLite:', err);
+      }
+
+      // Bump version so consuming pages reactively reload agents from DB
+      setThemeVersion((v) => v + 1);
+    },
+    [activeCompany]
+  );
 
   const dismissThemeModal = useCallback(() => {
     setHasSelectedTheme(true);
+    setIsThemeModalForcedOpen(false);
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_THEME_SELECTED_KEY, 'true');
@@ -305,12 +423,15 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         };
       }
 
-      // Check if we got a valid stream response
+      // Check if we got a valid response
       const text = await response.text();
       if (text.includes('data: ') || text.includes('Pong') || response.status === 200) {
+        // Mark verified in state & storage
+        await setIsLlmVerified(true);
         return { success: true, latencyMs };
       }
 
+      await setIsLlmVerified(true);
       return { success: true, latencyMs };
     } catch (err: any) {
       return {
@@ -319,11 +440,14 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         error: err?.message || 'Connection attempt failed',
       };
     }
-  }, [config]);
+  }, [config, setIsLlmVerified]);
 
-  const setLlmApiKey = useCallback(async (key: string) => {
-    await updateConfig({ apiKey: key.trim() });
-  }, [updateConfig]);
+  const setLlmApiKey = useCallback(
+    async (key: string) => {
+      await updateConfig({ apiKey: key.trim() });
+    },
+    [updateConfig]
+  );
 
   const setCustomUniverseQuery = useCallback(async (query: string) => {
     setCustomUniverseQueryState(query);
@@ -355,6 +479,174 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, []);
 
+  // Multi-tenant Company Profile management
+  const refreshCompanies = useCallback(async () => {
+    try {
+      await db.init();
+      if (db.getCompanyProfiles) {
+        const profiles = await db.getCompanyProfiles();
+        setCompanies(profiles);
+        const activeId =
+          (await db.getActiveCompanyProfileId?.()) ||
+          (typeof window !== 'undefined' ? localStorage.getItem(STORAGE_ACTIVE_COMPANY_KEY) : null);
+        const matched = profiles.find((p) => p.id === activeId) || profiles[0] || null;
+        if (matched) {
+          setActiveCompanyId(matched.id);
+          setActiveCompany(matched);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to refresh company profiles:', err);
+    }
+  }, []);
+
+  const switchCompany = useCallback(
+    async (companyId: string) => {
+      const target = companies.find((c) => c.id === companyId);
+      if (!target) return;
+
+      setActiveCompanyId(companyId);
+      setActiveCompany(target);
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(STORAGE_ACTIVE_COMPANY_KEY, companyId);
+        } catch {}
+      }
+
+      try {
+        await db.init();
+        await db.setActiveCompanyProfileId?.(companyId);
+
+        // Switch to the company's designated universe theme
+        if (target.theme && THEMES[target.theme as AppTheme]) {
+          await setTheme(target.theme as AppTheme);
+        }
+
+        if (target.custom_universe_query) {
+          await setCustomUniverseQuery(target.custom_universe_query);
+        }
+
+        if (target.custom_theme_config) {
+          try {
+            await setCustomThemeConfigAction(JSON.parse(target.custom_theme_config));
+          } catch {}
+        }
+      } catch (err) {
+        console.warn('Failed to switch company profile:', err);
+      }
+
+      setThemeVersion((v) => v + 1);
+    },
+    [companies, setTheme, setCustomUniverseQuery, setCustomThemeConfigAction]
+  );
+
+  const createCompany = useCallback(
+    async (data: {
+      name: string;
+      owners: string;
+      mission_vision: string;
+      initialTodos?: string[];
+    }): Promise<CompanyProfile> => {
+      await db.init();
+      const newProfile: CompanyProfile = {
+        id: `comp-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+        name: data.name.trim(),
+        owners: data.owners.trim(),
+        mission_vision: data.mission_vision.trim(),
+        theme: currentTheme || 'one-piece',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      if (db.saveCompanyProfile) {
+        await db.saveCompanyProfile(newProfile);
+      }
+      if (db.setActiveCompanyProfileId) {
+        await db.setActiveCompanyProfileId(newProfile.id);
+      }
+
+      // Seed initial tasks if provided
+      if (data.initialTodos && data.initialTodos.length > 0) {
+        for (let i = 0; i < data.initialTodos.length; i++) {
+          const todoTitle = data.initialTodos[i].trim();
+          if (!todoTitle) continue;
+          await db.saveTask({
+            id: `task-${newProfile.id}-${i}-${Date.now().toString(36)}`,
+            project_id: 'proj-manifesto',
+            agent_id: 'captain-core',
+            title: todoTitle,
+            status: 'pending',
+            priority: i === 0 ? 'high' : 'medium',
+            company_id: newProfile.id,
+          });
+        }
+      }
+
+      // Create a Founding Charter Document in Vault
+      await db.saveDocument({
+        id: `doc-${newProfile.id}-charter`,
+        project_id: 'proj-manifesto',
+        agent_id: 'captain-core',
+        title: `${newProfile.name} - Founding Charter & Principles.md`,
+        content: `# ${newProfile.name} — Founding Charter & Operating Principles\n\n> "Sovereign operations begin with absolute clarity of mission."\n\n## Leadership\n- **Owners / Executive Sponsors**: ${newProfile.owners}\n- **Established**: ${new Date().toLocaleDateString()}\n\n## Mission, Vision & Principles\n${newProfile.mission_vision}\n\n## Initial Strategic Objectives\n${(data.initialTodos || []).map((t, idx) => `${idx + 1}. [ ] ${t}`).join('\n') || 'None configured yet.'}\n\n---\n*Persisted locally via Quarkmeme OPFS SQLite Sovereign Engine.*`,
+        company_id: newProfile.id,
+        metadata: JSON.stringify({
+          tags: ['charter', 'company', newProfile.id],
+          author: newProfile.owners,
+          isCompanyCharter: true,
+        }),
+      });
+
+      setCompanies((prev) => [...prev, newProfile]);
+      setActiveCompanyId(newProfile.id);
+      setActiveCompany(newProfile);
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(STORAGE_ACTIVE_COMPANY_KEY, newProfile.id);
+        } catch {}
+      }
+
+      setThemeVersion((v) => v + 1);
+      return newProfile;
+    },
+    [currentTheme]
+  );
+
+  const updateCompany = useCallback(async (profile: CompanyProfile) => {
+    await db.init();
+    if (db.saveCompanyProfile) {
+      await db.saveCompanyProfile(profile);
+    }
+    setCompanies((prev) => prev.map((c) => (c.id === profile.id ? profile : c)));
+    if (activeCompanyId === profile.id) {
+      setActiveCompany(profile);
+    }
+  }, [activeCompanyId]);
+
+  const deleteCompany = useCallback(
+    async (companyId: string) => {
+      if (companies.length <= 1) {
+        throw new Error('Cannot delete the only company profile. At least one profile must exist.');
+      }
+
+      await db.init();
+      if (db.deleteCompanyProfile) {
+        await db.deleteCompanyProfile(companyId);
+      }
+
+      const remaining = companies.filter((c) => c.id !== companyId);
+      setCompanies(remaining);
+
+      if (activeCompanyId === companyId) {
+        const nextCompany = remaining[0];
+        await switchCompany(nextCompany.id);
+      }
+    },
+    [companies, activeCompanyId, switchCompany]
+  );
+
   const flushLocalStorage = useCallback(async () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_CACHE_KEY);
@@ -362,6 +654,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       localStorage.removeItem(STORAGE_THEME_SELECTED_KEY);
       localStorage.removeItem(STORAGE_CUSTOM_QUERY_KEY);
       localStorage.removeItem(STORAGE_CUSTOM_THEME_CONFIG_KEY);
+      localStorage.removeItem(STORAGE_IS_LLM_VERIFIED_KEY);
+      localStorage.removeItem(STORAGE_ACTIVE_COMPANY_KEY);
       localStorage.removeItem('quark_api_key');
     }
     setConfig(DEFAULT_CONFIG);
@@ -369,21 +663,28 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setCustomUniverseQueryState('');
     setCustomThemeConfig(null);
     setHasSelectedTheme(false);
+    setIsLlmVerifiedState(false);
+    setCompanies([]);
+    setActiveCompanyId(null);
+    setActiveCompany(null);
   }, []);
 
   const exportVaultData = useCallback(async (): Promise<string> => {
     await db.init();
-    const [agents, projects, tasks, documents] = await Promise.all([
+    const [agents, projects, tasks, documents, companyProfiles] = await Promise.all([
       db.getAgents(),
       db.getProjects(),
       db.getTasks(),
       db.getAllDocuments ? db.getAllDocuments() : [],
+      db.getCompanyProfiles ? db.getCompanyProfiles() : [],
     ]);
 
     const exportPayload = {
       exportedAt: new Date().toISOString(),
-      version: '1.0.0',
+      version: '2.0.0',
       currentTheme,
+      activeCompanyId,
+      companies: companyProfiles,
       customUniverseQuery,
       customThemeConfig,
       agents,
@@ -393,7 +694,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     return JSON.stringify(exportPayload, null, 2);
-  }, [currentTheme, customUniverseQuery, customThemeConfig]);
+  }, [currentTheme, activeCompanyId, customUniverseQuery, customThemeConfig]);
 
   const isConfigured = Boolean(config.apiKey && config.apiKey.trim().length > 0);
   const isLlmConfigured = isConfigured;
@@ -417,6 +718,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         hasSelectedTheme,
         setTheme,
         dismissThemeModal,
+        openThemeModal,
         llmApiKey: config.apiKey,
         customUniverseQuery,
         isLlmConfigured,
@@ -424,6 +726,24 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setCustomUniverseQuery,
         setCustomThemeConfig: setCustomThemeConfigAction,
         themeVersion,
+        // Phase 0: LLM Gate
+        isLlmVerified,
+        setIsLlmVerified,
+        isLlmModalOpen,
+        openLlmModal,
+        closeLlmModal,
+        // Phase 1 & 2: Company Profiles
+        companies,
+        activeCompany,
+        activeCompanyId,
+        switchCompany,
+        createCompany,
+        updateCompany,
+        deleteCompany,
+        refreshCompanies,
+        isCompanyModalOpen,
+        openCompanyModal,
+        closeCompanyModal,
       }}
     >
       {children}

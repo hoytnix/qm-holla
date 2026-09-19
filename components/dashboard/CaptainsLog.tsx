@@ -28,7 +28,7 @@ export const CaptainsLog: React.FC<CaptainsLogProps> = ({
   openCommitmentsCount,
   onOpenDailyBrief,
 }) => {
-  const { themeConfig, currentTheme } = useSettings();
+  const { themeConfig, currentTheme, activeCompany } = useSettings();
   const ThemeIcon = THEME_ICONS[currentTheme] || Crown;
 
   return (
@@ -38,11 +38,16 @@ export const CaptainsLog: React.FC<CaptainsLogProps> = ({
 
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400 font-bold flex items-center gap-1.5">
               <ThemeIcon width={14} height={14} className="text-amber-400" />
               <span>{themeConfig.leaderTitle}'s Log · {themeConfig.defaultGroup}</span>
             </span>
+            {activeCompany && (
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono font-semibold">
+                {activeCompany.name}
+              </span>
+            )}
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">
               {themeConfig.name} OS
             </span>

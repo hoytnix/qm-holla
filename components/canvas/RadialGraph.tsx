@@ -99,7 +99,7 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
   const [isPersistingNode, setIsPersistingNode] = useState(false);
 
   // Use theme-aware agent fallback instead of hardcoded One Piece
-  const { currentTheme } = useSettings();
+  const { currentTheme, activeCompanyId } = useSettings();
   const themedFallbackAgents = getThemedAgents(currentTheme) || DEFAULT_CREW;
 
   // Initialize agents and projects state with theme-aware fallback for immediate non-blocking render
@@ -315,6 +315,7 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
       if (newNodeType === 'project') {
         const newProj: ProjectRecord = {
           id: `proj-${Date.now().toString(36)}`,
+          company_id: activeCompanyId || null,
           agent_id: newNodeAgentId,
           title: newNodeTitle.trim(),
           description: newNodeDescription.trim() || 'Dynamic radial project workspace',
@@ -333,6 +334,7 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
 
         const newTask: TaskRecord = {
           id: `task-${Date.now().toString(36)}`,
+          company_id: activeCompanyId || null,
           project_id: targetProjId,
           agent_id: assignedAgentId,
           title: newNodeTitle.trim(),
@@ -349,6 +351,7 @@ export const RadialGraph: React.FC<RadialGraphProps> = ({
 
         const newDoc: DocumentRecord = {
           id: `doc-${Date.now().toString(36)}`,
+          company_id: activeCompanyId || null,
           project_id: targetProjId,
           agent_id: assignedAgentId,
           title: newNodeTitle.trim().endsWith('.md') ? newNodeTitle.trim() : `${newNodeTitle.trim()}.md`,

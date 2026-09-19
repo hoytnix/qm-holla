@@ -3,6 +3,12 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Multi-Tenant Company Profiles, LLM Gateway, and Granular Character Memory Filtering (Phases 0-3):
+  - Phase 0: Built blocking [`LlmSetupModal.tsx`](file:///home/oloty/Dev/qm-holla/components/settings/LlmSetupModal.tsx) enforcing mandatory LLM configuration and connection test verification before unlocking profile creation or theme selection.
+  - Phase 1: Built [`CompanySetupModal.tsx`](file:///home/oloty/Dev/qm-holla/components/onboarding/CompanySetupModal.tsx) wizard capturing Company Name, Owner Name(s), Mission/Vision/Principles, and dynamic initial tasks list. Automatically seeds tasks and generates a Founding Charter document upon creation.
+  - Phase 2: Added multi-tenant company workspace support in OPFS SQLite schema (`company_profiles` table, `company_id` columns across `projects`, `tasks`, `documents`, `kbs`, `messages`), hot-swap company switcher in [`Navbar.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/Navbar.tsx), and 2-step double-confirmation deletion in [`app/settings/page.tsx`](file:///home/oloty/Dev/qm-holla/app/settings/page.tsx) requiring typing the exact company name. Persisted universe theme per company workspace.
+  - Phase 3: Upgraded [`app/vault/page.tsx`](file:///home/oloty/Dev/qm-holla/app/vault/page.tsx) with company filtering, Character Memory Banks optgroup, individual character memory filtering (`/memory-bank/agents/[agent-id]/*`), and active Character Memory Bank hero banner. Upgraded [`components/vault/MarkdownDrawer.tsx`](file:///home/oloty/Dev/qm-holla/components/vault/MarkdownDrawer.tsx) with character memory badge.
+  - Wired company context across [`app/page.tsx`](file:///home/oloty/Dev/qm-holla/app/page.tsx), [`components/canvas/RadialGraph.tsx`](file:///home/oloty/Dev/qm-holla/components/canvas/RadialGraph.tsx), [`components/dashboard/CaptainsLog.tsx`](file:///home/oloty/Dev/qm-holla/components/dashboard/CaptainsLog.tsx), and [`components/vault/NotionRichEditor.tsx`](file:///home/oloty/Dev/qm-holla/components/vault/NotionRichEditor.tsx).
 - [x] Theme Selection Bug Fix & Dynamic Universe Crew Mapping:
   - Created [`lib/crew/theme-mapper.ts`](file:///home/oloty/Dev/qm-holla/lib/crew/theme-mapper.ts) with character mappings for all 7 built-in universes (One Piece, Naruto, The Office, Game Of Thrones, NCIS, Pokemon, Frieren), translating 7 abstract agent role slots to universe-specific characters with themed names, system prompts, routing descriptions, and avatars.
   - Rewired `setTheme()` in [`lib/settings/settings-context.tsx`](file:///home/oloty/Dev/qm-holla/lib/settings/settings-context.tsx) to write themed agents to the database via `db.saveAgent()` using `getThemedAgents()`, then bump a reactive `themeVersion` counter so all consuming pages reload.
@@ -75,4 +81,4 @@
 
 ## Quality & Verification Status
 - Typecheck: Verified with `npx tsc --noEmit` (0 errors)
-- Build status: Production build verified via `pnpm build` (exit code 0, 9 static routes generated)
+- Build status: Production build verified via `pnpm build` (exit code 0, 10 static routes generated)

@@ -54,6 +54,26 @@ export const MarkdownDrawer: React.FC<MarkdownDrawerProps> = ({
     };
   }, [document, projectId, agentId]);
 
+  // Character Memory Bank detection
+  const isMemoryBank = Boolean(
+    (document?.file_path && document.file_path.includes('/memory-bank/agents/')) ||
+    (document?.metadata && document.metadata.includes('memory-bank')) ||
+    document?.id.startsWith('mem-')
+  );
+
+  const memoryAgent = React.useMemo(() => {
+    if (!document) return null;
+    if (document.agent_id) {
+      const found = agents.find((a) => a.id === document.agent_id);
+      if (found) return found;
+    }
+    const match = document.file_path?.match(/\/memory-bank\/agents\/([^\/]+)\//);
+    if (match) {
+      return agents.find((a) => a.id === match[1]) || null;
+    }
+    return null;
+  }, [document, agents]);
+
   const handleCreateQuickTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickTaskTitle.trim() || !onAddTask) return;
@@ -85,10 +105,18 @@ export const MarkdownDrawer: React.FC<MarkdownDrawerProps> = ({
 
           {/* Quick bar above editor */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 bg-slate-900/40 text-xs shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400 font-mono text-[11px]">
-                {projectId ? `Project Link: ${projectId}` : 'Vault Note Workspace'}
-              </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              {memoryAgent ? (
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono text-[11px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                  <span className="font-bold">Memory Bank:</span>
+                  <span>{memoryAgent.name} ({memoryAgent.role_title})</span>
+                </div>
+              ) : (
+                <span className="text-slate-400 font-mono text-[11px]">
+                  {projectId ? `Project Link: ${projectId}` : 'Vault Note Workspace'}
+                </span>
+              )}
               {onAddTask && (
                 <button
                   type="button"

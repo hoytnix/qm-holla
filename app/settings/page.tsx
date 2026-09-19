@@ -7,6 +7,7 @@ import { GlassButton } from '@/components/ui/GlassButton';
 import { useSettings, LLMProvider, DEFAULT_GLOBAL_SYSTEM_PROMPT } from '@/lib/settings/settings-context';
 import { AppTheme, THEMES, ThemeConfig } from '@/lib/settings/themes';
 import { db } from '@/lib/db/opfs-adapter';
+import { CompanyProfile } from '@/lib/db/adapter';
 import {
   Sparkles,
   Bot,
@@ -36,6 +37,9 @@ import {
   Wand2,
   Film,
   KeyRound,
+  Building2,
+  Check,
+  Plus,
   LucideIcon,
 } from 'lucide-react';
 
@@ -80,6 +84,7 @@ export default function SettingsPage() {
     updateConfig,
     isConfigured,
     isLlmConfigured,
+    isLlmVerified,
     setLlmApiKey,
     customUniverseQuery,
     setCustomUniverseQuery,
@@ -90,6 +95,12 @@ export default function SettingsPage() {
     currentTheme,
     setTheme,
     themeConfig,
+    companies,
+    activeCompany,
+    activeCompanyId,
+    switchCompany,
+    openCompanyModal,
+    deleteCompany,
   } = useSettings();
 
   const [showApiKey, setShowApiKey] = useState(false);
@@ -104,12 +115,47 @@ export default function SettingsPage() {
   const [showFlushModal, setShowFlushModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
+  // Double-confirmation company deletion state
+  const [deletingCompany, setDeletingCompany] = useState<CompanyProfile | null>(null);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   // Custom universe inline casting state
   const [customInputQuery, setCustomInputQuery] = useState(customUniverseQuery || '');
   const [isGeneratingCustom, setIsGeneratingCustom] = useState(false);
   const [customGenError, setCustomGenError] = useState<string | null>(null);
   const [customGenSuccess, setCustomGenSuccess] = useState<string | null>(null);
   const [showKeyRequiredAlert, setShowKeyRequiredAlert] = useState(false);
+
+  const handleDeleteCompanyClick = (company: CompanyProfile) => {
+    setDeletingCompany(company);
+    setDeleteStep(1);
+    setDeleteConfirmationText('');
+    setDeleteError(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingCompany) return;
+    if (deleteStep === 1) {
+      setDeleteStep(2);
+      return;
+    }
+    if (deleteConfirmationText.trim().toLowerCase() !== deletingCompany.name.trim().toLowerCase()) {
+      setDeleteError(`Name does not match "${deletingCompany.name}".`);
+      return;
+    }
+    try {
+      await deleteCompany(deletingCompany.id);
+      setSaveFeedback(`Company profile "${deletingCompany.name}" successfully deleted.`);
+      setDeletingCompany(null);
+      setDeleteStep(1);
+      setDeleteConfirmationText('');
+      setTimeout(() => setSaveFeedback(null), 3500);
+    } catch (err: any) {
+      setDeleteError(err?.message || 'Failed to delete company profile.');
+    }
+  };
 
   React.useEffect(() => {
     if (customUniverseQuery) {
@@ -309,13 +355,129 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-8">
+          {/* Section 1: Multi-Tenant Company Profiles & Workspaces */}
+          <section className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                  <Building2 width={16} height={16} className="text-indigo-400" />
+                  <span>1. Company Profiles & Multi-Tenant Workspaces</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Operate multiple distinct business ventures, franchises, or side projects with isolated workspace context.
+                </p>
+              </div>
+
+              <GlassButton
+                type="button"
+                variant="primary"
+                onClick={openCompanyModal}
+                className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 border-indigo-400/40 text-xs sm:text-sm self-start sm:self-auto"
+              >
+                <Plus width={15} height={15} />
+                <span>New Company Profile</span>
+              </GlassButton>
+            </div>
+
+            {/* Company Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {companies.map((company) => {
+                const isActive = company.id === activeCompany?.id;
+                const companyTheme = THEMES[company.theme as AppTheme] || THEMES['one-piece'];
+                const CompanyThemeIcon = THEME_ICONS[company.theme as AppTheme] || Compass;
+
+                return (
+                  <GlassCard
+                    key={company.id}
+                    className={`p-5 rounded-2xl flex flex-col justify-between space-y-4 transition-all relative overflow-hidden ${
+                      isActive
+                        ? 'border-indigo-500/60 bg-slate-900/90 shadow-[0_0_25px_rgba(99,102,241,0.15)] ring-1 ring-indigo-500/40'
+                        : 'border-white/10 bg-slate-900/60 hover:border-white/20'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                            <Building2 width={16} height={16} />
+                          </div>
+                          <div>
+                            <h3 className="text-base font-bold text-white leading-tight">{company.name}</h3>
+                            <span className="text-[11px] text-slate-400 font-mono">
+                              By {company.owners}
+                            </span>
+                          </div>
+                        </div>
+
+                        {isActive ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            <Check width={12} height={12} />
+                            <span>ACTIVE</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-mono text-slate-400 bg-white/5 border border-white/10">
+                            INACTIVE
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed mb-3">
+                        {company.mission_vision}
+                      </p>
+
+                      <div className="flex items-center gap-2 pt-2 border-t border-white/5 text-[11px] text-slate-400 font-mono">
+                        <span className="text-slate-500">Universe Theme:</span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-950 border border-white/5 text-slate-200">
+                          <CompanyThemeIcon width={12} height={12} className={companyTheme.accentColor} />
+                          <span>{companyTheme.name}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5">
+                      {!isActive ? (
+                        <GlassButton
+                          type="button"
+                          variant="secondary"
+                          onClick={() => switchCompany(company.id)}
+                          className="flex items-center gap-1.5 text-xs text-indigo-300 hover:text-white"
+                        >
+                          <span>Switch to this Profile</span>
+                        </GlassButton>
+                      ) : (
+                        <span className="text-xs text-emerald-400/80 font-mono flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>Operating Workspace</span>
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCompanyClick(company)}
+                        disabled={companies.length <= 1}
+                        title={companies.length <= 1 ? 'Cannot delete the only profile' : 'Delete profile'}
+                        className={`p-2 rounded-xl transition-colors ${
+                          companies.length <= 1
+                            ? 'text-slate-600 cursor-not-allowed'
+                            : 'text-slate-400 hover:text-rose-400 hover:bg-rose-500/10'
+                        }`}
+                      >
+                        <Trash2 width={15} height={15} />
+                      </button>
+                    </div>
+                  </GlassCard>
+                );
+              })}
+            </div>
+          </section>
+
           {/* Universe Theme Selector Section */}
           <section className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                   <Palette width={16} height={16} className="text-amber-400" />
-                  <span>1. Choose App Universe & Vessel Branding</span>
+                  <span>2. Choose App Universe & Vessel Branding</span>
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Select your universe to customize ship crew hierarchy, division roles, and styling accents.
@@ -489,7 +651,7 @@ export default function SettingsPage() {
           {/* Provider Selector Tab Cards */}
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              2. Select LLM Fuel Provider
+              3. Select LLM Fuel Provider
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Google Gemini Card */}
@@ -565,7 +727,7 @@ export default function SettingsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                 <KeyRound width={16} height={16} className="text-amber-400" />
-                <span>3. LLM Configuration Vault</span>
+                <span>4. LLM Configuration Vault</span>
               </h2>
 
               {/* Status Indicator showing whether LLM is active and ready for Custom Themes */}
@@ -826,7 +988,7 @@ export default function SettingsPage() {
           {/* Data Management & Vault Controls */}
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              4. Local Sovereign Vault Management
+              5. Local Sovereign Vault Management
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <GlassCard className="p-5 border-white/10 bg-slate-900/60 flex flex-col justify-between space-y-4">
@@ -906,6 +1068,93 @@ export default function SettingsPage() {
                   onClick={handleConfirmFlush}
                 >
                   Yes, Flush Storage
+                </GlassButton>
+              </div>
+            </GlassCard>
+          </div>
+        )}
+
+        {/* Double-Confirmation Profile Deletion Modal */}
+        {deletingCompany && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200"
+            role="dialog"
+            aria-modal="true"
+          >
+            <GlassCard className="p-6 max-w-md w-full border-rose-500/40 bg-slate-900/95 shadow-2xl space-y-4 relative">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.2)]">
+                  <AlertTriangle width={22} height={22} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    {deleteStep === 1 ? 'Delete Company Profile?' : 'Confirm Final Deletion'}
+                  </h3>
+                  <p className="text-xs text-rose-400 font-mono">
+                    Step {deleteStep} of 2 Double-Confirmation
+                  </p>
+                </div>
+              </div>
+
+              {deleteStep === 1 ? (
+                <>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Are you sure you want to delete profile <strong className="text-white">"{deletingCompany.name}"</strong>?
+                  </p>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    This action will permanently delete all tasks, projects, notes, and local database records belonging exclusively to this company workspace.
+                  </p>
+                  <div className="p-3 rounded-xl bg-slate-950 border border-white/5 space-y-1 text-xs font-mono text-slate-400">
+                    <div>Company: <span className="text-white">{deletingCompany.name}</span></div>
+                    <div>Owners: <span className="text-white">{deletingCompany.owners}</span></div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    To permanently destroy this company workspace, please type the exact company name <strong className="text-rose-400 font-mono">"{deletingCompany.name}"</strong> into the box below:
+                  </p>
+                  <input
+                    type="text"
+                    value={deleteConfirmationText}
+                    onChange={(e) => {
+                      setDeleteConfirmationText(e.target.value);
+                      setDeleteError(null);
+                    }}
+                    placeholder={`Type "${deletingCompany.name}"`}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-rose-500/40 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-rose-400 font-mono"
+                    autoFocus
+                  />
+                </>
+              )}
+
+              {deleteError && (
+                <div className="p-2.5 rounded-xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300 font-mono">
+                  {deleteError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <GlassButton
+                  variant="secondary"
+                  onClick={() => {
+                    setDeletingCompany(null);
+                    setDeleteStep(1);
+                    setDeleteConfirmationText('');
+                  }}
+                >
+                  Cancel
+                </GlassButton>
+                <GlassButton
+                  variant="danger"
+                  onClick={handleConfirmDelete}
+                  disabled={
+                    deleteStep === 2 &&
+                    deleteConfirmationText.trim().toLowerCase() !== deletingCompany.name.trim().toLowerCase()
+                  }
+                  className="bg-rose-600 hover:bg-rose-500"
+                >
+                  {deleteStep === 1 ? 'Proceed to Confirmation' : 'Permanently Delete Workspace'}
                 </GlassButton>
               </div>
             </GlassCard>
