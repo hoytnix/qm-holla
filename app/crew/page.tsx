@@ -27,6 +27,7 @@ import {
   Brain,
   Search,
   Wrench,
+  Globe,
 } from 'lucide-react';
 import { useSettings } from '@/lib/settings/settings-context';
 import { GOOGLE_AI_STUDIO_MODELS } from '@/lib/ai/models';
@@ -53,6 +54,7 @@ export default function CrewPage() {
   const [formTools, setFormTools] = useState<AgentToolsConfig>({
     googleSearch: false,
     codeExecution: false,
+    fetchUrlMarkdown: false,
   });
 
   const loadAll = async () => {
@@ -90,7 +92,7 @@ export default function CrewPage() {
     setFormRouting(agent.routing_description || '');
     setFormPrompt(agent.system_prompt);
     setFormModel(agent.model || '');
-    setFormTools(agent.tools || { googleSearch: false, codeExecution: false });
+    setFormTools(agent.tools || { googleSearch: false, codeExecution: false, fetchUrlMarkdown: false });
   };
 
   const openCreate = () => {
@@ -101,7 +103,7 @@ export default function CrewPage() {
     setFormRouting('');
     setFormPrompt('');
     setFormModel('');
-    setFormTools({ googleSearch: false, codeExecution: false });
+    setFormTools({ googleSearch: false, codeExecution: false, fetchUrlMarkdown: false });
   };
 
   const cancelEdit = () => {
@@ -322,6 +324,32 @@ export default function CrewPage() {
                       </p>
                     </div>
                   </label>
+
+                  <label
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formTools.fetchUrlMarkdown
+                        ? 'border-purple-500/50 bg-purple-950/30'
+                        : 'border-white/10 bg-slate-900/60 hover:border-white/20'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!formTools.fetchUrlMarkdown}
+                      onChange={(e) =>
+                        setFormTools((prev) => ({ ...prev, fetchUrlMarkdown: e.target.checked }))
+                      }
+                      className="mt-0.5 rounded border-white/20 bg-slate-900 text-purple-500 focus:ring-purple-500/30"
+                    />
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
+                        <Globe width={13} height={13} className="text-purple-400" />
+                        <span>Web Markdowner</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-normal">
+                        Fetches public URLs and ingests clean Markdown (powered by md.dhr.wtf).
+                      </p>
+                    </div>
+                  </label>
                 </div>
               </div>
 
@@ -452,6 +480,13 @@ export default function CrewPage() {
                             <span>Code</span>
                           </span>
                         )}
+
+                        {agent.tools?.fetchUrlMarkdown && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-500/15 border border-purple-500/30 text-[10px] font-mono text-purple-300">
+                            <Globe width={10} height={10} />
+                            <span>Markdown</span>
+                          </span>
+                        )}
                       </div>
 
                       {/* Model Selector Dropdown on Card */}
@@ -489,26 +524,26 @@ export default function CrewPage() {
                             <span>Enabled Tools</span>
                           </span>
                           <span className="text-[9px] text-slate-500 font-mono">
-                            {`${(agent.tools?.googleSearch ? 1 : 0) + (agent.tools?.codeExecution ? 1 : 0)} active`}
+                            {`${(agent.tools?.googleSearch ? 1 : 0) + (agent.tools?.codeExecution ? 1 : 0) + (agent.tools?.fetchUrlMarkdown ? 1 : 0)} active`}
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-1.5">
                           <button
                             type="button"
                             onClick={() => handleAgentToolToggle(agent, 'googleSearch')}
-                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-[11px] font-mono transition-all ${
+                            className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-[10px] font-mono transition-all ${
                               agent.tools?.googleSearch
                                 ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-sm'
                                 : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
                             }`}
                             title="Toggle Google Search Grounding for this agent"
                           >
-                            <span className="flex items-center gap-1.5">
-                              <Search width={12} height={12} className={agent.tools?.googleSearch ? 'text-emerald-400' : 'text-slate-500'} />
+                            <span className="flex items-center gap-1">
+                              <Search width={11} height={11} className={agent.tools?.googleSearch ? 'text-emerald-400' : 'text-slate-500'} />
                               <span>Search</span>
                             </span>
                             <span
-                              className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                              className={`text-[8px] mt-0.5 px-1 py-0.2 rounded font-bold uppercase tracking-wider ${
                                 agent.tools?.googleSearch
                                   ? 'bg-emerald-500/20 text-emerald-300'
                                   : 'bg-white/5 text-slate-500'
@@ -521,25 +556,50 @@ export default function CrewPage() {
                           <button
                             type="button"
                             onClick={() => handleAgentToolToggle(agent, 'codeExecution')}
-                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-[11px] font-mono transition-all ${
+                            className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-[10px] font-mono transition-all ${
                               agent.tools?.codeExecution
                                 ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 shadow-sm'
                                 : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
                             }`}
                             title="Toggle Code Execution for this agent"
                           >
-                            <span className="flex items-center gap-1.5">
-                              <Terminal width={12} height={12} className={agent.tools?.codeExecution ? 'text-cyan-400' : 'text-slate-500'} />
+                            <span className="flex items-center gap-1">
+                              <Terminal width={11} height={11} className={agent.tools?.codeExecution ? 'text-cyan-400' : 'text-slate-500'} />
                               <span>Code</span>
                             </span>
                             <span
-                              className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                              className={`text-[8px] mt-0.5 px-1 py-0.2 rounded font-bold uppercase tracking-wider ${
                                 agent.tools?.codeExecution
                                   ? 'bg-cyan-500/20 text-cyan-300'
                                   : 'bg-white/5 text-slate-500'
                               }`}
                             >
                               {agent.tools?.codeExecution ? 'ON' : 'OFF'}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleAgentToolToggle(agent, 'fetchUrlMarkdown')}
+                            className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-[10px] font-mono transition-all ${
+                              agent.tools?.fetchUrlMarkdown
+                                ? 'bg-purple-500/15 border-purple-500/40 text-purple-300 shadow-sm'
+                                : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
+                            }`}
+                            title="Toggle Web Markdowner (URL to clean markdown) for this agent"
+                          >
+                            <span className="flex items-center gap-1">
+                              <Globe width={11} height={11} className={agent.tools?.fetchUrlMarkdown ? 'text-purple-400' : 'text-slate-500'} />
+                              <span>MD</span>
+                            </span>
+                            <span
+                              className={`text-[8px] mt-0.5 px-1 py-0.2 rounded font-bold uppercase tracking-wider ${
+                                agent.tools?.fetchUrlMarkdown
+                                  ? 'bg-purple-500/20 text-purple-300'
+                                  : 'bg-white/5 text-slate-500'
+                              }`}
+                            >
+                              {agent.tools?.fetchUrlMarkdown ? 'ON' : 'OFF'}
                             </span>
                           </button>
                         </div>
@@ -699,6 +759,16 @@ export default function CrewPage() {
                       >
                         <Terminal width={10} height={10} />
                         <span>Code Execution: {inspectingInstructionsAgent.tools?.codeExecution ? 'Enabled' : 'Disabled'}</span>
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono ${
+                          inspectingInstructionsAgent.tools?.fetchUrlMarkdown
+                            ? 'bg-purple-500/15 border-purple-500/40 text-purple-300'
+                            : 'bg-white/5 border-white/10 text-slate-500'
+                        }`}
+                      >
+                        <Globe width={10} height={10} />
+                        <span>Web Markdowner: {inspectingInstructionsAgent.tools?.fetchUrlMarkdown ? 'Enabled' : 'Disabled'}</span>
                       </span>
                     </div>
                     <p>• Scoped FTS5 BM25 search restricted to knowledge base lore.</p>

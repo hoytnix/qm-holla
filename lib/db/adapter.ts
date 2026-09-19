@@ -1,6 +1,7 @@
 export interface AgentToolsConfig {
   googleSearch?: boolean;
   codeExecution?: boolean;
+  fetchUrlMarkdown?: boolean;
 }
 
 export interface AgentRecord {

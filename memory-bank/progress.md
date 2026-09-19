@@ -3,6 +3,13 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Custom Gemini Markdowner Tool (`fetch_url_as_markdown`):
+  - Created [`lib/ai/tools/web-markdown.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/tools/web-markdown.ts) exporting `fetchUrlAsMarkdownDeclaration` and `executeFetchUrlAsMarkdown(url, llmFilter)` contacting Markdowner service (`https://md.dhr.wtf/?url=...`), with 10s timeout signal, 20k-character token cap, and descriptive markdown error reporting.
+  - Registered in [`lib/ai/tools.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/tools.ts): updated `buildGeminiTools` to merge built-in tools (`googleSearch`, `codeExecution`) with custom `functionDeclarations` (`fetchUrlAsMarkdownDeclaration`), and extended `AgentToolsConfig` with `fetchUrlMarkdown?: boolean`.
+  - Implemented function calling execution loop in [`app/api/chat/route.ts`](file:///home/oloty/Dev/qm-holla/app/api/chat/route.ts): intercepted candidate `functionCalls`, dispatched `executeFetchUrlAsMarkdown`, constructed `functionResponse` part with Markdown content, and looped back for final synthesized model response.
+  - Injected tool instructions into `assembleContext` in [`lib/ai/orchestrator.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/orchestrator.ts) when agent has `fetchUrlMarkdown` active.
+  - Enabled `fetchUrlMarkdown: true` by default for research and navigation specialists (Robin, Nami) across all 7 universe themes in [`lib/crew/default-crew.ts`](file:///home/oloty/Dev/qm-holla/lib/crew/default-crew.ts) and [`lib/crew/theme-mapper.ts`](file:///home/oloty/Dev/qm-holla/lib/crew/theme-mapper.ts).
+  - Enhanced [`app/crew/page.tsx`](file:///home/oloty/Dev/qm-holla/app/crew/page.tsx) with 3-column tool controls (`Search`, `Code`, `MD`), modal edit checkbox for Web Markdowner, and role instructions inspection badge. Added live Markdown tool badge to [`app/chat/page.tsx`](file:///home/oloty/Dev/qm-holla/app/chat/page.tsx) toolbar.
 - [x] First-Class Gemini Built-In Tools Support (Google Search Grounding & Code Execution):
   - Created [`lib/ai/tools.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/tools.ts) defining `AgentToolsConfig`, `GroundingMetadata`, `ExecutableCodePart`, `CodeExecutionResultPart`, and `buildGeminiTools()` helper for `@google/genai` API calls.
   - Implemented `readChatStream()` utility supporting Server-Sent Events (SSE) metadata streams with fallback for plain text streams.

@@ -1,6 +1,14 @@
+import {
+  fetchUrlAsMarkdownDeclaration,
+  executeFetchUrlAsMarkdown,
+} from './tools/web-markdown';
+
+export { fetchUrlAsMarkdownDeclaration, executeFetchUrlAsMarkdown };
+
 export interface AgentToolsConfig {
   googleSearch?: boolean;
   codeExecution?: boolean;
+  fetchUrlMarkdown?: boolean;
 }
 
 export interface GeminiToolGoogleSearch {
@@ -11,21 +19,44 @@ export interface GeminiToolCodeExecution {
   codeExecution: Record<string, never>;
 }
 
-export type GeminiTool = GeminiToolGoogleSearch | GeminiToolCodeExecution;
+export interface GeminiToolFunctionDeclarations {
+  functionDeclarations: any[];
+}
+
+export type GeminiTool =
+  | GeminiToolGoogleSearch
+  | GeminiToolCodeExecution
+  | GeminiToolFunctionDeclarations;
 
 /**
  * Formats tool options for Google Gemini API generateContent / generateContentStream calls.
+ * Combines built-in tools (googleSearch, codeExecution) with custom function declarations
+ * such as fetchUrlAsMarkdownDeclaration.
  */
-export function buildGeminiTools(toolsConfig?: AgentToolsConfig | null): any[] {
-  if (!toolsConfig) return [];
+export function buildGeminiTools(
+  toolsConfig?: AgentToolsConfig | null,
+  customFunctionDeclarations?: any[]
+): any[] {
   const tools: any[] = [];
+  const functionDecls: any[] = customFunctionDeclarations ? [...customFunctionDeclarations] : [];
 
-  if (toolsConfig.googleSearch) {
+  if (toolsConfig?.googleSearch) {
     tools.push({ googleSearch: {} });
   }
 
-  if (toolsConfig.codeExecution) {
+  if (toolsConfig?.codeExecution) {
     tools.push({ codeExecution: {} });
+  }
+
+  if (toolsConfig?.fetchUrlMarkdown) {
+    // Ensure fetchUrlAsMarkdownDeclaration is included if not already present
+    if (!functionDecls.some((f) => f.name === fetchUrlAsMarkdownDeclaration.name)) {
+      functionDecls.push(fetchUrlAsMarkdownDeclaration);
+    }
+  }
+
+  if (functionDecls.length > 0) {
+    tools.push({ functionDeclarations: functionDecls });
   }
 
   return tools;

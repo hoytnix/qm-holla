@@ -2,7 +2,12 @@ import { NextRequest } from 'next/server';
 import { createOpenAI } from '@ai-sdk/openai';
 import { GoogleGenAI } from '@google/genai';
 import { streamText } from 'ai';
-import { buildGeminiTools, AgentToolsConfig } from '@/lib/ai/tools';
+import {
+  buildGeminiTools,
+  AgentToolsConfig,
+  executeFetchUrlAsMarkdown,
+  fetchUrlAsMarkdownDeclaration,
+} from '@/lib/ai/tools';
 
 export const runtime = 'nodejs';
 
@@ -149,99 +154,172 @@ export async function POST(req: NextRequest) {
       }
 
       const geminiTools = buildGeminiTools(resolvedTools);
-
-      const responseStream = await ai.models.generateContentStream({
-        model: selectedModel,
-        contents,
-        config: {
-          ...(combinedSystem ? { systemInstruction: combinedSystem } : {}),
-          ...(typeof temperature === 'number' ? { temperature } : {}),
-          ...(typeof maxTokens === 'number' ? { maxOutputTokens: maxTokens } : {}),
-          ...(geminiTools.length > 0 ? { tools: geminiTools } : {}),
-        },
-      });
-
       const encoder = new TextEncoder();
+
+      // Track contents history for function calling loop
+      const conversationContents: any[] = [...contents];
+
       const readable = new ReadableStream({
         async start(controller) {
           try {
-            for await (const chunk of responseStream) {
-              const candidate = chunk.candidates?.[0];
-              const parts = candidate?.content?.parts;
-              let streamedSpecificParts = false;
+            const MAX_FUNCTION_TURNS = 5;
+            let turns = 0;
 
-              if (parts && parts.length > 0) {
-                for (const part of parts) {
-                  if (part.executableCode) {
-                    streamedSpecificParts = true;
-                    controller.enqueue(
-                      encoder.encode(
-                        `data: ${JSON.stringify({
-                          type: 'executable_code',
-                          executableCode: {
-                            language: part.executableCode.language,
-                            code: part.executableCode.code,
-                            id: part.executableCode.id,
-                          },
-                        })}\n\n`
-                      )
-                    );
-                  }
+            while (turns < MAX_FUNCTION_TURNS) {
+              turns++;
 
-                  if (part.codeExecutionResult) {
-                    streamedSpecificParts = true;
-                    controller.enqueue(
-                      encoder.encode(
-                        `data: ${JSON.stringify({
-                          type: 'code_execution_result',
-                          codeExecutionResult: {
-                            outcome: part.codeExecutionResult.outcome,
-                            output: part.codeExecutionResult.output,
-                            id: part.codeExecutionResult.id,
-                          },
-                        })}\n\n`
-                      )
-                    );
-                  }
+              const responseStream = await ai.models.generateContentStream({
+                model: selectedModel,
+                contents: conversationContents,
+                config: {
+                  ...(combinedSystem ? { systemInstruction: combinedSystem } : {}),
+                  ...(typeof temperature === 'number' ? { temperature } : {}),
+                  ...(typeof maxTokens === 'number' ? { maxOutputTokens: maxTokens } : {}),
+                  ...(geminiTools.length > 0 ? { tools: geminiTools } : {}),
+                },
+              });
 
-                  if (part.text) {
-                    streamedSpecificParts = true;
-                    controller.enqueue(
-                      encoder.encode(
-                        `data: ${JSON.stringify({
-                          type: 'text',
-                          text: part.text,
-                        })}\n\n`
-                      )
-                    );
+              // Collect parts across the response stream for function call detection & turn history
+              const accumulatedModelParts: any[] = [];
+              const pendingFunctionCalls: Array<{ name: string; args?: any; id?: string }> = [];
+
+              for await (const chunk of responseStream) {
+                const candidate = chunk.candidates?.[0];
+                const parts = candidate?.content?.parts;
+                let streamedSpecificParts = false;
+
+                if (parts && parts.length > 0) {
+                  for (const part of parts) {
+                    accumulatedModelParts.push(part);
+
+                    if (part.functionCall && part.functionCall.name) {
+                      pendingFunctionCalls.push({
+                        name: part.functionCall.name,
+                        args: part.functionCall.args,
+                        id: part.functionCall.id,
+                      });
+                    }
+
+                    if (part.executableCode) {
+                      streamedSpecificParts = true;
+                      controller.enqueue(
+                        encoder.encode(
+                          `data: ${JSON.stringify({
+                            type: 'executable_code',
+                            executableCode: {
+                              language: part.executableCode.language,
+                              code: part.executableCode.code,
+                              id: part.executableCode.id,
+                            },
+                          })}\n\n`
+                        )
+                      );
+                    }
+
+                    if (part.codeExecutionResult) {
+                      streamedSpecificParts = true;
+                      controller.enqueue(
+                        encoder.encode(
+                          `data: ${JSON.stringify({
+                            type: 'code_execution_result',
+                            codeExecutionResult: {
+                              outcome: part.codeExecutionResult.outcome,
+                              output: part.codeExecutionResult.output,
+                              id: part.codeExecutionResult.id,
+                            },
+                          })}\n\n`
+                        )
+                      );
+                    }
+
+                    if (part.text) {
+                      streamedSpecificParts = true;
+                      controller.enqueue(
+                        encoder.encode(
+                          `data: ${JSON.stringify({
+                            type: 'text',
+                            text: part.text,
+                          })}\n\n`
+                        )
+                      );
+                    }
                   }
+                }
+
+                // Fallback to chunk.text if parts weren't specifically streamed
+                if (!streamedSpecificParts && chunk.text) {
+                  controller.enqueue(
+                    encoder.encode(
+                      `data: ${JSON.stringify({
+                        type: 'text',
+                        text: chunk.text,
+                      })}\n\n`
+                    )
+                  );
+                }
+
+                // Forward grounding metadata (citations, web search queries, web sources)
+                const grounding = candidate?.groundingMetadata;
+                if (grounding) {
+                  controller.enqueue(
+                    encoder.encode(
+                      `data: ${JSON.stringify({
+                        type: 'grounding_metadata',
+                        groundingMetadata: grounding,
+                      })}\n\n`
+                    )
+                  );
                 }
               }
 
-              // Fallback to chunk.text if parts weren't specifically streamed
-              if (!streamedSpecificParts && chunk.text) {
-                controller.enqueue(
-                  encoder.encode(
-                    `data: ${JSON.stringify({
-                      type: 'text',
-                      text: chunk.text,
-                    })}\n\n`
-                  )
-                );
+              // Check if Gemini requested any tool calls that require execution
+              if (pendingFunctionCalls.length > 0) {
+                // Record the model turn with the function calls in contents history
+                conversationContents.push({
+                  role: 'model',
+                  parts: accumulatedModelParts.length > 0
+                    ? accumulatedModelParts
+                    : pendingFunctionCalls.map((fc) => ({ functionCall: fc })),
+                });
+
+                // Execute function calls
+                const functionResponseParts: any[] = [];
+
+                for (const call of pendingFunctionCalls) {
+                  if (call.name === 'fetch_url_as_markdown') {
+                    const targetUrl = call.args?.url;
+                    const llmFilter = Boolean(call.args?.llmFilter);
+
+                    // Execute Markdowner tool executor
+                    const markdownResult = await executeFetchUrlAsMarkdown(targetUrl, llmFilter);
+
+                    functionResponseParts.push({
+                      functionResponse: {
+                        name: 'fetch_url_as_markdown',
+                        response: { content: markdownResult },
+                      },
+                    });
+                  } else {
+                    functionResponseParts.push({
+                      functionResponse: {
+                        name: call.name,
+                        response: { error: `Tool ${call.name} is not recognized` },
+                      },
+                    });
+                  }
+                }
+
+                // Append function response turn and loop back to Gemini for final synthesized answer
+                conversationContents.push({
+                  role: 'user',
+                  parts: functionResponseParts,
+                });
+
+                continue;
               }
 
-              // Forward grounding metadata (citations, web search queries, web sources)
-              const grounding = candidate?.groundingMetadata;
-              if (grounding) {
-                controller.enqueue(
-                  encoder.encode(
-                    `data: ${JSON.stringify({
-                      type: 'grounding_metadata',
-                      groundingMetadata: grounding,
-                    })}\n\n`
-                  )
-                );
-              }
+              // No further tool calls: finish stream
+              break;
             }
 
             controller.enqueue(encoder.encode('data: [DONE]\n\n'));

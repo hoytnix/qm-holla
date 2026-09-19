@@ -1,6 +1,21 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
+- Implemented **Custom Gemini Web Markdowner Tool (`fetch_url_as_markdown`)**:
+  - **Markdowner Tool Handler (`lib/ai/tools/web-markdown.ts`)**:
+    - Defined Gemini function declaration `fetchUrlAsMarkdownDeclaration` with `url` and optional `llmFilter` parameters.
+    - Implemented `executeFetchUrlAsMarkdown(url, llmFilter)` contacting Markdowner service (`https://md.dhr.wtf/?url=...`), handling 10-second timeouts, graceful Markdown error messages, and 20,000-character caps to safeguard model context.
+  - **Tool Registry Integration (`lib/ai/tools.ts`)**:
+    - Exported `fetchUrlAsMarkdownDeclaration` and `executeFetchUrlAsMarkdown`.
+    - Extended `AgentToolsConfig` with `fetchUrlMarkdown?: boolean`.
+    - Updated `buildGeminiTools` to seamlessly merge built-in tools (`googleSearch`, `codeExecution`) with custom function declarations (`functionDeclarations`).
+  - **Function Calling Execution Loop (`app/api/chat/route.ts` & `lib/ai/orchestrator.ts`)**:
+    - Implemented multi-turn function calling execution loop in `/api/chat` streaming handler: intercepts candidate `functionCalls`, executes `executeFetchUrlAsMarkdown`, constructs `functionResponse` parts, and feeds results back in conversation history for natural synthesized final answers.
+    - Added tool capability directives into `assembleContext` in `lib/ai/orchestrator.ts` when an agent has `fetchUrlMarkdown` active.
+  - **Agent Tool Capability Matrix & Roster Controls (`lib/crew/default-crew.ts`, `lib/crew/theme-mapper.ts`, `app/crew/page.tsx`, `app/chat/page.tsx`)**:
+    - Added `fetchUrlMarkdown: true` by default for research and navigation specialists (Robin, Nami) across all 7 universes in `DEFAULT_ROLE_SLOT_TOOLS` and `DEFAULT_STRAW_HAT_AGENTS`.
+    - Updated Crew roster UI: 3-column tool toggle grid (`Search`, `Code`, `MD`) on agent cards, modal edit checkbox for Web Markdowner, and status inspection view.
+    - Added live `Markdown` indicator badge in Helm Chat toolbar.
 - Implemented **First-Class Gemini Built-In Tools Support (Google Search Grounding & Code Execution)**:
   - **Tool Utilities (`lib/ai/tools.ts`)**:
     - Defined types for `AgentToolsConfig`, `GroundingMetadata`, `GroundingChunkWeb`, `ExecutableCodePart`, `CodeExecutionResultPart`, and `CodeExecutionBlock`.

@@ -26,17 +26,17 @@ export const ROLE_SLOTS: AgentRoleSlot[] = [
 
 /**
  * Default tool assignments for each role slot across all universes.
- * Research & Navigation agents have Google Search grounding enabled.
+ * Research & Navigation agents have Google Search grounding and fetchUrlMarkdown enabled.
  * Systems & Calculation agents have Code Execution enabled.
  */
 export const DEFAULT_ROLE_SLOT_TOOLS: Record<AgentRoleSlot, AgentToolsConfig> = {
-  'captain-core': { googleSearch: false, codeExecution: false },
-  'scholar-robin': { googleSearch: true, codeExecution: false },
-  'shipwright-franky': { googleSearch: false, codeExecution: true },
-  'navigator-nami': { googleSearch: true, codeExecution: true },
-  'doctor-chopper': { googleSearch: false, codeExecution: false },
-  'chef-sanji': { googleSearch: false, codeExecution: false },
-  'sniper-usopp': { googleSearch: false, codeExecution: false },
+  'captain-core': { googleSearch: false, codeExecution: false, fetchUrlMarkdown: false },
+  'scholar-robin': { googleSearch: true, codeExecution: false, fetchUrlMarkdown: true },
+  'shipwright-franky': { googleSearch: false, codeExecution: true, fetchUrlMarkdown: false },
+  'navigator-nami': { googleSearch: true, codeExecution: true, fetchUrlMarkdown: true },
+  'doctor-chopper': { googleSearch: false, codeExecution: false, fetchUrlMarkdown: false },
+  'chef-sanji': { googleSearch: false, codeExecution: false, fetchUrlMarkdown: false },
+  'sniper-usopp': { googleSearch: false, codeExecution: false, fetchUrlMarkdown: false },
 };
 
 export interface CharacterMapping {

@@ -14,6 +14,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     tools: {
       googleSearch: false,
       codeExecution: false,
+      fetchUrlMarkdown: false,
     },
   },
   {
@@ -28,6 +29,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     tools: {
       googleSearch: true,
       codeExecution: false,
+      fetchUrlMarkdown: true,
     },
   },
   {
@@ -42,6 +44,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     tools: {
       googleSearch: false,
       codeExecution: true,
+      fetchUrlMarkdown: false,
     },
   },
   {
@@ -56,6 +59,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     tools: {
       googleSearch: true,
       codeExecution: true,
+      fetchUrlMarkdown: true,
     },
   },
   {
@@ -70,6 +74,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     tools: {
       googleSearch: false,
       codeExecution: false,
+      fetchUrlMarkdown: false,
     },
   },
   {
@@ -84,6 +89,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     tools: {
       googleSearch: false,
       codeExecution: false,
+      fetchUrlMarkdown: false,
     },
   },
   {
@@ -98,6 +104,7 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     tools: {
       googleSearch: false,
       codeExecution: false,
+      fetchUrlMarkdown: false,
     },
   },
 ];

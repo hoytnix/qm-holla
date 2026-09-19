@@ -514,6 +514,15 @@ function ChatContent() {
                         <span>Code</span>
                       </span>
                     )}
+                    {selectedAgent.tools.fetchUrlMarkdown && (
+                      <span
+                        title="Web Markdowner (https://md.dhr.wtf) enabled"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-purple-950/60 border border-purple-500/30 text-purple-300 text-[10px] font-mono"
+                      >
+                        <Globe className="w-2.5 h-2.5" width={10} height={10} />
+                        <span>Markdown</span>
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
