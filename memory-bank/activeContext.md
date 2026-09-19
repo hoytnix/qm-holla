@@ -20,6 +20,10 @@
     - Rendered collapsible code execution blocks with executable script and console output terminal.
     - Added live tool status indicator badges (Search / Code) in the Helm Chat control toolbar.
     - Persisted grounding citations and code execution blocks to OPFS SQLite for permanent history restoration.
+  - **Crew Page Tool Controls (`app/crew/page.tsx`)**:
+    - Added Gemini Built-In Tools form group directly beneath the "Assigned AI Model" selector in the Specialist Edit/Create modal form, allowing fine-grained toggling of Google Search Grounding and Code Execution with descriptions.
+    - Added interactive Built-In Tools toggle buttons (`Search` and `Code` with ON/OFF badges) directly below the Assigned AI Model selector on each crew card in the roster grid, with instant optimistic UI update and OPFS SQLite persistence (`db.saveAgent`).
+    - Added tool status badges on crew cards alongside model badges and updated Scoped Knowledge & Tool Access inspection section in the role instructions modal.
 - Implemented **Mobile Navigation Theme Architecture**:
   - **Fixed Quick Navbar on Bottom (`components/layout/BottomNav.tsx`)**:
     - Thumb-friendly reach positioned fixed at the bottom on mobile devices (`inset-x-0 bottom-0 z-40 md:hidden`).

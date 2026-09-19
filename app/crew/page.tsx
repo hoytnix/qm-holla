@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/opfs-adapter';
-import { AgentRecord, TaskRecord } from '@/lib/db/adapter';
+import { AgentRecord, TaskRecord, AgentToolsConfig } from '@/lib/db/adapter';
 import { Navbar } from '@/components/layout/Navbar';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { GlassButton } from '@/components/ui/GlassButton';
@@ -25,6 +25,8 @@ import {
   Terminal,
   Cpu,
   Brain,
+  Search,
+  Wrench,
 } from 'lucide-react';
 import { useSettings } from '@/lib/settings/settings-context';
 import { GOOGLE_AI_STUDIO_MODELS } from '@/lib/ai/models';
@@ -48,6 +50,10 @@ export default function CrewPage() {
   const [formRouting, setFormRouting] = useState('');
   const [formPrompt, setFormPrompt] = useState('');
   const [formModel, setFormModel] = useState<string>('');
+  const [formTools, setFormTools] = useState<AgentToolsConfig>({
+    googleSearch: false,
+    codeExecution: false,
+  });
 
   const loadAll = async () => {
     try {
@@ -84,6 +90,7 @@ export default function CrewPage() {
     setFormRouting(agent.routing_description || '');
     setFormPrompt(agent.system_prompt);
     setFormModel(agent.model || '');
+    setFormTools(agent.tools || { googleSearch: false, codeExecution: false });
   };
 
   const openCreate = () => {
@@ -94,6 +101,7 @@ export default function CrewPage() {
     setFormRouting('');
     setFormPrompt('');
     setFormModel('');
+    setFormTools({ googleSearch: false, codeExecution: false });
   };
 
   const cancelEdit = () => {
@@ -115,6 +123,7 @@ export default function CrewPage() {
       routing_description: formRouting.trim() || null,
       parent_agent_id: editingAgent ? editingAgent.parent_agent_id : 'captain-core',
       model: formModel.trim() || null,
+      tools: formTools,
     };
 
     await db.saveAgent(newRecord);
@@ -126,6 +135,21 @@ export default function CrewPage() {
     const updatedAgent: AgentRecord = {
       ...agent,
       model: newModel ? newModel : null,
+    };
+    // Optimistically update UI
+    setAgents((prev) => prev.map((a) => (a.id === agent.id ? updatedAgent : a)));
+    await db.saveAgent(updatedAgent);
+  };
+
+  const handleAgentToolToggle = async (agent: AgentRecord, toolKey: keyof AgentToolsConfig) => {
+    const currentTools: AgentToolsConfig = agent.tools || { googleSearch: false, codeExecution: false };
+    const updatedTools: AgentToolsConfig = {
+      ...currentTools,
+      [toolKey]: !currentTools[toolKey],
+    };
+    const updatedAgent: AgentRecord = {
+      ...agent,
+      tools: updatedTools,
     };
     // Optimistically update UI
     setAgents((prev) => prev.map((a) => (a.id === agent.id ? updatedAgent : a)));
@@ -238,6 +262,67 @@ export default function CrewPage() {
                 <p className="text-[11px] text-slate-400 mt-1 ml-1">
                   Assign a unique AI model for this specialist. If set to default, uses the global model from Settings.
                 </p>
+              </div>
+
+              {/* Gemini Built-In Tools Form Group */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1 block mb-2 flex items-center gap-1.5">
+                  <Wrench width={14} height={14} className="text-amber-400" />
+                  <span>Agent Built-In Tools</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formTools.googleSearch
+                        ? 'border-emerald-500/50 bg-emerald-950/30'
+                        : 'border-white/10 bg-slate-900/60 hover:border-white/20'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!formTools.googleSearch}
+                      onChange={(e) =>
+                        setFormTools((prev) => ({ ...prev, googleSearch: e.target.checked }))
+                      }
+                      className="mt-0.5 rounded border-white/20 bg-slate-900 text-emerald-500 focus:ring-emerald-500/30"
+                    />
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
+                        <Search width={13} height={13} className="text-emerald-400" />
+                        <span>Google Search Grounding</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-normal">
+                        Enables live Google web search and real-time grounding citations.
+                      </p>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formTools.codeExecution
+                        ? 'border-cyan-500/50 bg-cyan-950/30'
+                        : 'border-white/10 bg-slate-900/60 hover:border-white/20'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!formTools.codeExecution}
+                      onChange={(e) =>
+                        setFormTools((prev) => ({ ...prev, codeExecution: e.target.checked }))
+                      }
+                      className="mt-0.5 rounded border-white/20 bg-slate-900 text-cyan-500 focus:ring-cyan-500/30"
+                    />
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
+                        <Terminal width={13} height={13} className="text-cyan-400" />
+                        <span>Code Execution</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-normal">
+                        Allows writing and sandboxed execution of Python/code snippets.
+                      </p>
+                    </div>
+                  </label>
+                </div>
               </div>
 
               <div>
@@ -353,6 +438,20 @@ export default function CrewPage() {
                             <span>{agent.model}</span>
                           </span>
                         )}
+
+                        {agent.tools?.googleSearch && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">
+                            <Search width={10} height={10} />
+                            <span>Search</span>
+                          </span>
+                        )}
+
+                        {agent.tools?.codeExecution && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-[10px] font-mono text-cyan-300">
+                            <Terminal width={10} height={10} />
+                            <span>Code</span>
+                          </span>
+                        )}
                       </div>
 
                       {/* Model Selector Dropdown on Card */}
@@ -380,6 +479,70 @@ export default function CrewPage() {
                             </option>
                           ))}
                         </select>
+                      </div>
+
+                      {/* Built-In Tools Selector Group on Card */}
+                      <div className="pt-2">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <Wrench width={11} height={11} className="text-amber-400" />
+                            <span>Enabled Tools</span>
+                          </span>
+                          <span className="text-[9px] text-slate-500 font-mono">
+                            {`${(agent.tools?.googleSearch ? 1 : 0) + (agent.tools?.codeExecution ? 1 : 0)} active`}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleAgentToolToggle(agent, 'googleSearch')}
+                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-[11px] font-mono transition-all ${
+                              agent.tools?.googleSearch
+                                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-sm'
+                                : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
+                            }`}
+                            title="Toggle Google Search Grounding for this agent"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <Search width={12} height={12} className={agent.tools?.googleSearch ? 'text-emerald-400' : 'text-slate-500'} />
+                              <span>Search</span>
+                            </span>
+                            <span
+                              className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                                agent.tools?.googleSearch
+                                  ? 'bg-emerald-500/20 text-emerald-300'
+                                  : 'bg-white/5 text-slate-500'
+                              }`}
+                            >
+                              {agent.tools?.googleSearch ? 'ON' : 'OFF'}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleAgentToolToggle(agent, 'codeExecution')}
+                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-[11px] font-mono transition-all ${
+                              agent.tools?.codeExecution
+                                ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 shadow-sm'
+                                : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
+                            }`}
+                            title="Toggle Code Execution for this agent"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <Terminal width={12} height={12} className={agent.tools?.codeExecution ? 'text-cyan-400' : 'text-slate-500'} />
+                              <span>Code</span>
+                            </span>
+                            <span
+                              className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                                agent.tools?.codeExecution
+                                  ? 'bg-cyan-500/20 text-cyan-300'
+                                  : 'bg-white/5 text-slate-500'
+                              }`}
+                            >
+                              {agent.tools?.codeExecution ? 'ON' : 'OFF'}
+                            </span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -514,7 +677,30 @@ export default function CrewPage() {
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">
                     Scoped Knowledge & Tool Access
                   </span>
-                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-white/5 text-xs text-slate-400 space-y-1">
+                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-white/5 text-xs text-slate-400 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-slate-300 font-medium">Built-In Tools:</span>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono ${
+                          inspectingInstructionsAgent.tools?.googleSearch
+                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                            : 'bg-white/5 border-white/10 text-slate-500'
+                        }`}
+                      >
+                        <Search width={10} height={10} />
+                        <span>Google Search: {inspectingInstructionsAgent.tools?.googleSearch ? 'Enabled' : 'Disabled'}</span>
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono ${
+                          inspectingInstructionsAgent.tools?.codeExecution
+                            ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
+                            : 'bg-white/5 border-white/10 text-slate-500'
+                        }`}
+                      >
+                        <Terminal width={10} height={10} />
+                        <span>Code Execution: {inspectingInstructionsAgent.tools?.codeExecution ? 'Enabled' : 'Disabled'}</span>
+                      </span>
+                    </div>
                     <p>• Scoped FTS5 BM25 search restricted to knowledge base lore.</p>
                     <p>• Inter-agent shared memory context resolution via orchestrator bus.</p>
                     <p>• Local OPFS SQLite document & task persistence.</p>

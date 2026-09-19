@@ -12,6 +12,7 @@
   - Wired into [`lib/ai/orchestrator.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/orchestrator.ts) and [`app/api/chat/route.ts`](file:///home/oloty/Dev/qm-holla/app/api/chat/route.ts): injected resolved tools into `generateContentStream` configuration and streamed `groundingMetadata` and executable code/results via SSE.
   - Enhanced [`app/chat/page.tsx`](file:///home/oloty/Dev/qm-holla/app/chat/page.tsx) with interactive grounding search queries, web source links with Lucide vector icons, and collapsible code execution blocks with formatted syntax and terminal output.
   - Added live tool badges (Search/Code) in the chat toolbar and persisted citations/code blocks to OPFS SQLite.
+  - Added Gemini Built-In Tools form group under Assigned AI Model selector in [`app/crew/page.tsx`](file:///home/oloty/Dev/qm-holla/app/crew/page.tsx): checkboxes with descriptions in Specialist Edit/Create modal, quick-toggle buttons with ON/OFF badges on crew cards, model/tool indicator chips, and inspection modal status display.
 - [x] Streamlined Minimalist Topnav & Radial Graph Controls:
   - Removed all redundant buttons containing text from [`components/layout/Navbar.tsx`](file:///home/oloty/Dev/qm-holla/components/layout/Navbar.tsx): eliminated center `NAV_ITEMS` text links, quick universe theme name trigger, and morning planning text brief button.
   - Retained clean icons-only layout: leftmost Menu button, Company Profile Switcher icon button with company name, and rightmost icons-only Speak With CEO (Voice Chat) and Helm Chat buttons.
