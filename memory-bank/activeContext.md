@@ -1,6 +1,15 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
+- Fixed **Startup Onboarding Sequence for Incognito & Clean Sessions**:
+  - **`isLoading` State Lock Resolution (`lib/settings/settings-context.tsx`)**:
+    - Removed `if (mounted)` guard around `setIsLoading(false)` in `load()`'s `finally` block. In React 19 development mode or strict hydration cycles, the effect cleanup unmount flipped `mounted = false` while `hasLoadedRef.current = true` prevented subsequent re-runs, leaving `isLoading` permanently stuck on `true` and blocking `LlmSetupModal` (`!isLoading && !isLlmVerified`).
+  - **Theme Selection Gate Fix (`lib/settings/settings-context.tsx`)**:
+    - Corrected `hasSelectedTheme` default state to `false` (from `true`) so fresh or incognito sessions without saved SQLite/localStorage theme selections reliably trigger `ThemeSelectionModal` after company onboarding.
+  - **Context Modal Propagation (`lib/settings/settings-context.tsx`, `components/settings/ThemeSelectionModal.tsx`)**:
+    - Added `isThemeModalOpen: boolean` and `closeThemeModal: () => void` to `SettingsContextValue` and exported them from `SettingsContext.Provider`.
+    - Updated `ThemeSelectionModal` to destructure and consume `isThemeModalOpen` in `isOpen: (forceOpen || isThemeModalOpen || !hasSelectedTheme) && !isGated`.
+    - Ensured `closeThemeModal()` is executed whenever `ThemeSelectionModal` is dismissed or confirmed.
 - Implemented **100% Client-Side AI Execution Architecture (Direct Browser Execution)**:
   - **Direct Browser Client Runner (`lib/ai/client-runner.ts`)**:
     - Created `generateContentClientDirect()` executing direct browser-to-Gemini REST generation via `fetch()` to `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`.

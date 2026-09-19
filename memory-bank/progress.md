@@ -3,6 +3,11 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Fixed Startup Onboarding Modal Sequence for Incognito & Clean Sessions:
+  - Eliminated `isLoading` permanent lock by ensuring `setIsLoading(false)` always executes unconditionally in `load()`'s `finally` block in [`lib/settings/settings-context.tsx`](file:///home/oloty/Dev/qm-holla/lib/settings/settings-context.tsx).
+  - Defaulted `hasSelectedTheme` to `false` (from `true`) so first-time users and incognito sessions without saved theme selections are presented with theme setup.
+  - Exported `isThemeModalOpen` and `closeThemeModal` in `SettingsContextValue` and `SettingsContext.Provider`.
+  - Wired `isThemeModalOpen` into [`components/settings/ThemeSelectionModal.tsx`](file:///home/oloty/Dev/qm-holla/components/settings/ThemeSelectionModal.tsx) to ensure seamless automatic chaining from `CompanySetupModal` (`openThemeModal()`).
 - [x] 100% Client-Side AI Execution Architecture (Direct Browser Execution):
   - Created [`lib/ai/client-runner.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/client-runner.ts) supporting direct browser `fetch()` to Gemini API with function calling interception, web markdowner tool execution (`https://md.dhr.wtf/?url=...`), grounding citations, code execution blocks, `testGeminiConnection()`, and `generateCustomThemeDirect()`.
   - Refactored [`lib/ai/subagent-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/subagent-engine.ts) to execute tasks directly client-side with cancellation support and local storage key resolution.

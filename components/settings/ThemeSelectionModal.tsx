@@ -53,6 +53,8 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
     setTheme,
     hasSelectedTheme,
     dismissThemeModal,
+    isThemeModalOpen,
+    closeThemeModal,
     isLlmConfigured,
     isLlmVerified,
     companies,
@@ -80,10 +82,10 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
     }
   }, [customUniverseQuery]);
 
-  // Modal displays if forceOpen is true, or if user hasn't selected a theme yet,
-  // but strictly gated behind Phase 0 (LLM Verification) and Phase 1 (Company Setup)
+  // Modal displays if forceOpen is true, or if opened from context (isThemeModalOpen),
+  // or if user hasn't selected a theme yet, but strictly gated behind Phase 0 (LLM Verification) and Phase 1 (Company Setup)
   const isGated = !isLlmVerified || companies.length === 0;
-  const isOpen = (forceOpen || !hasSelectedTheme) && !isGated;
+  const isOpen = (forceOpen || isThemeModalOpen || !hasSelectedTheme) && !isGated;
 
   if (!isOpen) return null;
 
@@ -165,6 +167,7 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
       setGenerationSuccess(`Successfully generated ${customConfig.name}! Agent crew updated.`);
 
       setTimeout(() => {
+        closeThemeModal();
         if (onClose) {
           onClose();
         } else {
@@ -192,6 +195,7 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
     }
 
     await setTheme(selectedThemeId);
+    closeThemeModal();
     if (onClose) {
       onClose();
     } else {
@@ -200,6 +204,7 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
   };
 
   const handleDismiss = () => {
+    closeThemeModal();
     if (onClose) {
       onClose();
     } else {
@@ -208,6 +213,7 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
   };
 
   const handleGoToSettings = () => {
+    closeThemeModal();
     setShowKeyPromptModal(false);
     if (onClose) onClose();
     else dismissThemeModal();

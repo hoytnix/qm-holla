@@ -36,6 +36,8 @@ export interface SettingsContextValue {
   setTheme: (theme: AppTheme) => Promise<void>;
   dismissThemeModal: () => void;
   openThemeModal: () => void;
+  closeThemeModal: () => void;
+  isThemeModalOpen: boolean;
 
   // Custom Universe & LLM API Key helpers
   llmApiKey: string;
@@ -106,7 +108,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [config, setConfig] = useState<LLMConfig>(DEFAULT_CONFIG);
   const [isLoading, setIsLoading] = useState(true);
   const [currentTheme, setCurrentThemeState] = useState<AppTheme>(DEFAULT_THEME);
-  const [hasSelectedTheme, setHasSelectedTheme] = useState<boolean>(true); // Default true until verified on client to avoid flash
+  const [hasSelectedTheme, setHasSelectedTheme] = useState<boolean>(false);
   const [customUniverseQuery, setCustomUniverseQueryState] = useState<string>('');
   const [customThemeConfig, setCustomThemeConfig] = useState<ThemeConfig | null>(null);
   const [themeVersion, setThemeVersion] = useState(0);
@@ -268,9 +270,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       } catch (err) {
         console.warn('Failed to load settings or company profiles from OPFS SQLite:', err);
       } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     }
 
@@ -301,6 +301,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const openCompanyModal = useCallback(() => setIsCompanyModalOpen(true), []);
   const closeCompanyModal = useCallback(() => setIsCompanyModalOpen(false), []);
   const openThemeModal = useCallback(() => setIsThemeModalForcedOpen(true), []);
+  const closeThemeModal = useCallback(() => setIsThemeModalForcedOpen(false), []);
 
   const setTheme = useCallback(
     async (theme: AppTheme) => {
@@ -697,6 +698,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setTheme,
         dismissThemeModal,
         openThemeModal,
+        closeThemeModal,
+        isThemeModalOpen: isThemeModalForcedOpen,
         llmApiKey: config.apiKey,
         customUniverseQuery,
         isLlmConfigured,
