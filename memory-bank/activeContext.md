@@ -1,32 +1,38 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
-- Implemented individual, isolated Memory Banks and universal dynamic provisioning for all crew agents (Luffy, Robin, Franky, Nami, Chopper, Sanji, Usopp, and newly recruited specialists) directly mirroring the Casper system-level memory architecture in both physical workspace directories and the local OPFS SQLite virtual filesystem Vault (`/memory-bank/agents/[agent-id]/`).
+- Implemented a multi-universe theme selection system replacing the single hardcoded One Piece theme with a first-time onboarding modal and persistent theme switching across 7 distinct universes:
+  1. One Piece (Default, Straw Hat Pirates)
+  2. Naruto (Team 7)
+  3. The Office (Dunder Mifflin Scranton)
+  4. Game Of Thrones (Small Council)
+  5. NCIS (MCRT Response Team)
+  6. Pokemon (Pallet Town Trainers)
+  7. Frieren (Hero Party Successors)
 
 ## Recent Changes
-- **Agent Isolated Memory Bank Generator & Architecture (`lib/crew/agent-memory.ts`)**:
-  - Implemented `generateAgentMemoryBankFiles` producing the 6 standard Casper-style core files (`projectbrief.md`, `productContext.md`, `systemPatterns.md`, `techContext.md`, `activeContext.md`, `progress.md`) tailored to each agent's persona and domain responsibilities.
-  - Implemented `createMemoryBankDocumentRecords` converting memory files to virtual filesystem records with `/memory-bank/agents/[agent-id]/[file].md` file paths.
-  - Created `provisionAgentMemoryBank`, `loadAgentMemoryBank`, and `syncAgentMemoryBankAfterTask` lifecycle handlers for dynamic provisioning, re-hydration, and task execution persistence.
-- **Physical Workspace Seeding (`memory-bank/agents/[agent-id]/`)**:
-  - Provisioned and seeded dedicated folders and all 6 core files for all 7 Straw Hat crew members: `captain-core`, `scholar-robin`, `shipwright-franky`, `navigator-nami`, `doctor-chopper`, `chef-sanji`, and `sniper-usopp`.
-- **Default Crew Roster Integration (`lib/crew/default-crew.ts`)**:
-  - Integrated `DEFAULT_CREW_MEMORY_DOCUMENTS` into `DEFAULT_DOCUMENTS` so all agent Memory Banks are seeded into OPFS SQLite upon initialization.
-- **Database Adapter Auto-Provisioning (`lib/db/opfs-adapter.ts`)**:
-  - Updated `saveAgent` to automatically provision the dedicated `/memory-bank/agents/[agent-id]/` virtual vault files whenever custom officers or specialists are recruited or updated.
-- **Orchestration Context Rehydration (`lib/ai/orchestrator.ts`)**:
-  - Enhanced `assembleContext` to automatically load the target agent's isolated Memory Bank from the local Vault and inject rehydrated context (`projectbrief.md`, `activeContext.md`, `progress.md`) into `systemInstruction` ahead of each conversation or execution.
-- **Subagent Autonomous Engine Task Synchronization (`lib/ai/subagent-engine.ts`)**:
-  - Integrated `syncAgentMemoryBankAfterTask` into `SubagentExecutionEngine.executeTask` to auto-update the executing agent's `activeContext.md` and `progress.md` in the local Vault upon task completion.
-- **Roster & Vault UI Integration (`app/crew/page.tsx`, `app/vault/page.tsx`)**:
-  - Added "Isolated Memory Bank" inspection section to the role instructions modal in `/crew` with a direct link to open the agent's Memory Bank in the Vault.
-  - Added Memory Bank filtering (`Isolated Memory Banks (/memory-bank/agents/*)` and `General Vault Notes & Manifesto`) in the Vault collection filter, along with virtual filesystem path badges (`/memory-bank/agents/[id]/[file].md`) on document cards.
-- **Production Validation**:
+- **Theme Definitions & Registry (`lib/settings/themes.ts`)**:
+  - Defined `AppTheme` union type and `ThemeConfig` interface.
+  - Exported `THEMES` record with display names, default groups, taglines, leader titles, accent colors, gradients, and badges.
+- **Settings Context Multi-Universe Extension (`lib/settings/settings-context.tsx`)**:
+  - Added `currentTheme: AppTheme`, `themeConfig: ThemeConfig`, and `hasSelectedTheme: boolean`.
+  - Implemented dual-layer persistence: immediate client-side `localStorage` cache (`quark_app_theme`, `quark_has_selected_theme`) and authoritative browser-secured OPFS SQLite (`app_theme`, `has_selected_theme`).
+  - Implemented `setTheme(theme: AppTheme)` and `dismissThemeModal()` actions.
+- **First-Time & On-Demand Theme Selection Modal (`components/settings/ThemeSelectionModal.tsx`)**:
+  - Fullscreen modal triggered automatically if `hasSelectedTheme === false`.
+  - Interactive grid displaying all 7 universes with vector Lucide icons, accent badges, group descriptions, and instant theme application.
+- **Settings Page Theme Selector (`app/settings/page.tsx`)**:
+  - Added interactive Universe Theme Selector card grid as Section 1, renumbering remaining sections accordingly.
+  - Supports live switching and immediate UI re-skinning across all 7 universes.
+- **Dynamic Theme Awareness (`components/layout/Navbar.tsx`, `components/dashboard/CaptainsLog.tsx`, `app/page.tsx`, `app/layout.tsx`)**:
+  - Navbar dynamically reflects the active universe icon, name, and squad vessel name, with a quick-switch universe launcher in the header and mobile navigation drawer.
+  - RootLayout mounts `ThemeSelectionModal` globally for first-time users.
+  - CaptainsLog and CanvasPage headers dynamically adapt leader titles, taglines, and vessel descriptions.
+- **Quality & Invariant Validation**:
   - Verified with `npx tsc --noEmit` (0 errors).
-  - Next.js production build (`pnpm build`) compiled cleanly (exit code 0, 9 static routes generated).
+  - Production build verified via `pnpm build` (exit code 0, 9 static routes generated).
 
 ## Invariants Maintained
-1. Local-First SQLite storage guarantee (zero cloud database bills, all agent memory banks stored in local OPFS/IndexedDB Vault).
-2. Strict isolation: Each agent retains dedicated domain memory files without cross-agent pollution.
-3. Zero unbundled emojis law across all UI elements (all vector Lucide SVG icons).
-4. 375px+ responsive mobile touch targets and clean layout navigation.
+1. Local-First SQLite storage guarantee (zero cloud database bills, settings and themes persisted in browser OPFS SQLite).
+2. Zero unbundled emojis law across all UI components (all Lucide SVG vector icons).
+3. 375px+ responsive mobile touch targets and clean layout navigation.

@@ -5,6 +5,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { GlassButton } from '@/components/ui/GlassButton';
 import { useSettings, LLMProvider, DEFAULT_GLOBAL_SYSTEM_PROMPT } from '@/lib/settings/settings-context';
+import { AppTheme, THEMES } from '@/lib/settings/themes';
 import {
   Sparkles,
   Bot,
@@ -25,9 +26,25 @@ import {
   Terminal,
   FileText,
   RotateCcw,
+  Compass,
+  Coffee,
+  Crown,
+  Shield,
+  Palette,
+  LucideIcon,
 } from 'lucide-react';
 
 import { GOOGLE_AI_STUDIO_MODELS } from '@/lib/ai/models';
+
+const THEME_ICONS: Record<AppTheme, LucideIcon> = {
+  'one-piece': Compass,
+  'naruto': Flame,
+  'the-office': Coffee,
+  'game-of-thrones': Crown,
+  'ncis': Shield,
+  'pokemon': Zap,
+  'frieren': Sparkles,
+};
 
 const MODEL_PRESETS: Record<LLMProvider, { label: string; value: string; desc: string; category?: string }[]> = {
   gemini: GOOGLE_AI_STUDIO_MODELS,
@@ -59,6 +76,9 @@ export default function SettingsPage() {
     testConnection,
     exportVaultData,
     flushLocalStorage,
+    currentTheme,
+    setTheme,
+    themeConfig,
   } = useSettings();
 
   const [showApiKey, setShowApiKey] = useState(false);
@@ -176,10 +196,78 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-8">
+          {/* Universe Theme Selector Section */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                  <Palette width={16} height={16} className="text-amber-400" />
+                  <span>1. Choose App Universe & Vessel Branding</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Select your universe to customize ship crew hierarchy, division roles, and styling accents.
+                </p>
+              </div>
+              <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-slate-900 border border-white/10 text-amber-300">
+                Active: {themeConfig.name}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {Object.values(THEMES).map((theme) => {
+                const isSelected = currentTheme === theme.id;
+                const Icon = THEME_ICONS[theme.id] || Compass;
+
+                return (
+                  <button
+                    key={theme.id}
+                    type="button"
+                    onClick={() => setTheme(theme.id)}
+                    className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
+                      isSelected
+                        ? 'bg-slate-900/90 border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.2)] ring-1 ring-amber-500/50'
+                        : 'bg-slate-900/50 border-white/10 hover:border-white/20 hover:bg-slate-900/80'
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${theme.accentBg} ${
+                        isSelected ? 'opacity-100' : 'opacity-30'
+                      }`}
+                    />
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div
+                          className={`w-8 h-8 rounded-xl bg-slate-950 border border-white/10 flex items-center justify-center ${theme.accentColor}`}
+                        >
+                          <Icon width={16} height={16} />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span
+                            className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold uppercase ${theme.badgeBg} ${theme.badgeText}`}
+                          >
+                            {theme.leaderTitle}
+                          </span>
+                          {isSelected && (
+                            <CheckCircle2 width={14} height={14} className="text-amber-400" />
+                          )}
+                        </div>
+                      </div>
+
+                      <h3 className="text-sm font-bold text-white mb-0.5">{theme.name}</h3>
+                      <p className="text-xs font-mono text-slate-300 mb-1.5">{theme.defaultGroup}</p>
+                      <p className="text-[11px] text-slate-400 line-clamp-2">{theme.tagline}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
           {/* Provider Selector Tab Cards */}
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              1. Select LLM Fuel Provider
+              2. Select LLM Fuel Provider
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Google Gemini Card */}
@@ -253,7 +341,7 @@ export default function SettingsPage() {
           {/* Configuration Fields */}
           <GlassCard className="p-6 space-y-6 border-white/10 bg-slate-900/80">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              2. Provider Engine Configuration
+              3. Provider Engine Configuration
             </h2>
 
             {/* API Key */}
@@ -498,7 +586,7 @@ export default function SettingsPage() {
           {/* Data Management & Vault Controls */}
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              3. Local Sovereign Vault Management
+              4. Local Sovereign Vault Management
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <GlassCard className="p-5 border-white/10 bg-slate-900/60 flex flex-col justify-between space-y-4">

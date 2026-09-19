@@ -3,9 +3,27 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Compass, Users, MessageSquare, Database, Sun, SlidersHorizontal, Menu, X } from 'lucide-react';
+import {
+  Compass,
+  Users,
+  MessageSquare,
+  Database,
+  Sun,
+  SlidersHorizontal,
+  Menu,
+  X,
+  Sparkles,
+  Flame,
+  Coffee,
+  Crown,
+  Shield,
+  Zap,
+  LucideIcon,
+} from 'lucide-react';
 import { MorningPlanningModal } from '@/components/planning/MorningPlanningModal';
+import { ThemeSelectionModal } from '@/components/settings/ThemeSelectionModal';
 import { useSettings } from '@/lib/settings/settings-context';
+import { AppTheme } from '@/lib/settings/themes';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Canvas', icon: Compass },
@@ -15,6 +33,16 @@ const NAV_ITEMS = [
   { href: '/settings', label: 'Settings', icon: SlidersHorizontal },
 ];
 
+const THEME_ICONS: Record<AppTheme, LucideIcon> = {
+  'one-piece': Compass,
+  'naruto': Flame,
+  'the-office': Coffee,
+  'game-of-thrones': Crown,
+  'ncis': Shield,
+  'pokemon': Zap,
+  'frieren': Sparkles,
+};
+
 interface NavbarProps {
   onOpenMorningPlanning?: () => void;
 }
@@ -22,9 +50,12 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
   const pathname = usePathname();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [hasReviewedToday, setHasReviewedToday] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isConfigured } = useSettings();
+  const { isConfigured, currentTheme, themeConfig } = useSettings();
+
+  const ThemeIcon = THEME_ICONS[currentTheme] || Compass;
 
   // Close mobile navigation drawer whenever route changes
   useEffect(() => {
@@ -71,10 +102,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
               )}
             </button>
 
-            {/* Logo */}
+            {/* Logo & Theme Badge */}
             <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center text-white shadow-[0_0_15px_rgba(245,158,11,0.4)] group-hover:scale-105 transition-transform">
-                <span className="font-mono font-black text-lg">Q</span>
+              <div
+                className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${themeConfig.accentBg} flex items-center justify-center text-white shadow-[0_0_15px_rgba(245,158,11,0.4)] group-hover:scale-105 transition-transform`}
+              >
+                <ThemeIcon width={19} height={19} />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
@@ -83,7 +116,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
                     OPFS SQLite
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 hidden sm:block">Local-First Multi-Agent Canvas</p>
+                <p className="text-[10px] text-slate-400 hidden sm:block font-mono">
+                  {themeConfig.name} · {themeConfig.defaultGroup}
+                </p>
               </div>
             </Link>
           </div>
@@ -116,6 +151,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
 
           {/* Header Actions */}
           <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Quick Universe Switcher Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsThemeModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-white/10 hover:border-amber-500/40 text-slate-300 hover:text-white text-xs font-mono transition-all"
+              title="Switch Universe Theme"
+            >
+              <ThemeIcon width={14} height={14} className={themeConfig.accentColor} />
+              <span className="hidden sm:inline font-semibold">{themeConfig.name}</span>
+            </button>
+
             {/* High-visibility Crimson Morning Planning Button */}
             <button
               onClick={handleOpenModal}
@@ -134,7 +180,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
 
             <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-amber-950/40 border border-amber-500/30 text-amber-300 text-xs font-mono">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Fleet Active</span>
+              <span>Squad Active</span>
             </div>
           </div>
         </div>
@@ -156,12 +202,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
               {/* Drawer Header */}
               <div className="flex items-center justify-between pb-4 border-b border-white/10">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center text-white font-mono font-bold text-base shadow-[0_0_10px_rgba(245,158,11,0.3)]">
-                    Q
+                  <div className={`w-8 h-8 rounded-xl bg-gradient-to-tr ${themeConfig.accentBg} flex items-center justify-center text-white font-mono font-bold text-base shadow-[0_0_10px_rgba(245,158,11,0.3)]`}>
+                    <ThemeIcon width={16} height={16} />
                   </div>
                   <div>
                     <span className="font-bold text-white text-sm block leading-tight">Quarkmeme</span>
-                    <span className="text-[10px] text-emerald-400 font-mono">Local Sovereign OS</span>
+                    <span className="text-[10px] text-emerald-400 font-mono">{themeConfig.name}</span>
                   </div>
                 </div>
 
@@ -207,14 +253,32 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
                   );
                 })}
               </nav>
+
+              {/* Universe Switcher within mobile drawer */}
+              <div className="mt-6 pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setIsThemeModalOpen(true);
+                  }}
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-white/10 hover:border-amber-500/40 text-left text-xs font-mono text-slate-300"
+                >
+                  <div className="flex items-center gap-2">
+                    <ThemeIcon width={16} height={16} className={themeConfig.accentColor} />
+                    <span>Theme: {themeConfig.name}</span>
+                  </div>
+                  <span className="text-[10px] text-amber-400">Change</span>
+                </button>
+              </div>
             </div>
 
             {/* Mobile Drawer Footer */}
             <div className="pt-4 border-t border-white/10 space-y-3">
               <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5 space-y-1 text-xs">
                 <div className="flex items-center justify-between text-slate-300 font-medium">
-                  <span>Engine Storage</span>
-                  <span className="text-emerald-400 font-mono text-[11px]">IndexedDB / WASM</span>
+                  <span>Squad Vessel</span>
+                  <span className="text-emerald-400 font-mono text-[11px]">{themeConfig.defaultGroup}</span>
                 </div>
                 <p className="text-[11px] text-slate-500">
                   Zero cloud database bills. Sovereign local memory.
@@ -238,6 +302,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMorningPlanning }) => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onMarkReviewed={() => setHasReviewedToday(true)}
+      />
+
+      {/* On-demand or first-time Theme Selection Modal */}
+      <ThemeSelectionModal
+        forceOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
       />
     </>
   );

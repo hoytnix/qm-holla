@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { db } from '@/lib/db/opfs-adapter';
+import { AppTheme, ThemeConfig, THEMES, DEFAULT_THEME } from '@/lib/settings/themes';
 
 export type LLMProvider = 'openrouter' | 'gemini' | 'openai_compatible';
 
@@ -24,6 +25,12 @@ export interface SettingsContextValue {
   testConnection: () => Promise<{ success: boolean; latencyMs?: number; error?: string }>;
   flushLocalStorage: () => Promise<void>;
   exportVaultData: () => Promise<string>;
+  // Theme management
+  currentTheme: AppTheme;
+  themeConfig: ThemeConfig;
+  hasSelectedTheme: boolean;
+  setTheme: (theme: AppTheme) => Promise<void>;
+  dismissThemeModal: () => void;
 }
 
 export const DEFAULT_GLOBAL_SYSTEM_PROMPT = `You are an elite autonomous AI operating inside Quarkmeme, a sovereign, local-first multi-agent operating system.
@@ -47,13 +54,17 @@ export const DEFAULT_CONFIG: LLMConfig = {
 const SettingsContext = createContext<SettingsContextValue | undefined>(undefined);
 
 const STORAGE_CACHE_KEY = 'quark_llm_config_cache';
+const STORAGE_THEME_KEY = 'quark_app_theme';
+const STORAGE_THEME_SELECTED_KEY = 'quark_has_selected_theme';
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [config, setConfig] = useState<LLMConfig>(DEFAULT_CONFIG);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentTheme, setCurrentThemeState] = useState<AppTheme>(DEFAULT_THEME);
+  const [hasSelectedTheme, setHasSelectedTheme] = useState<boolean>(true); // Default true until verified on client to avoid flash
   const hasLoadedRef = React.useRef(false);
 
-  // Hydrate settings from local storage cache first, then SQLite
+  // Hydrate settings and theme from local storage cache first, then SQLite
   useEffect(() => {
     if (hasLoadedRef.current) return;
     hasLoadedRef.current = true;
@@ -63,6 +74,20 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // 1. Fast cache fallback from localStorage
       if (typeof window !== 'undefined') {
         try {
+          const cachedTheme = localStorage.getItem(STORAGE_THEME_KEY) as AppTheme | null;
+          const cachedHasSelected = localStorage.getItem(STORAGE_THEME_SELECTED_KEY);
+
+          if (cachedTheme && THEMES[cachedTheme]) {
+            if (mounted) setCurrentThemeState(cachedTheme);
+          }
+
+          if (cachedHasSelected === null) {
+            // First time user has never picked a theme
+            if (mounted) setHasSelectedTheme(false);
+          } else {
+            if (mounted) setHasSelectedTheme(cachedHasSelected === 'true');
+          }
+
           const cached = localStorage.getItem(STORAGE_CACHE_KEY);
           if (cached) {
             const parsed = JSON.parse(cached);
@@ -71,7 +96,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
           }
         } catch (e) {
-          console.warn('Failed to parse cached LLM settings:', e);
+          console.warn('Failed to parse cached LLM settings or theme:', e);
         }
       }
 
@@ -89,6 +114,22 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (settings['llm_max_tokens']) loaded.maxTokens = parseInt(settings['llm_max_tokens'], 10);
           if (settings['llm_rpm']) loaded.requestsPerMinute = parseInt(settings['llm_rpm'], 10);
           if (settings['llm_system_prompt'] !== undefined) loaded.systemPrompt = settings['llm_system_prompt'];
+
+          if (settings['app_theme'] && THEMES[settings['app_theme'] as AppTheme]) {
+            const themeVal = settings['app_theme'] as AppTheme;
+            setCurrentThemeState(themeVal);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(STORAGE_THEME_KEY, themeVal);
+            }
+          }
+
+          if (settings['has_selected_theme'] !== undefined) {
+            const hasSelected = settings['has_selected_theme'] === 'true';
+            setHasSelectedTheme(hasSelected);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(STORAGE_THEME_SELECTED_KEY, String(hasSelected));
+            }
+          }
 
           setConfig((prev) => {
             const merged = { ...prev, ...loaded };
@@ -112,6 +153,39 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => {
       mounted = false;
     };
+  }, []);
+
+  const setTheme = useCallback(async (theme: AppTheme) => {
+    if (!THEMES[theme]) return;
+    setCurrentThemeState(theme);
+    setHasSelectedTheme(true);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_THEME_KEY, theme);
+        localStorage.setItem(STORAGE_THEME_SELECTED_KEY, 'true');
+      } catch {}
+    }
+
+    try {
+      await db.init();
+      await db.setSetting('app_theme', theme);
+      await db.setSetting('has_selected_theme', 'true');
+    } catch (err) {
+      console.warn('Failed to persist theme to OPFS SQLite:', err);
+    }
+  }, []);
+
+  const dismissThemeModal = useCallback(() => {
+    setHasSelectedTheme(true);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_THEME_SELECTED_KEY, 'true');
+      } catch {}
+    }
+    db.init().then(() => {
+      db.setSetting('has_selected_theme', 'true').catch(() => {});
+    });
   }, []);
 
   const updateConfig = useCallback(async (partial: Partial<LLMConfig>) => {
@@ -194,9 +268,13 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const flushLocalStorage = useCallback(async () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_CACHE_KEY);
+      localStorage.removeItem(STORAGE_THEME_KEY);
+      localStorage.removeItem(STORAGE_THEME_SELECTED_KEY);
       localStorage.removeItem('quark_api_key');
     }
     setConfig(DEFAULT_CONFIG);
+    setCurrentThemeState(DEFAULT_THEME);
+    setHasSelectedTheme(false);
   }, []);
 
   const exportVaultData = useCallback(async (): Promise<string> => {
@@ -211,6 +289,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const exportPayload = {
       exportedAt: new Date().toISOString(),
       version: '1.0.0',
+      currentTheme,
       agents,
       projects,
       tasks,
@@ -218,9 +297,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     return JSON.stringify(exportPayload, null, 2);
-  }, []);
+  }, [currentTheme]);
 
   const isConfigured = Boolean(config.apiKey && config.apiKey.trim().length > 0);
+  const themeConfig = THEMES[currentTheme] || THEMES[DEFAULT_THEME];
 
   return (
     <SettingsContext.Provider
@@ -232,6 +312,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         testConnection,
         flushLocalStorage,
         exportVaultData,
+        currentTheme,
+        themeConfig,
+        hasSelectedTheme,
+        setTheme,
+        dismissThemeModal,
       }}
     >
       {children}
@@ -246,3 +331,4 @@ export function useSettings(): SettingsContextValue {
   }
   return context;
 }
+export { THEMES, DEFAULT_THEME };

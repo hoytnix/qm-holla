@@ -38,7 +38,7 @@ import {
 } from 'lucide-react';
 
 export default function CanvasPage() {
-  const { config } = useSettings();
+  const { config, themeConfig } = useSettings();
   const [agents, setAgents] = useState<AgentRecord[]>(DEFAULT_CREW);
   const [projects, setProjects] = useState<ProjectRecord[]>(DEFAULT_PROJECTS);
   const [tasks, setTasks] = useState<TaskRecord[]>(DEFAULT_TASKS);
@@ -208,10 +208,10 @@ export default function CanvasPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
-                <span>Grand Line Radial Canvas</span>
+                <span>{themeConfig.name} Radial Canvas</span>
               </h1>
               <p className="text-xs sm:text-sm text-slate-400 mt-0.5 max-w-xl">
-                Orbiting division specialists and leaf workspaces persisted in browser-secured local SQLite.
+                Orbiting {themeConfig.defaultGroup} specialists and leaf workspaces persisted in browser-secured local SQLite.
               </p>
             </div>
 
@@ -223,7 +223,7 @@ export default function CanvasPage() {
                 className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-lg shadow-amber-500/20 transition-all active:scale-95 min-h-[44px]"
               >
                 <Mic width={16} height={16} />
-                <span>Speak with Luffy</span>
+                <span>Speak with {themeConfig.leaderTitle}</span>
               </button>
 
               <Link href="/chat" className="flex-1 sm:flex-initial">

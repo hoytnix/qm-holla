@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { SettingsProvider } from '@/lib/settings/settings-context';
+import { ThemeSelectionModal } from '@/components/settings/ThemeSelectionModal';
 
 export const metadata: Metadata = {
   title: 'Quarkmeme - Local-First Multi-Agent Autonomous Canvas',
@@ -29,7 +30,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500/30">
-        <SettingsProvider>{children}</SettingsProvider>
+        <SettingsProvider>
+          {children}
+          <ThemeSelectionModal />
+        </SettingsProvider>
       </body>
     </html>
   );
