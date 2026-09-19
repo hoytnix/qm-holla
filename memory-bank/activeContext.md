@@ -7,6 +7,9 @@
 - Fully operational local IndexedDB persistence via `sql.js` with auto-debounced database state export.
 
 ## Recent Changes
+- **Google AI Studio Models Registry**:
+  - Defined [`lib/ai/models.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/models.ts) containing the full specified Google AI Studio model suite (excluding Antigravity): Gemini 3.8 Flash, Gemini 3.6 Flash, Deep Research Pro Preview, Gemini 2 Flash, Gemini 2 Flash Lite, Computer Use Preview, Gemini 2.5 Flash, Nano Banana (Gemini 2.5 Flash Preview Image), Gemini 2.5 Flash Lite, Gemini 2.5 Flash TTS, Gemini 2.5 Pro, Gemini 2.5 Pro TTS, Gemini 3 Flash, Nano Banana Pro (Gemini 3 Pro Image), Gemini 3.1 Pro, Nano Banana 2 (Gemini 3.1 Flash Image), Gemini 3.1 Flash Lite, Nano Banana 2 Lite (Gemini 3.1 Flash Lite Image), Gemini 3.1 Flash TTS, Gemini 3.5 Flash, and Gemini 3.5 Flash Lite.
+  - Linked `GOOGLE_AI_STUDIO_MODELS` into [`app/settings/page.tsx`](file:///home/oloty/Dev/qm-holla/app/settings/page.tsx) with organized categories and selection presets.
 - **Autonomous Subagent Execution Engine & Task Queue**:
   - Implemented [`lib/ai/subagent-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/subagent-engine.ts) with background queue processing, strict Requests Per Minute (RPM) interval pacing, scoped context assembly (`assembleContext`), and output deliverable persistence to OPFS SQLite documents.
   - Added `UPDATE_TASK_STATUS` actions in [`workers/db.worker.ts`](file:///home/oloty/Dev/qm-holla/workers/db.worker.ts) and [`public/sqlite/sqlite-engine.js`](file:///home/oloty/Dev/qm-holla/public/sqlite/sqlite-engine.js) to support `in_progress` and `completed` status transitions with `completed_at` timestamps.

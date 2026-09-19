@@ -24,13 +24,12 @@ import {
   Gauge,
 } from 'lucide-react';
 
-const MODEL_PRESETS: Record<LLMProvider, { label: string; value: string; desc: string }[]> = {
-  gemini: [
-    { label: 'Gemini 2.5 Flash (Recommended)', value: 'gemini-2.5-flash', desc: 'Ultra-fast, low-latency, free demo tier via Google AI Studio' },
-    { label: 'Gemini 2.5 Pro', value: 'gemini-2.5-pro', desc: 'Deep reasoning, large context window' },
-    { label: 'Gemini 1.5 Flash', value: 'gemini-1.5-flash', desc: 'High-throughput legacy fast model' },
-  ],
+import { GOOGLE_AI_STUDIO_MODELS } from '@/lib/ai/models';
+
+const MODEL_PRESETS: Record<LLMProvider, { label: string; value: string; desc: string; category?: string }[]> = {
+  gemini: GOOGLE_AI_STUDIO_MODELS,
   openrouter: [
+    { label: 'Gemini 3.8 Flash', value: 'google/gemini-3.8-flash', desc: 'Cutting-edge high-throughput flagship multimodal' },
     { label: 'Gemini 2.5 Flash', value: 'google/gemini-2.5-flash', desc: 'Fast multimodal via OpenRouter' },
     { label: 'Claude 3.5 Sonnet', value: 'anthropic/claude-3.5-sonnet', desc: 'High intelligence and nuanced writing' },
     { label: 'DeepSeek Chat (V3)', value: 'deepseek/deepseek-chat', desc: 'Cost-effective reasoning & coding' },
