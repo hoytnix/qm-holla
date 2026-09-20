@@ -2,6 +2,9 @@ export interface AgentToolsConfig {
   googleSearch?: boolean;
   codeExecution?: boolean;
   fetchUrlMarkdown?: boolean;
+  vaultRead?: boolean;
+  vaultWrite?: boolean;
+  sqliteQueryBuilder?: boolean;
 }
 
 export interface AgentRecord {
@@ -144,6 +147,9 @@ export interface IQuarkDatabase {
   searchKnowledge(query: string, limit?: number, agentId?: string): Promise<SearchResult[]>;
   searchDocuments(query: string, limit?: number, agentId?: string): Promise<SearchResult[]>;
 
+  // Direct SQL Query Execution
+  executeSql?<T = any>(sql: string, params?: any[]): Promise<T[]>;
+
   // Messages
   saveMessage(message: MessageRecord): Promise<void>;
   getMessages(threadId: string): Promise<MessageRecord[]>;
@@ -153,4 +159,23 @@ export interface IQuarkDatabase {
   getSetting(key: string, defaultValue?: string): Promise<string>;
   setSetting(key: string, value: string): Promise<void>;
   getAllSettings(): Promise<Record<string, string>>;
+}
+
+let activeDbInstance: IQuarkDatabase | null = null;
+
+export function registerDb(dbInstance: IQuarkDatabase): void {
+  activeDbInstance = dbInstance;
+}
+
+export function getDb(): IQuarkDatabase {
+  if (!activeDbInstance) {
+    // Dynamic fallback to opfs adapter singleton
+    try {
+      const { db } = require('./opfs-adapter');
+      activeDbInstance = db;
+    } catch {
+      throw new Error('Database instance has not been registered yet.');
+    }
+  }
+  return activeDbInstance!;
 }

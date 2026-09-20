@@ -8,6 +8,7 @@ import {
 } from './tools';
 import { executeFetchUrlAsMarkdown } from './tools/web-markdown';
 import { CustomUniverseResponse } from '@/app/api/themes/custom/route';
+import { getDb, DocumentRecord } from '@/lib/db/adapter';
 
 export interface ClientRunnerMessage {
   role: 'user' | 'assistant' | 'model';
@@ -28,6 +29,7 @@ export interface ClientRunnerOptions {
   maxTokens?: number;
   baseUrl?: string;
   signal?: AbortSignal;
+  companyId?: string | null;
   onChunk?: (text: string) => void;
   onExecutableCode?: (code: ExecutableCodePart) => void;
   onCodeExecutionResult?: (result: CodeExecutionResultPart) => void;
@@ -140,6 +142,7 @@ export async function generateContentClientDirect(
     maxTokens,
     baseUrl = 'https://generativelanguage.googleapis.com/v1beta',
     signal,
+    companyId,
     onChunk,
     onExecutableCode,
     onCodeExecutionResult,
@@ -328,27 +331,13 @@ export async function generateContentClientDirect(
       const functionResponseParts: any[] = [];
 
       for (const call of pendingFunctionCalls) {
-        if (call.name === 'fetch_url_as_markdown') {
-          const targetUrl = call.args?.url;
-          const llmFilter = Boolean(call.args?.llmFilter);
-
-          // Direct client fetch to Markdowner service
-          const markdownResult = await executeFetchUrlAsMarkdown(targetUrl, llmFilter);
-
-          functionResponseParts.push({
-            functionResponse: {
-              name: 'fetch_url_as_markdown',
-              response: { content: markdownResult },
-            },
-          });
-        } else {
-          functionResponseParts.push({
-            functionResponse: {
-              name: call.name,
-              response: { error: `Unsupported function '${call.name}' on client` },
-            },
-          });
-        }
+        const toolResult = await executeClientTool(call.name, call.args, companyId);
+        functionResponseParts.push({
+          functionResponse: {
+            name: call.name,
+            response: toolResult,
+          },
+        });
       }
 
       conversationContents.push({
@@ -369,6 +358,175 @@ export async function generateContentClientDirect(
     groundingMetadata: currentGrounding,
     codeExecutionBlocks: codeBlocks,
   };
+}
+
+/**
+ * Direct client-side tool execution handler.
+ * Dispatches custom function calls to local services and OPFS SQLite database.
+ */
+export async function executeClientTool(
+  toolName: string,
+  args: any,
+  companyId?: string | null
+): Promise<any> {
+  try {
+    switch (toolName) {
+      case 'fetch_url_as_markdown': {
+        const targetUrl = args?.url;
+        const llmFilter = Boolean(args?.llmFilter);
+        const markdown = await executeFetchUrlAsMarkdown(targetUrl, llmFilter);
+        return { markdown };
+      }
+
+      case 'vault_read': {
+        const rawPath = typeof args?.path === 'string' ? args.path.trim() : '';
+        if (!rawPath) {
+          return { error: 'Missing required parameter "path" for vault_read.' };
+        }
+
+        const database = getDb();
+        await database.init();
+
+        const docs: DocumentRecord[] = database.getAllDocuments
+          ? await database.getAllDocuments(companyId || undefined)
+          : [];
+
+        const normalizedSearch = rawPath.replace(/^\/+/, '').toLowerCase();
+
+        // 1. Match by file_path or title
+        const found = docs.find((d) => {
+          const docPath = (d.file_path || '').replace(/^\/+/, '').toLowerCase();
+          const docTitle = (d.title || '').toLowerCase();
+          return (
+            docPath === normalizedSearch ||
+            docPath.endsWith(`/${normalizedSearch}`) ||
+            docTitle === normalizedSearch ||
+            docTitle === normalizedSearch.replace(/\.md$/, '')
+          );
+        });
+
+        if (found) {
+          return {
+            content: found.content,
+            path: found.file_path || found.title,
+            title: found.title,
+          };
+        }
+
+        return {
+          error: `Document not found at path "${rawPath}" in the local Vault. Available document titles: ${docs.slice(0, 10).map((d) => d.title).join(', ')}${docs.length > 10 ? '...' : ''}`,
+        };
+      }
+
+      case 'vault_write': {
+        const rawPath = typeof args?.path === 'string' ? args.path.trim() : '';
+        const content = typeof args?.content === 'string' ? args.content : '';
+        const mode = args?.mode === 'append' ? 'append' : 'overwrite';
+
+        if (!rawPath) {
+          return { error: 'Missing required parameter "path" for vault_write.' };
+        }
+
+        const database = getDb();
+        await database.init();
+
+        const docs: DocumentRecord[] = database.getAllDocuments
+          ? await database.getAllDocuments(companyId || undefined)
+          : [];
+
+        const normalizedSearch = rawPath.replace(/^\/+/, '').toLowerCase();
+
+        const existing = docs.find((d) => {
+          const docPath = (d.file_path || '').replace(/^\/+/, '').toLowerCase();
+          const docTitle = (d.title || '').toLowerCase();
+          return (
+            docPath === normalizedSearch ||
+            docPath.endsWith(`/${normalizedSearch}`) ||
+            docTitle === normalizedSearch ||
+            docTitle === normalizedSearch.replace(/\.md$/, '')
+          );
+        });
+
+        const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+        const fileName = normalizedPath.split('/').pop() || rawPath;
+        const now = new Date().toISOString();
+
+        let finalContent = content;
+        let docId = existing?.id || `doc-vault-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
+
+        if (existing) {
+          docId = existing.id;
+          if (mode === 'append') {
+            finalContent = `${existing.content}\n\n${content}`;
+          }
+        }
+
+        const docRecord: DocumentRecord = {
+          id: docId,
+          title: existing?.title || fileName,
+          content: finalContent,
+          file_path: normalizedPath,
+          project_id: existing?.project_id || null,
+          kb_id: existing?.kb_id || null,
+          agent_id: existing?.agent_id || null,
+          company_id: companyId || existing?.company_id || null,
+          metadata: JSON.stringify({
+            writtenByTool: 'vault_write',
+            mode,
+            updatedAt: now,
+          }),
+          updated_at: now,
+        };
+
+        await database.saveDocument(docRecord);
+
+        return {
+          success: true,
+          path: normalizedPath,
+          bytesWritten: new TextEncoder().encode(finalContent).length,
+          mode,
+        };
+      }
+
+      case 'sqlite_query_builder': {
+        const query = typeof args?.query === 'string' ? args.query.trim() : '';
+        const params = Array.isArray(args?.params) ? args.params : [];
+
+        if (!query) {
+          return { error: 'Missing required parameter "query" for sqlite_query_builder.' };
+        }
+
+        // Safety check: Reject destructive statements
+        const destructiveRegex = /\b(DROP|ALTER|TRUNCATE|PRAGMA)\b/i;
+        if (destructiveRegex.test(query)) {
+          return {
+            error: 'Security guard rejected destructive or administrative statement (DROP, ALTER, TRUNCATE, PRAGMA). Only analytical and read queries are permitted.',
+          };
+        }
+
+        const database = getDb();
+        await database.init();
+
+        if (!database.executeSql) {
+          return { error: 'Database adapter does not support direct SQL execution.' };
+        }
+
+        const rows = await database.executeSql(query, params);
+        return {
+          rowCount: rows.length,
+          rows,
+        };
+      }
+
+      default: {
+        return { error: `Unsupported function "${toolName}" on client runner.` };
+      }
+    }
+  } catch (err: any) {
+    return {
+      error: `Error executing tool "${toolName}": ${err?.message || String(err)}`,
+    };
+  }
 }
 
 /**

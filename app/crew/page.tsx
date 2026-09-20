@@ -28,6 +28,9 @@ import {
   Search,
   Wrench,
   Globe,
+  Database,
+  FileText,
+  Edit3,
 } from 'lucide-react';
 import { useSettings } from '@/lib/settings/settings-context';
 import { GOOGLE_AI_STUDIO_MODELS } from '@/lib/ai/models';
@@ -55,6 +58,9 @@ export default function CrewPage() {
     googleSearch: false,
     codeExecution: false,
     fetchUrlMarkdown: false,
+    vaultRead: false,
+    vaultWrite: false,
+    sqliteQueryBuilder: false,
   });
 
   const loadAll = async () => {
@@ -92,7 +98,14 @@ export default function CrewPage() {
     setFormRouting(agent.routing_description || '');
     setFormPrompt(agent.system_prompt);
     setFormModel(agent.model || '');
-    setFormTools(agent.tools || { googleSearch: false, codeExecution: false, fetchUrlMarkdown: false });
+    setFormTools(agent.tools || {
+      googleSearch: false,
+      codeExecution: false,
+      fetchUrlMarkdown: false,
+      vaultRead: false,
+      vaultWrite: false,
+      sqliteQueryBuilder: false,
+    });
   };
 
   const openCreate = () => {
@@ -103,7 +116,14 @@ export default function CrewPage() {
     setFormRouting('');
     setFormPrompt('');
     setFormModel('');
-    setFormTools({ googleSearch: false, codeExecution: false, fetchUrlMarkdown: false });
+    setFormTools({
+      googleSearch: false,
+      codeExecution: false,
+      fetchUrlMarkdown: false,
+      vaultRead: false,
+      vaultWrite: false,
+      sqliteQueryBuilder: false,
+    });
   };
 
   const cancelEdit = () => {
@@ -266,65 +286,95 @@ export default function CrewPage() {
                 </p>
               </div>
 
-              {/* Gemini Built-In Tools Form Group */}
+              {/* Agent Tools Form Group (All 6 Direct Tools) */}
               <div>
                 <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1 block mb-2 flex items-center gap-1.5">
                   <Wrench width={14} height={14} className="text-amber-400" />
-                  <span>Agent Built-In Tools</span>
+                  <span>Enabled Tools & Autonomous Capabilities</span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* vault_read */}
                   <label
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                      formTools.googleSearch
-                        ? 'border-emerald-500/50 bg-emerald-950/30'
+                      formTools.vaultRead
+                        ? 'border-blue-500/50 bg-blue-950/30'
                         : 'border-white/10 bg-slate-900/60 hover:border-white/20'
                     }`}
                   >
                     <input
                       type="checkbox"
-                      checked={!!formTools.googleSearch}
+                      checked={!!formTools.vaultRead}
                       onChange={(e) =>
-                        setFormTools((prev) => ({ ...prev, googleSearch: e.target.checked }))
+                        setFormTools((prev) => ({ ...prev, vaultRead: e.target.checked }))
                       }
-                      className="mt-0.5 rounded border-white/20 bg-slate-900 text-emerald-500 focus:ring-emerald-500/30"
+                      className="mt-0.5 rounded border-white/20 bg-slate-900 text-blue-500 focus:ring-blue-500/30"
                     />
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
-                        <Search width={13} height={13} className="text-emerald-400" />
-                        <span>Google Search Grounding</span>
+                        <FileText width={13} height={13} className="text-blue-400" />
+                        <span>Vault Read (vault_read)</span>
                       </div>
                       <p className="text-[11px] text-slate-400 leading-normal">
-                        Enables live Google web search and real-time grounding citations.
+                        Reads markdown notes, project briefs, and memory banks from the local Vault by relative path.
                       </p>
                     </div>
                   </label>
 
+                  {/* vault_write */}
                   <label
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                      formTools.codeExecution
-                        ? 'border-cyan-500/50 bg-cyan-950/30'
+                      formTools.vaultWrite
+                        ? 'border-amber-500/50 bg-amber-950/30'
                         : 'border-white/10 bg-slate-900/60 hover:border-white/20'
                     }`}
                   >
                     <input
                       type="checkbox"
-                      checked={!!formTools.codeExecution}
+                      checked={!!formTools.vaultWrite}
                       onChange={(e) =>
-                        setFormTools((prev) => ({ ...prev, codeExecution: e.target.checked }))
+                        setFormTools((prev) => ({ ...prev, vaultWrite: e.target.checked }))
                       }
-                      className="mt-0.5 rounded border-white/20 bg-slate-900 text-cyan-500 focus:ring-cyan-500/30"
+                      className="mt-0.5 rounded border-white/20 bg-slate-900 text-amber-500 focus:ring-amber-500/30"
                     />
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
-                        <Terminal width={13} height={13} className="text-cyan-400" />
-                        <span>Code Execution</span>
+                        <Edit3 width={13} height={13} className="text-amber-400" />
+                        <span>Vault Write (vault_write)</span>
                       </div>
                       <p className="text-[11px] text-slate-400 leading-normal">
-                        Allows writing and sandboxed execution of Python/code snippets.
+                        Commits living specs, plan updates, and artifacts directly to the Vault (overwrite or append).
                       </p>
                     </div>
                   </label>
 
+                  {/* sqlite_query_builder */}
+                  <label
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formTools.sqliteQueryBuilder
+                        ? 'border-teal-500/50 bg-teal-950/30'
+                        : 'border-white/10 bg-slate-900/60 hover:border-white/20'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!formTools.sqliteQueryBuilder}
+                      onChange={(e) =>
+                        setFormTools((prev) => ({ ...prev, sqliteQueryBuilder: e.target.checked }))
+                      }
+                      className="mt-0.5 rounded border-white/20 bg-slate-900 text-teal-500 focus:ring-teal-500/30"
+                    />
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
+                        <Database width={13} height={13} className="text-teal-400" />
+                        <span>SQLite Query Builder (sqlite_query_builder)</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-normal">
+                        Executes analytical SQL queries against local SQLite database tables with safety guards.
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* fetch_url_as_markdown */}
                   <label
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                       formTools.fetchUrlMarkdown
@@ -343,10 +393,64 @@ export default function CrewPage() {
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
                         <Globe width={13} height={13} className="text-purple-400" />
-                        <span>Web Markdowner</span>
+                        <span>Web Markdowner (fetch_url_as_markdown)</span>
                       </div>
                       <p className="text-[11px] text-slate-400 leading-normal">
                         Fetches public URLs and ingests clean Markdown (powered by md.dhr.wtf).
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* googleSearch */}
+                  <label
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formTools.googleSearch
+                        ? 'border-emerald-500/50 bg-emerald-950/30'
+                        : 'border-white/10 bg-slate-900/60 hover:border-white/20'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!formTools.googleSearch}
+                      onChange={(e) =>
+                        setFormTools((prev) => ({ ...prev, googleSearch: e.target.checked }))
+                      }
+                      className="mt-0.5 rounded border-white/20 bg-slate-900 text-emerald-500 focus:ring-emerald-500/30"
+                    />
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
+                        <Search width={13} height={13} className="text-emerald-400" />
+                        <span>Google Search Grounding (googleSearch)</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-normal">
+                        Enables live Google web search and real-time grounding citations.
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* codeExecution */}
+                  <label
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formTools.codeExecution
+                        ? 'border-cyan-500/50 bg-cyan-950/30'
+                        : 'border-white/10 bg-slate-900/60 hover:border-white/20'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!formTools.codeExecution}
+                      onChange={(e) =>
+                        setFormTools((prev) => ({ ...prev, codeExecution: e.target.checked }))
+                      }
+                      className="mt-0.5 rounded border-white/20 bg-slate-900 text-cyan-500 focus:ring-cyan-500/30"
+                    />
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
+                        <Terminal width={13} height={13} className="text-cyan-400" />
+                        <span>Code Execution (codeExecution)</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-normal">
+                        Allows writing and sandboxed execution of computational Python/code snippets.
                       </p>
                     </div>
                   </label>
@@ -467,6 +571,27 @@ export default function CrewPage() {
                           </span>
                         )}
 
+                        {agent.tools?.vaultRead && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-[10px] font-mono text-blue-300">
+                            <FileText width={10} height={10} />
+                            <span>V-Read</span>
+                          </span>
+                        )}
+
+                        {agent.tools?.vaultWrite && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[10px] font-mono text-amber-300">
+                            <Edit3 width={10} height={10} />
+                            <span>V-Write</span>
+                          </span>
+                        )}
+
+                        {agent.tools?.sqliteQueryBuilder && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-teal-500/15 border border-teal-500/30 text-[10px] font-mono text-teal-300">
+                            <Database width={10} height={10} />
+                            <span>SQL</span>
+                          </span>
+                        )}
+
                         {agent.tools?.googleSearch && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">
                             <Search width={10} height={10} />
@@ -524,10 +649,122 @@ export default function CrewPage() {
                             <span>Enabled Tools</span>
                           </span>
                           <span className="text-[9px] text-slate-500 font-mono">
-                            {`${(agent.tools?.googleSearch ? 1 : 0) + (agent.tools?.codeExecution ? 1 : 0) + (agent.tools?.fetchUrlMarkdown ? 1 : 0)} active`}
+                            {`${
+                              (agent.tools?.vaultRead ? 1 : 0) +
+                              (agent.tools?.vaultWrite ? 1 : 0) +
+                              (agent.tools?.sqliteQueryBuilder ? 1 : 0) +
+                              (agent.tools?.fetchUrlMarkdown ? 1 : 0) +
+                              (agent.tools?.googleSearch ? 1 : 0) +
+                              (agent.tools?.codeExecution ? 1 : 0)
+                            } / 6 active`}
                           </span>
                         </div>
                         <div className="grid grid-cols-3 gap-1.5">
+                          {/* vaultRead */}
+                          <button
+                            type="button"
+                            onClick={() => handleAgentToolToggle(agent, 'vaultRead')}
+                            className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-[10px] font-mono transition-all ${
+                              agent.tools?.vaultRead
+                                ? 'bg-blue-500/15 border-blue-500/40 text-blue-300 shadow-sm'
+                                : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
+                            }`}
+                            title="Toggle Vault Read (vault_read) for this agent"
+                          >
+                            <span className="flex items-center gap-1">
+                              <FileText width={11} height={11} className={agent.tools?.vaultRead ? 'text-blue-400' : 'text-slate-500'} />
+                              <span>V-Read</span>
+                            </span>
+                            <span
+                              className={`text-[8px] mt-0.5 px-1 py-0.2 rounded font-bold uppercase tracking-wider ${
+                                agent.tools?.vaultRead
+                                  ? 'bg-blue-500/20 text-blue-300'
+                                  : 'bg-white/5 text-slate-500'
+                              }`}
+                            >
+                              {agent.tools?.vaultRead ? 'ON' : 'OFF'}
+                            </span>
+                          </button>
+
+                          {/* vaultWrite */}
+                          <button
+                            type="button"
+                            onClick={() => handleAgentToolToggle(agent, 'vaultWrite')}
+                            className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-[10px] font-mono transition-all ${
+                              agent.tools?.vaultWrite
+                                ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-sm'
+                                : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
+                            }`}
+                            title="Toggle Vault Write (vault_write) for this agent"
+                          >
+                            <span className="flex items-center gap-1">
+                              <Edit3 width={11} height={11} className={agent.tools?.vaultWrite ? 'text-amber-400' : 'text-slate-500'} />
+                              <span>V-Write</span>
+                            </span>
+                            <span
+                              className={`text-[8px] mt-0.5 px-1 py-0.2 rounded font-bold uppercase tracking-wider ${
+                                agent.tools?.vaultWrite
+                                  ? 'bg-amber-500/20 text-amber-300'
+                                  : 'bg-white/5 text-slate-500'
+                              }`}
+                            >
+                              {agent.tools?.vaultWrite ? 'ON' : 'OFF'}
+                            </span>
+                          </button>
+
+                          {/* sqliteQueryBuilder */}
+                          <button
+                            type="button"
+                            onClick={() => handleAgentToolToggle(agent, 'sqliteQueryBuilder')}
+                            className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-[10px] font-mono transition-all ${
+                              agent.tools?.sqliteQueryBuilder
+                                ? 'bg-teal-500/15 border-teal-500/40 text-teal-300 shadow-sm'
+                                : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
+                            }`}
+                            title="Toggle SQLite Query Builder (sqlite_query_builder) for this agent"
+                          >
+                            <span className="flex items-center gap-1">
+                              <Database width={11} height={11} className={agent.tools?.sqliteQueryBuilder ? 'text-teal-400' : 'text-slate-500'} />
+                              <span>SQL</span>
+                            </span>
+                            <span
+                              className={`text-[8px] mt-0.5 px-1 py-0.2 rounded font-bold uppercase tracking-wider ${
+                                agent.tools?.sqliteQueryBuilder
+                                  ? 'bg-teal-500/20 text-teal-300'
+                                  : 'bg-white/5 text-slate-500'
+                              }`}
+                            >
+                              {agent.tools?.sqliteQueryBuilder ? 'ON' : 'OFF'}
+                            </span>
+                          </button>
+
+                          {/* fetchUrlMarkdown */}
+                          <button
+                            type="button"
+                            onClick={() => handleAgentToolToggle(agent, 'fetchUrlMarkdown')}
+                            className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-[10px] font-mono transition-all ${
+                              agent.tools?.fetchUrlMarkdown
+                                ? 'bg-purple-500/15 border-purple-500/40 text-purple-300 shadow-sm'
+                                : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
+                            }`}
+                            title="Toggle Web Markdowner (fetch_url_as_markdown) for this agent"
+                          >
+                            <span className="flex items-center gap-1">
+                              <Globe width={11} height={11} className={agent.tools?.fetchUrlMarkdown ? 'text-purple-400' : 'text-slate-500'} />
+                              <span>MD</span>
+                            </span>
+                            <span
+                              className={`text-[8px] mt-0.5 px-1 py-0.2 rounded font-bold uppercase tracking-wider ${
+                                agent.tools?.fetchUrlMarkdown
+                                  ? 'bg-purple-500/20 text-purple-300'
+                                  : 'bg-white/5 text-slate-500'
+                              }`}
+                            >
+                              {agent.tools?.fetchUrlMarkdown ? 'ON' : 'OFF'}
+                            </span>
+                          </button>
+
+                          {/* googleSearch */}
                           <button
                             type="button"
                             onClick={() => handleAgentToolToggle(agent, 'googleSearch')}
@@ -536,7 +773,7 @@ export default function CrewPage() {
                                 ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-sm'
                                 : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
                             }`}
-                            title="Toggle Google Search Grounding for this agent"
+                            title="Toggle Google Search Grounding (googleSearch) for this agent"
                           >
                             <span className="flex items-center gap-1">
                               <Search width={11} height={11} className={agent.tools?.googleSearch ? 'text-emerald-400' : 'text-slate-500'} />
@@ -553,6 +790,7 @@ export default function CrewPage() {
                             </span>
                           </button>
 
+                          {/* codeExecution */}
                           <button
                             type="button"
                             onClick={() => handleAgentToolToggle(agent, 'codeExecution')}
@@ -561,7 +799,7 @@ export default function CrewPage() {
                                 ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 shadow-sm'
                                 : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
                             }`}
-                            title="Toggle Code Execution for this agent"
+                            title="Toggle Code Execution (codeExecution) for this agent"
                           >
                             <span className="flex items-center gap-1">
                               <Terminal width={11} height={11} className={agent.tools?.codeExecution ? 'text-cyan-400' : 'text-slate-500'} />
@@ -575,31 +813,6 @@ export default function CrewPage() {
                               }`}
                             >
                               {agent.tools?.codeExecution ? 'ON' : 'OFF'}
-                            </span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleAgentToolToggle(agent, 'fetchUrlMarkdown')}
-                            className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-[10px] font-mono transition-all ${
-                              agent.tools?.fetchUrlMarkdown
-                                ? 'bg-purple-500/15 border-purple-500/40 text-purple-300 shadow-sm'
-                                : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
-                            }`}
-                            title="Toggle Web Markdowner (URL to clean markdown) for this agent"
-                          >
-                            <span className="flex items-center gap-1">
-                              <Globe width={11} height={11} className={agent.tools?.fetchUrlMarkdown ? 'text-purple-400' : 'text-slate-500'} />
-                              <span>MD</span>
-                            </span>
-                            <span
-                              className={`text-[8px] mt-0.5 px-1 py-0.2 rounded font-bold uppercase tracking-wider ${
-                                agent.tools?.fetchUrlMarkdown
-                                  ? 'bg-purple-500/20 text-purple-300'
-                                  : 'bg-white/5 text-slate-500'
-                              }`}
-                            >
-                              {agent.tools?.fetchUrlMarkdown ? 'ON' : 'OFF'}
                             </span>
                           </button>
                         </div>
@@ -739,7 +952,47 @@ export default function CrewPage() {
                   </span>
                   <div className="bg-slate-950/60 p-3 rounded-2xl border border-white/5 text-xs text-slate-400 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-slate-300 font-medium">Built-In Tools:</span>
+                      <span className="text-slate-300 font-medium">Tools & Autonomous Capabilities:</span>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono ${
+                          inspectingInstructionsAgent.tools?.vaultRead
+                            ? 'bg-blue-500/15 border-blue-500/40 text-blue-300'
+                            : 'bg-white/5 border-white/10 text-slate-500'
+                        }`}
+                      >
+                        <FileText width={10} height={10} />
+                        <span>Vault Read: {inspectingInstructionsAgent.tools?.vaultRead ? 'Enabled' : 'Disabled'}</span>
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono ${
+                          inspectingInstructionsAgent.tools?.vaultWrite
+                            ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                            : 'bg-white/5 border-white/10 text-slate-500'
+                        }`}
+                      >
+                        <Edit3 width={10} height={10} />
+                        <span>Vault Write: {inspectingInstructionsAgent.tools?.vaultWrite ? 'Enabled' : 'Disabled'}</span>
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono ${
+                          inspectingInstructionsAgent.tools?.sqliteQueryBuilder
+                            ? 'bg-teal-500/15 border-teal-500/40 text-teal-300'
+                            : 'bg-white/5 border-white/10 text-slate-500'
+                        }`}
+                      >
+                        <Database width={10} height={10} />
+                        <span>SQLite Query: {inspectingInstructionsAgent.tools?.sqliteQueryBuilder ? 'Enabled' : 'Disabled'}</span>
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono ${
+                          inspectingInstructionsAgent.tools?.fetchUrlMarkdown
+                            ? 'bg-purple-500/15 border-purple-500/40 text-purple-300'
+                            : 'bg-white/5 border-white/10 text-slate-500'
+                        }`}
+                      >
+                        <Globe width={10} height={10} />
+                        <span>Web Markdowner: {inspectingInstructionsAgent.tools?.fetchUrlMarkdown ? 'Enabled' : 'Disabled'}</span>
+                      </span>
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono ${
                           inspectingInstructionsAgent.tools?.googleSearch
@@ -759,16 +1012,6 @@ export default function CrewPage() {
                       >
                         <Terminal width={10} height={10} />
                         <span>Code Execution: {inspectingInstructionsAgent.tools?.codeExecution ? 'Enabled' : 'Disabled'}</span>
-                      </span>
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono ${
-                          inspectingInstructionsAgent.tools?.fetchUrlMarkdown
-                            ? 'bg-purple-500/15 border-purple-500/40 text-purple-300'
-                            : 'bg-white/5 border-white/10 text-slate-500'
-                        }`}
-                      >
-                        <Globe width={10} height={10} />
-                        <span>Web Markdowner: {inspectingInstructionsAgent.tools?.fetchUrlMarkdown ? 'Enabled' : 'Disabled'}</span>
                       </span>
                     </div>
                     <p>• Scoped FTS5 BM25 search restricted to knowledge base lore.</p>

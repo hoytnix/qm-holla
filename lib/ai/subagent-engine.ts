@@ -232,6 +232,7 @@ Format your output cleanly in Markdown with clear sections, actionable findings,
             maxTokens: config.maxTokens,
             baseUrl: config.baseUrl,
             signal: this.currentAbortController.signal,
+            companyId: task.company_id || null,
           });
 
           generatedOutput = directResult.text;

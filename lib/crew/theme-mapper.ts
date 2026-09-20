@@ -30,13 +30,62 @@ export const ROLE_SLOTS: AgentRoleSlot[] = [
  * Systems & Calculation agents have Code Execution enabled.
  */
 export const DEFAULT_ROLE_SLOT_TOOLS: Record<AgentRoleSlot, AgentToolsConfig> = {
-  'captain-core': { googleSearch: false, codeExecution: false, fetchUrlMarkdown: false },
-  'scholar-robin': { googleSearch: true, codeExecution: false, fetchUrlMarkdown: true },
-  'shipwright-franky': { googleSearch: false, codeExecution: true, fetchUrlMarkdown: false },
-  'navigator-nami': { googleSearch: true, codeExecution: true, fetchUrlMarkdown: true },
-  'doctor-chopper': { googleSearch: false, codeExecution: false, fetchUrlMarkdown: false },
-  'chef-sanji': { googleSearch: false, codeExecution: false, fetchUrlMarkdown: false },
-  'sniper-usopp': { googleSearch: false, codeExecution: false, fetchUrlMarkdown: false },
+  'captain-core': {
+    vaultRead: true,
+    vaultWrite: true,
+    sqliteQueryBuilder: true,
+    googleSearch: true,
+    fetchUrlMarkdown: true,
+    codeExecution: false,
+  },
+  'scholar-robin': {
+    vaultRead: true,
+    googleSearch: true,
+    fetchUrlMarkdown: true,
+    vaultWrite: false,
+    sqliteQueryBuilder: false,
+    codeExecution: false,
+  },
+  'shipwright-franky': {
+    vaultRead: true,
+    vaultWrite: true,
+    sqliteQueryBuilder: true,
+    codeExecution: true,
+    googleSearch: false,
+    fetchUrlMarkdown: false,
+  },
+  'navigator-nami': {
+    vaultRead: true,
+    vaultWrite: true,
+    sqliteQueryBuilder: true,
+    googleSearch: true,
+    codeExecution: true,
+    fetchUrlMarkdown: true,
+  },
+  'doctor-chopper': {
+    vaultRead: true,
+    vaultWrite: false,
+    sqliteQueryBuilder: false,
+    googleSearch: false,
+    codeExecution: false,
+    fetchUrlMarkdown: false,
+  },
+  'chef-sanji': {
+    vaultRead: true,
+    vaultWrite: false,
+    sqliteQueryBuilder: false,
+    googleSearch: false,
+    codeExecution: false,
+    fetchUrlMarkdown: false,
+  },
+  'sniper-usopp': {
+    vaultRead: true,
+    vaultWrite: true,
+    googleSearch: true,
+    fetchUrlMarkdown: true,
+    sqliteQueryBuilder: false,
+    codeExecution: false,
+  },
 };
 
 export interface CharacterMapping {

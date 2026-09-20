@@ -12,9 +12,12 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     parent_agent_id: null,
     model: null,
     tools: {
-      googleSearch: false,
+      vaultRead: true,
+      vaultWrite: true,
+      sqliteQueryBuilder: true,
+      googleSearch: true,
+      fetchUrlMarkdown: true,
       codeExecution: false,
-      fetchUrlMarkdown: false,
     },
   },
   {
@@ -27,9 +30,12 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     parent_agent_id: 'captain-core',
     model: null,
     tools: {
+      vaultRead: true,
       googleSearch: true,
-      codeExecution: false,
       fetchUrlMarkdown: true,
+      vaultWrite: false,
+      sqliteQueryBuilder: false,
+      codeExecution: false,
     },
   },
   {
@@ -42,8 +48,11 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     parent_agent_id: 'captain-core',
     model: null,
     tools: {
-      googleSearch: false,
+      vaultRead: true,
+      vaultWrite: true,
+      sqliteQueryBuilder: true,
       codeExecution: true,
+      googleSearch: false,
       fetchUrlMarkdown: false,
     },
   },
@@ -57,6 +66,9 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     parent_agent_id: 'captain-core',
     model: null,
     tools: {
+      vaultRead: true,
+      vaultWrite: true,
+      sqliteQueryBuilder: true,
       googleSearch: true,
       codeExecution: true,
       fetchUrlMarkdown: true,
@@ -72,6 +84,9 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     parent_agent_id: 'captain-core',
     model: null,
     tools: {
+      vaultRead: true,
+      vaultWrite: false,
+      sqliteQueryBuilder: false,
       googleSearch: false,
       codeExecution: false,
       fetchUrlMarkdown: false,
@@ -87,6 +102,9 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     parent_agent_id: 'captain-core',
     model: null,
     tools: {
+      vaultRead: true,
+      vaultWrite: false,
+      sqliteQueryBuilder: false,
       googleSearch: false,
       codeExecution: false,
       fetchUrlMarkdown: false,
@@ -102,9 +120,12 @@ export const DEFAULT_STRAW_HAT_AGENTS: AgentRecord[] = [
     parent_agent_id: 'captain-core',
     model: null,
     tools: {
-      googleSearch: false,
+      vaultRead: true,
+      vaultWrite: true,
+      googleSearch: true,
+      fetchUrlMarkdown: true,
+      sqliteQueryBuilder: false,
       codeExecution: false,
-      fetchUrlMarkdown: false,
     },
   },
 ];

@@ -1,6 +1,6 @@
 import { db } from '@/lib/db/opfs-adapter';
 import { AgentRecord, SearchResult, DocumentRecord, AgentToolsConfig } from '@/lib/db/adapter';
-import { loadAgentMemoryBank } from '@/lib/crew/agent-memory';
+import { loadAgentMemoryBank, loadAgentContext } from '@/lib/crew/agent-memory';
 import { generateContentClientDirect, getClientGeminiApiKey } from './client-runner';
 
 export interface OrchestrationResult {
@@ -227,10 +227,7 @@ You are operating within a sovereign multi-agent crew.
 Respect domain boundaries: Each division lead governs their domain. Reference sibling research or specifications for context, but do NOT rewrite or contradict their core specs without explicit user delegation.
 `;
 
-  let toolInstructions = '';
-  if (targetAgent.tools?.fetchUrlMarkdown) {
-    toolInstructions = `\n--- TOOL CAPABILITY: fetch_url_as_markdown ---\nYou have access to the custom tool 'fetch_url_as_markdown' powered by the Markdowner service (https://md.dhr.wtf). When a user provides a public URL or asks you to read/browse/summarize a webpage, call 'fetch_url_as_markdown' with { "url": "..." } (and optional llmFilter: true to filter boilerplate/ads) to ingest the clean markdown.\n--- END TOOL CAPABILITY ---\n`;
-  }
+  const toolInstructions = loadAgentContext(targetAgent);
 
   const systemInstruction = `${globalBlock}${targetAgent.system_prompt}${memoryBankBlock}${contextBlock}${toolInstructions}${separationOfDuties}\n\nMaintain character and resolve user queries efficiently. Always stay grounded in provided knowledge where applicable.`;
 

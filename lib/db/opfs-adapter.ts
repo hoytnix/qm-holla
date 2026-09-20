@@ -8,6 +8,7 @@ import {
   SearchResult,
   MessageRecord,
   CompanyProfile,
+  registerDb,
 } from './adapter';
 import {
   DEFAULT_STRAW_HAT_AGENTS,
@@ -792,8 +793,24 @@ class OpfsDatabase implements IQuarkDatabase {
     }
     return { ...this.memSettings };
   }
+
+  // --- Direct SQL Query Execution ---
+  async executeSql<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+    await this.init();
+    if (!this.usingFallback && this.worker) {
+      try {
+        const rows = await this.sendToWorker<T[]>('EXECUTE_SQL', { sql, bind: params });
+        return Array.isArray(rows) ? rows : [];
+      } catch (err) {
+        console.warn('executeSql worker call failed, attempting fallback:', err);
+        return this.query<T>(sql, params);
+      }
+    }
+    return [];
+  }
 }
 
 // Global singleton instance
 export const db = new OpfsDatabase();
 export const opfsAdapter = db;
+registerDb(db);

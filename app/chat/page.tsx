@@ -326,6 +326,7 @@ function ChatContent() {
         maxTokens: config.maxTokens,
         systemInstruction: orchestration.systemInstruction,
         tools: activeTools,
+        companyId: activeCompany?.id || null,
         messages: [...messages, userMsg].map((m) => ({
           role: m.sender_type === 'user' ? 'user' : 'assistant',
           content: m.content,

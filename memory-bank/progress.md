@@ -3,7 +3,16 @@
 ## Current Progress Overview
 
 ### Completed & Functional
-- [x] Fixed Startup Onboarding Modal Sequence for Incognito & Clean Sessions:
+- [x] Direct Client-Side Tool Declarations, Execution Handlers & Multi-Turn Function Calling:
+  - Defined strict JSON function declaration schemas in [`lib/ai/tools.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/tools.ts) for `vault_read` (`path`), `vault_write` (`path`, `content`, `mode`), and `sqlite_query_builder` (`query`, optional `params`).
+  - Created `ALL_TOOLS_REGISTRY` mapping custom functions (`fetch_url_as_markdown`, `vault_read`, `vault_write`, `sqlite_query_builder`) and Gemini built-ins (`googleSearch`, `codeExecution`).
+  - Added `filterToolsForAgent()` and updated `buildGeminiTools()` to bundle custom function declarations under `[{ functionDeclarations: [...] }]` and append Gemini built-in tools.
+  - Extended [`lib/db/adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/adapter.ts) with `getDb()`, `registerDb()`, and `executeSql` on `IQuarkDatabase`, implemented on `OpfsDatabase` in [`lib/db/opfs-adapter.ts`](file:///home/oloty/Dev/qm-holla/lib/db/opfs-adapter.ts).
+  - Implemented `executeClientTool(toolName, args, companyId)` in [`lib/ai/client-runner.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/client-runner.ts) handling URL markdown scraping, Vault document reading and writing (overwrite/append), and safe SQL queries with destructive statement guards.
+  - Implemented `loadAgentContext()` in [`lib/crew/agent-memory.ts`](file:///home/oloty/Dev/qm-holla/lib/crew/agent-memory.ts) and wired tool instructions and SQLite schema reference into `assembleContext()` in [`lib/ai/orchestrator.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/orchestrator.ts).
+  - Standardized realistic tool permissions across all agents in [`lib/crew/default-crew.ts`](file:///home/oloty/Dev/qm-holla/lib/crew/default-crew.ts) and [`lib/crew/theme-mapper.ts`](file:///home/oloty/Dev/qm-holla/lib/crew/theme-mapper.ts).
+  - Updated Agent Edit Drawer and crew cards in [`app/crew/page.tsx`](file:///home/oloty/Dev/qm-holla/app/crew/page.tsx) with all 6 tools, clear labels, status badges, and direct persistence to OPFS SQLite.
+  - Wired `companyId` through [`app/chat/page.tsx`](file:///home/oloty/Dev/qm-holla/app/chat/page.tsx) and [`lib/ai/subagent-engine.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/subagent-engine.ts) for company-scoped Vault operations.
   - Eliminated `isLoading` permanent lock by ensuring `setIsLoading(false)` always executes unconditionally in `load()`'s `finally` block in [`lib/settings/settings-context.tsx`](file:///home/oloty/Dev/qm-holla/lib/settings/settings-context.tsx).
   - Defaulted `hasSelectedTheme` to `false` (from `true`) so first-time users and incognito sessions without saved theme selections are presented with theme setup.
   - Exported `isThemeModalOpen` and `closeThemeModal` in `SettingsContextValue` and `SettingsContext.Provider`.

@@ -1,7 +1,35 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
-- Fixed **Startup Onboarding Sequence for Incognito & Clean Sessions**:
+- Implemented **Direct Client-Side Tool System & Multi-Turn Function Calling**:
+  - **Tool Schemas & Registry (`lib/ai/tools.ts`)**:
+    - Defined strict JSON schemas for `vault_read` (`path`), `vault_write` (`path`, `content`, `mode: "overwrite" | "append"`), and `sqlite_query_builder` (`query`, optional `params`).
+    - Exported all-tools registry `ALL_TOOLS_REGISTRY` mapping custom functions (`fetch_url_as_markdown`, `vault_read`, `vault_write`, `sqlite_query_builder`) and Gemini built-ins (`googleSearch`, `codeExecution`).
+    - Implemented `filterToolsForAgent(agentToolIds)` and `buildGeminiTools(toolsConfig)` properly grouping custom function declarations under `[{ functionDeclarations: [...] }]` and appending built-in tools.
+  - **Database Adapter Layer (`lib/db/adapter.ts`, `lib/db/opfs-adapter.ts`)**:
+    - Exported `getDb()` and `registerDb()`.
+    - Added `executeSql(sql, params)` on `IQuarkDatabase` and `OpfsDatabase` communicating directly with `EXECUTE_SQL` in the Web Worker.
+    - Extended `AgentToolsConfig` with `vaultRead`, `vaultWrite`, and `sqliteQueryBuilder`.
+  - **Direct Tool Execution Handlers (`lib/ai/client-runner.ts`)**:
+    - Implemented `executeClientTool(toolName, args, companyId)`:
+      - `fetch_url_as_markdown`: Scrapes URLs via `https://md.dhr.wtf/?url=...` returning `{ markdown }`.
+      - `vault_read`: Reads notes/specs from local SQLite `documents` matching `path` or title with company scoping, returning `{ content, path, title }`.
+      - `vault_write`: Upserts into `documents` table with overwrite or append modes and byte accounting, returning `{ success: true, path, bytesWritten, mode }`.
+      - `sqlite_query_builder`: Enforces read/analytical safety guards rejecting `DROP`, `ALTER`, `TRUNCATE`, and `PRAGMA`, executing queries via `database.executeSql` and returning tabular rows.
+    - Preserved Google's built-in tools (`googleSearch`, `codeExecution`) running directly on Google's infrastructure with citations and collapsible execution blocks.
+  - **System Prompt Tool Instructions & Context Assembly (`lib/crew/agent-memory.ts`, `lib/ai/orchestrator.ts`)**:
+    - Implemented `loadAgentContext(agent)` detailing tool guidelines (brief inspection with `vault_read`, persistent artifact generation with `vault_write`, SQLite schema reference with `sqlite_query_builder`, web markdown scraping, Google search grounding, and code execution).
+    - Injected `loadAgentContext` into composite system instructions in `assembleContext()`.
+  - **Granular Tool Permissions in Crew Config & UI (`lib/crew/default-crew.ts`, `lib/crew/theme-mapper.ts`, `app/crew/page.tsx`)**:
+    - Standardized default toolsets across agents:
+      - Captain/CEO: `vault_read`, `vault_write`, `sqlite_query_builder`, `googleSearch`, `fetch_url_as_markdown`.
+      - Scholar/Research: `vault_read`, `googleSearch`, `fetch_url_as_markdown`.
+      - Shipwright/Systems: `vault_read`, `vault_write`, `sqlite_query_builder`, `codeExecution`.
+      - Sniper/Marketing: `vault_read`, `vault_write`, `googleSearch`, `fetch_url_as_markdown`.
+    - Upgraded Agent Edit Drawer in `app/crew/page.tsx` with all 6 tools, clear labels, and descriptions.
+    - Added 6-tool badges and quick toggle buttons on crew cards and updated Role Instructions inspection modal.
+  - **Execution Engine Wiring (`lib/ai/subagent-engine.ts`, `app/chat/page.tsx`)**:
+    - Passed `companyId` into `generateContentClientDirect` for company-scoped Vault operations.
   - **`isLoading` State Lock Resolution (`lib/settings/settings-context.tsx`)**:
     - Removed `if (mounted)` guard around `setIsLoading(false)` in `load()`'s `finally` block. In React 19 development mode or strict hydration cycles, the effect cleanup unmount flipped `mounted = false` while `hasLoadedRef.current = true` prevented subsequent re-runs, leaving `isLoading` permanently stuck on `true` and blocking `LlmSetupModal` (`!isLoading && !isLlmVerified`).
   - **Theme Selection Gate Fix (`lib/settings/settings-context.tsx`)**:

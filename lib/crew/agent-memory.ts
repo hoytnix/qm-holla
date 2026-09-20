@@ -308,3 +308,77 @@ export async function syncAgentMemoryBankAfterTask(
   }
 }
 
+/**
+ * Loads operational tool instructions and guidelines for an agent.
+ * Outlines rules for vault_read, vault_write, sqlite_query_builder, fetch_url_as_markdown,
+ * googleSearch, and codeExecution.
+ */
+export function loadAgentContext(agent: {
+  id: string;
+  name?: string;
+  tools?: {
+    vaultRead?: boolean;
+    vaultWrite?: boolean;
+    sqliteQueryBuilder?: boolean;
+    fetchUrlMarkdown?: boolean;
+    googleSearch?: boolean;
+    codeExecution?: boolean;
+  } | null;
+}): string {
+  const tools = agent.tools || {};
+  const toolGuidelines: string[] = [];
+
+  if (tools.vaultRead) {
+    toolGuidelines.push(
+      `- 'vault_read': Call 'vault_read' with { "path": "..." } to inspect project briefs, memory banks (e.g. "memory-bank/projectbrief.md"), and existing notes in the local Vault before making assumptions.`
+    );
+  }
+
+  if (tools.vaultWrite) {
+    toolGuidelines.push(
+      `- 'vault_write': Call 'vault_write' with { "path": "...", "content": "...", "mode": "overwrite"|"append" } to commit living specs, plan updates, and research artifacts directly to the Vault rather than printing unpersisted Markdown in chat.`
+    );
+  }
+
+  if (tools.sqliteQueryBuilder) {
+    toolGuidelines.push(
+      `- 'sqlite_query_builder': Execute analytical read SQL queries against local SQLite database tables.
+Schema Reference:
+  * 'company_profiles' (id, name, owners, mission_vision, theme, created_at, updated_at)
+  * 'agents' (id, name, role_title, system_prompt, routing_description, parent_agent_id, model, tools)
+  * 'projects' (id, agent_id, title, description, category, is_private, company_id, created_at, updated_at)
+  * 'kbs' (id, agent_id, name, description, company_id, created_at)
+  * 'documents' (id, project_id, kb_id, agent_id, title, content, metadata, file_path, company_id, created_at, updated_at)
+  * 'tasks' (id, project_id, agent_id, title, status, priority, company_id, completed_at, created_at)
+  * 'messages' (id, thread_id, sender_type, agent_id, content, delegation_trace, grounding_metadata, code_execution, company_id, created_at)
+  * 'settings' (key, value, updated_at)
+Destructive statements (DROP, ALTER, TRUNCATE, PRAGMA) are strictly blocked.`
+    );
+  }
+
+  if (tools.fetchUrlMarkdown) {
+    toolGuidelines.push(
+      `- 'fetch_url_as_markdown': When a user provides a public URL or asks you to read/browse/summarize a webpage, call 'fetch_url_as_markdown' with { "url": "..." } (and optional "llmFilter": true) to ingest clean Markdown.`
+    );
+  }
+
+  if (tools.googleSearch) {
+    toolGuidelines.push(
+      `- 'googleSearch': Leverage real-time Google web search grounding for current facts, research, and live documentation when enabled.`
+    );
+  }
+
+  if (tools.codeExecution) {
+    toolGuidelines.push(
+      `- 'codeExecution': Leverage sandboxed code execution for verified computational, algorithmic, and data-processing tasks when enabled.`
+    );
+  }
+
+  if (toolGuidelines.length === 0) {
+    return '';
+  }
+
+  return `\n--- OPERATIONAL TOOL GUIDELINES & CAPABILITIES ---\nYou have access to the following direct tools:\n${toolGuidelines.join('\n\n')}\n--- END OPERATIONAL TOOL GUIDELINES ---\n`;
+}
+
+
