@@ -1,7 +1,7 @@
 import { db } from '@/lib/db/opfs-adapter';
-import { AgentRecord, SearchResult, DocumentRecord, AgentToolsConfig } from '@/lib/db/adapter';
+import { AgentRecord, SearchResult, DocumentRecord, AgentToolsConfig, executeDbQuery } from '@/lib/db/adapter';
 import { loadAgentMemoryBank, loadAgentContext } from '@/lib/crew/agent-memory';
-import { generateContentClientDirect, getClientGeminiApiKey } from './client-runner';
+import { generateContentClientDirect, getClientGeminiApiKey, runClientSideLlm } from './client-runner';
 
 export interface OrchestrationResult {
   targetAgent: AgentRecord;
@@ -342,3 +342,148 @@ export async function autoOrchestrateFleetDestination(taskPayload: any, customCe
     enforceAnchorCEO: true,
   });
 }
+
+export interface ProjectBootstrapPayload {
+  theme: {
+    name: string;
+    colors: {
+      primary: string;
+      secondary: string;
+      accent: string;
+      background: string;
+      surface: string;
+      text: string;
+    };
+  };
+  memoryBank: Array<{
+    filename: string; // e.g. "projectbrief.md", "productContext.md", "activeContext.md"
+    content: string;
+  }>;
+  initialPlan: {
+    captainLog: string;
+    starterTasks: Array<{
+      title: string;
+      assignedAgentId: string;
+      priority: "low" | "medium" | "high";
+    }>;
+  };
+}
+
+export const BOOTSTRAP_RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    theme: {
+      type: "OBJECT",
+      properties: {
+        name: { type: "STRING" },
+        colors: {
+          type: "OBJECT",
+          properties: {
+            primary: { type: "STRING" },
+            secondary: { type: "STRING" },
+            accent: { type: "STRING" },
+            background: { type: "STRING" },
+            surface: { type: "STRING" },
+            text: { type: "STRING" },
+          },
+          required: ["primary", "secondary", "accent", "background", "surface", "text"],
+        },
+      },
+      required: ["name", "colors"],
+    },
+    memoryBank: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          filename: { type: "STRING" },
+          content: { type: "STRING" },
+        },
+        required: ["filename", "content"],
+      },
+    },
+    initialPlan: {
+      type: "OBJECT",
+      properties: {
+        captainLog: { type: "STRING" },
+        starterTasks: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              title: { type: "STRING" },
+              assignedAgentId: { type: "STRING" },
+              priority: { type: "STRING", enum: ["low", "medium", "high"] },
+            },
+            required: ["title", "assignedAgentId", "priority"],
+          },
+        },
+      },
+      required: ["captainLog", "starterTasks"],
+    },
+  },
+  required: ["theme", "memoryBank", "initialPlan"],
+};
+
+export async function bootstrapWorkspaceInSingleRequest(options: {
+  companyId: string;
+  companyName: string;
+  projectDescription: string;
+  apiKey: string;
+  model: string;
+}): Promise<ProjectBootstrapPayload> {
+  const prompt = `Initialize complete project workspace for "${options.companyName}".
+Project Overview: ${options.projectDescription}
+
+Produce:
+1. Complete cohesive visual theme.
+2. Complete Memory Bank core files (projectbrief.md, productContext.md, systemPatterns.md, techContext.md, activeContext.md).
+3. Initial Captain's Log and initial squad task breakdown.`;
+
+  // 1 Single HTTP call with guaranteed JSON format
+  const rawJson = await runClientSideLlm({
+    provider: "gemini",
+    apiKey: options.apiKey,
+    model: options.model,
+    systemInstruction: "You are the Ship Architect. You generate complete application foundation states in valid structured JSON.",
+    prompt,
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: BOOTSTRAP_RESPONSE_SCHEMA,
+    },
+  });
+
+  const bootstrapData: ProjectBootstrapPayload = JSON.parse(rawJson);
+
+  // Commit all artifacts into SQLite in ONE single transaction
+  // This prevents 15 IndexedDB persist dumps and replaces them with 1 persist
+  await executeDbQuery(
+    `BEGIN TRANSACTION;
+     -- 1. Insert Theme
+     INSERT OR REPLACE INTO company_themes (company_id, theme_json, updated_at)
+     VALUES (?, ?, datetime('now'));
+
+     -- 2. Insert Memory Bank Files
+     ${bootstrapData.memoryBank.map(() => `
+       INSERT OR REPLACE INTO vault_files (company_id, file_path, content, updated_at)
+       VALUES (?, ?, ?, datetime('now'));
+     `).join("\n")}
+
+     -- 3. Insert Captain's Log & Tasks
+     INSERT INTO captains_logs (company_id, entry, created_at)
+     VALUES (?, ?, datetime('now'));
+     COMMIT;`,
+    [
+      options.companyId,
+      JSON.stringify(bootstrapData.theme),
+      ...bootstrapData.memoryBank.flatMap((f) => [options.companyId, f.filename, f.content]),
+      options.companyId,
+      bootstrapData.initialPlan.captainLog,
+    ]
+  );
+
+  return bootstrapData;
+}
+
+export const bootstrapProjectWorkspace = bootstrapWorkspaceInSingleRequest;
+

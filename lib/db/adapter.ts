@@ -179,3 +179,16 @@ export function getDb(): IQuarkDatabase {
   }
   return activeDbInstance!;
 }
+
+/**
+ * Executes a raw SQL query against the active database adapter.
+ * Supports parameterized queries and multi-statement transactions.
+ */
+export async function executeDbQuery<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+  const database = getDb();
+  await database.init();
+  if (database.executeSql) {
+    return database.executeSql<T>(sql, params);
+  }
+  return [];
+}

@@ -42,6 +42,41 @@ export interface ClientRunnerResult {
   codeExecutionBlocks: CodeExecutionBlock[];
 }
 
+export interface RunClientSideLlmOptions {
+  provider?: string;
+  apiKey: string;
+  model?: string;
+  systemInstruction?: string;
+  prompt: string;
+  generationConfig?: {
+    responseMimeType?: string;
+    responseSchema?: any;
+    temperature?: number;
+    maxOutputTokens?: number;
+  };
+  signal?: AbortSignal;
+}
+
+/**
+ * Runs a single-shot client-side LLM completion returning structured string output.
+ * Delegates to generateContentClientDirect with support for responseSchema and JSON mime types.
+ */
+export async function runClientSideLlm(options: RunClientSideLlmOptions): Promise<string> {
+  const result = await generateContentClientDirect({
+    apiKey: options.apiKey,
+    model: options.model || 'gemini-2.5-flash',
+    prompt: options.prompt,
+    systemInstruction: options.systemInstruction,
+    responseSchema: options.generationConfig?.responseSchema,
+    responseMimeType: options.generationConfig?.responseMimeType,
+    temperature: options.generationConfig?.temperature,
+    maxTokens: options.generationConfig?.maxOutputTokens,
+    signal: options.signal,
+  });
+
+  return result.text;
+}
+
 /**
  * Extracts clean user-facing error message and status code from Gemini responses or exceptions.
  */
@@ -516,6 +551,18 @@ export async function executeClientTool(
           rowCount: rows.length,
           rows,
         };
+      }
+
+      case 'batch_read_files': {
+        const paths = Array.isArray(args?.paths) ? args.paths : [];
+        const { handleBatchReadFiles } = await import('./subagent-engine');
+        return await handleBatchReadFiles(companyId || '', paths);
+      }
+
+      case 'batch_write_files': {
+        const files = Array.isArray(args?.files) ? args.files : [];
+        const { handleBatchWriteFiles } = await import('./subagent-engine');
+        return await handleBatchWriteFiles(companyId || '', files);
       }
 
       default: {

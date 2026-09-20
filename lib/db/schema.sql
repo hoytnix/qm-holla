@@ -118,3 +118,27 @@ CREATE TRIGGER IF NOT EXISTS documents_au AFTER UPDATE ON documents BEGIN
   INSERT INTO documents_fts(documents_fts, rowid, title, content) VALUES('delete', old.rowid, old.title, old.content);
   INSERT INTO documents_fts(rowid, title, content) VALUES (new.rowid, new.title, new.content);
 END;
+
+-- Vault Files (Flat File Store for Batched Tools & Single-Shot Onboarding)
+CREATE TABLE IF NOT EXISTS vault_files (
+  company_id TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  content TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (company_id, file_path)
+);
+
+-- Company Themes (Persisted Cohesive Themes from Bootstrap)
+CREATE TABLE IF NOT EXISTS company_themes (
+  company_id TEXT PRIMARY KEY,
+  theme_json TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Captain's Logs (Strategic Onboarding & Fleet Directives)
+CREATE TABLE IF NOT EXISTS captains_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  company_id TEXT NOT NULL,
+  entry TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

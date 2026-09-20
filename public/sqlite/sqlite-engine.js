@@ -453,6 +453,27 @@ function runBootstrapMigrations(database) {
       company_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS vault_files (
+      company_id TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      content TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (company_id, file_path)
+    );
+
+    CREATE TABLE IF NOT EXISTS company_themes (
+      company_id TEXT PRIMARY KEY,
+      theme_json TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS captains_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      company_id TEXT NOT NULL,
+      entry TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   try {
@@ -624,13 +645,40 @@ self.onmessage = async (e) => {
       }
 
       case 'EXECUTE_SQL': {
-        const isSelect = payload.sql.trim().toUpperCase().startsWith('SELECT');
+        const trimmed = (payload.sql || '').trim();
+        const isSelect = trimmed.toUpperCase().startsWith('SELECT');
         if (isSelect) {
-          const res = db.exec(payload.sql, payload.bind || []);
-          const rows = res.length > 0 ? res[0].values : [];
+          const rows = execToObjects(db, payload.sql, payload.bind || []);
           self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
         } else {
-          db.run(payload.sql, payload.bind || []);
+          const rawStatements = trimmed
+            .split(';')
+            .map((s) => s.replace(/--.*$/gm, '').trim())
+            .filter((s) => s.length > 0);
+
+          if (rawStatements.length > 1) {
+            let paramIndex = 0;
+            const params = payload.bind || [];
+            db.run('BEGIN TRANSACTION');
+            try {
+              for (const stmt of rawStatements) {
+                const upper = stmt.toUpperCase();
+                if (upper === 'BEGIN TRANSACTION' || upper === 'BEGIN' || upper === 'COMMIT') {
+                  continue;
+                }
+                const count = (stmt.match(/\?/g) || []).length;
+                const stmtParams = params.slice(paramIndex, paramIndex + count);
+                paramIndex += count;
+                db.run(stmt, stmtParams);
+              }
+              db.run('COMMIT');
+            } catch (txErr) {
+              try { db.run('ROLLBACK'); } catch (_) {}
+              throw txErr;
+            }
+          } else if (rawStatements.length === 1) {
+            db.run(rawStatements[0], payload.bind || []);
+          }
           persistChanges();
           self.postMessage({ id, type: 'SUCCESS', success: true, result: [] });
         }

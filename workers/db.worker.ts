@@ -100,6 +100,27 @@ CREATE TRIGGER IF NOT EXISTS documents_au AFTER UPDATE ON documents BEGIN
   INSERT INTO documents_fts(documents_fts, rowid, title, content) VALUES('delete', old.rowid, old.title, old.content);
   INSERT INTO documents_fts(rowid, title, content) VALUES (new.rowid, new.title, new.content);
 END;
+
+CREATE TABLE IF NOT EXISTS vault_files (
+  company_id TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  content TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (company_id, file_path)
+);
+
+CREATE TABLE IF NOT EXISTS company_themes (
+  company_id TEXT PRIMARY KEY,
+  theme_json TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS captains_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  company_id TEXT NOT NULL,
+  entry TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 const SEED_AGENTS = [
@@ -637,12 +658,56 @@ self.onmessage = async (e: MessageEvent) => {
       }
 
       case 'EXECUTE_SQL': {
-        const rows = db.exec({
-          sql: payload.sql,
-          bind: payload.bind || [],
-          returnValue: 'resultRows',
-        });
-        self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
+        const trimmed = (payload.sql || '').trim();
+        const isSelect = trimmed.toUpperCase().startsWith('SELECT');
+        if (isSelect) {
+          const rows: any[] = [];
+          db.exec({
+            sql: payload.sql,
+            bind: payload.bind || [],
+            rowMode: 'object',
+            callback: (row: any) => {
+              rows.push(row);
+            },
+          });
+          self.postMessage({ id, type: 'SUCCESS', success: true, data: rows, result: rows });
+        } else {
+          const rawStatements = trimmed
+            .split(';')
+            .map((s: string) => s.replace(/--.*$/gm, '').trim())
+            .filter((s: string) => s.length > 0);
+
+          if (rawStatements.length > 1) {
+            let paramIndex = 0;
+            const params = payload.bind || [];
+            db.exec('BEGIN TRANSACTION');
+            try {
+              for (const stmt of rawStatements) {
+                const upper = stmt.toUpperCase();
+                if (upper === 'BEGIN TRANSACTION' || upper === 'BEGIN' || upper === 'COMMIT') {
+                  continue;
+                }
+                const count = (stmt.match(/\?/g) || []).length;
+                const stmtParams = params.slice(paramIndex, paramIndex + count);
+                paramIndex += count;
+                db.exec({
+                  sql: stmt,
+                  bind: stmtParams,
+                });
+              }
+              db.exec('COMMIT');
+            } catch (txErr) {
+              try { db.exec('ROLLBACK'); } catch (_) {}
+              throw txErr;
+            }
+          } else if (rawStatements.length === 1) {
+            db.exec({
+              sql: rawStatements[0],
+              bind: payload.bind || [],
+            });
+          }
+          self.postMessage({ id, type: 'SUCCESS', success: true, result: [] });
+        }
         break;
       }
 

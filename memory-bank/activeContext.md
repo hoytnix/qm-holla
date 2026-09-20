@@ -1,6 +1,20 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
+- Implemented **Single-Shot Onboarding Runner & Batching Tools Layer**:
+  - **Single-Shot Structured Bootstrap (`lib/ai/orchestrator.ts`)**:
+    - Defined `ProjectBootstrapPayload` interface and `BOOTSTRAP_RESPONSE_SCHEMA` generating visual theme colors, core Memory Bank files (`projectbrief.md`, `productContext.md`, `systemPatterns.md`, `techContext.md`, `activeContext.md`), and initial Captain's Log with starter tasks in a single LLM request.
+    - Created `bootstrapWorkspaceInSingleRequest()` (and `bootstrapProjectWorkspace`) invoking `runClientSideLlm()` with Gemini JSON mode.
+    - Atomic database commit: persists theme into `company_themes`, all Memory Bank files into `vault_files`, and Captain's Log into `captains_logs` in a single `BEGIN TRANSACTION ... COMMIT` block, reducing IndexedDB persistence events by ~90%.
+  - **Batching Tool Layer (`lib/ai/tools.ts`, `lib/ai/subagent-engine.ts`, `lib/ai/client-runner.ts`)**:
+    - Defined `BatchReadFilesInput`, `BatchWriteFilesInput`, and `BATCH_TOOLS` (`batch_read_files`, `batch_write_files`).
+    - Implemented `handleBatchReadFiles(companyId, paths)` querying `vault_files` in a single SQL round-trip.
+    - Implemented `handleBatchWriteFiles(companyId, files)` committing multiple file updates in a single atomic transaction.
+    - Registered batch tools in `ALL_TOOLS_REGISTRY`, `AgentToolsConfig`, and `executeClientTool` dispatch loop.
+  - **Database Migration & Transaction Execution Engine (`lib/db/adapter.ts`, `lib/db/schema.sql`, `public/sqlite/sqlite-engine.js`, `workers/db.worker.ts`)**:
+    - Added `executeDbQuery<T = any>(sql, params)` to `IQuarkDatabase` adapter.
+    - Added `vault_files`, `company_themes`, and `captains_logs` schemas across `schema.sql`, `sqlite-engine.js`, and `db.worker.ts`.
+    - Enhanced worker `EXECUTE_SQL` handler to return row objects for SELECT queries and execute multi-statement parameterized transactions safely with atomic commit.
 - Implemented **Direct Client-Side Tool System & Multi-Turn Function Calling**:
   - **Tool Schemas & Registry (`lib/ai/tools.ts`)**:
     - Defined strict JSON schemas for `vault_read` (`path`), `vault_write` (`path`, `content`, `mode: "overwrite" | "append"`), and `sqlite_query_builder` (`query`, optional `params`).

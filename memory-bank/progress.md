@@ -3,6 +3,12 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Single-Shot Onboarding Runner & Batching Tools Layer:
+  - Consolidates workspace onboarding into exactly 1 LLM request with structured JSON schema (`BOOTSTRAP_RESPONSE_SCHEMA` & `ProjectBootstrapPayload`) producing theme colors, core memory bank files, and initial Captain's Log / starter tasks.
+  - Commits onboarding artifacts in a single atomic SQLite transaction (`BEGIN TRANSACTION ... COMMIT`) via `executeDbQuery` across `company_themes`, `vault_files`, and `captains_logs`, eliminating redundant IndexedDB file sync operations.
+  - Implemented batch file operations (`batch_read_files`, `batch_write_files`, `BatchReadFilesInput`, `BatchWriteFilesInput`, `BATCH_TOOLS`) in `lib/ai/tools.ts` and tool handlers (`handleBatchReadFiles`, `handleBatchWriteFiles`) in `lib/ai/subagent-engine.ts` with multi-statement transaction persistence.
+  - Added `runClientSideLlm` in `lib/ai/client-runner.ts` and wired tool handlers into `executeClientTool`.
+  - Added table migrations for `vault_files`, `company_themes`, and `captains_logs` in `schema.sql`, `public/sqlite/sqlite-engine.js`, and `workers/db.worker.ts`, with object row mapping and transaction splitting.
 - [x] Direct Client-Side Tool Declarations, Execution Handlers & Multi-Turn Function Calling:
   - Defined strict JSON function declaration schemas in [`lib/ai/tools.ts`](file:///home/oloty/Dev/qm-holla/lib/ai/tools.ts) for `vault_read` (`path`), `vault_write` (`path`, `content`, `mode`), and `sqlite_query_builder` (`query`, optional `params`).
   - Created `ALL_TOOLS_REGISTRY` mapping custom functions (`fetch_url_as_markdown`, `vault_read`, `vault_write`, `sqlite_query_builder`) and Gemini built-ins (`googleSearch`, `codeExecution`).

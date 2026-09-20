@@ -12,7 +12,60 @@ export interface AgentToolsConfig {
   vaultRead?: boolean;
   vaultWrite?: boolean;
   sqliteQueryBuilder?: boolean;
+  batchReadFiles?: boolean;
+  batchWriteFiles?: boolean;
 }
+
+export interface BatchReadFilesInput {
+  paths: string[];
+}
+
+export interface BatchWriteFilesInput {
+  files: Array<{
+    path: string;
+    content: string;
+  }>;
+}
+
+export const BATCH_TOOLS = [
+  {
+    name: "batch_read_files",
+    description: "Read the contents of multiple files in a single turn without separate requests.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        paths: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "Array of relative file paths to read (e.g. ['src/App.tsx', 'package.json'])",
+        },
+      },
+      required: ["paths"],
+    },
+  },
+  {
+    name: "batch_write_files",
+    description: "Write or update multiple files simultaneously in one atomic turn.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        files: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              path: { type: "STRING" },
+              content: { type: "STRING" },
+            },
+            required: ["path", "content"],
+          },
+          description: "Array of file paths and their contents to commit.",
+        },
+      },
+      required: ["files"],
+    },
+  },
+];
 
 export const vaultReadDeclaration = {
   name: 'vault_read',
@@ -79,7 +132,9 @@ export type CustomToolId =
   | 'fetch_url_as_markdown'
   | 'vault_read'
   | 'vault_write'
-  | 'sqlite_query_builder';
+  | 'sqlite_query_builder'
+  | 'batch_read_files'
+  | 'batch_write_files';
 
 export type BuiltInToolId = 'googleSearch' | 'codeExecution';
 
@@ -108,6 +163,14 @@ export const ALL_TOOLS_REGISTRY: Record<
   sqlite_query_builder: {
     type: 'custom',
     declaration: sqliteQueryBuilderDeclaration,
+  },
+  batch_read_files: {
+    type: 'custom',
+    declaration: BATCH_TOOLS[0],
+  },
+  batch_write_files: {
+    type: 'custom',
+    declaration: BATCH_TOOLS[1],
   },
   googleSearch: {
     type: 'builtin',
@@ -182,6 +245,8 @@ export function buildGeminiTools(
   if (toolsConfig?.vaultRead) toolIds.push('vault_read');
   if (toolsConfig?.vaultWrite) toolIds.push('vault_write');
   if (toolsConfig?.sqliteQueryBuilder) toolIds.push('sqlite_query_builder');
+  if (toolsConfig?.batchReadFiles) toolIds.push('batch_read_files');
+  if (toolsConfig?.batchWriteFiles) toolIds.push('batch_write_files');
 
   const tools = filterToolsForAgent(toolIds);
 

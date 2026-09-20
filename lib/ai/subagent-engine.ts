@@ -1,5 +1,5 @@
 import { db } from '@/lib/db/opfs-adapter';
-import { AgentRecord, TaskRecord, DocumentRecord } from '@/lib/db/adapter';
+import { AgentRecord, TaskRecord, DocumentRecord, executeDbQuery } from '@/lib/db/adapter';
 import { LLMConfig } from '@/lib/settings/settings-context';
 import { assembleContext } from '@/lib/ai/orchestrator';
 import { syncAgentMemoryBankAfterTask } from '@/lib/crew/agent-memory';
@@ -382,3 +382,35 @@ This document synthesizes the completion of task **"${task.title}"** assigned to
 }
 
 export const subagentEngine = new SubagentExecutionEngine();
+
+export async function handleBatchReadFiles(companyId: string, paths: string[]) {
+  if (!paths.length) return [];
+
+  const placeholders = paths.map(() => "?").join(",");
+  const rows = await executeDbQuery<{ file_path: string; content: string }>(
+    `SELECT file_path, content FROM vault_files 
+     WHERE company_id = ? AND file_path IN (${placeholders})`,
+    [companyId, ...paths]
+  );
+
+  return rows; // Returns [{ file_path: '...', content: '...' }, ...]
+}
+
+export async function handleBatchWriteFiles(
+  companyId: string,
+  files: Array<{ path: string; content: string }>
+) {
+  if (!files.length) return { written: 0 };
+
+  // Single transaction write
+  const statements = files.map(() => 
+    `INSERT OR REPLACE INTO vault_files (company_id, file_path, content, updated_at)
+     VALUES (?, ?, ?, datetime('now'));`
+  ).join("\n");
+
+  const params = files.flatMap((f) => [companyId, f.path, f.content]);
+
+  await executeDbQuery(`BEGIN TRANSACTION;\n${statements}\nCOMMIT;`, params);
+
+  return { written: files.length };
+}
