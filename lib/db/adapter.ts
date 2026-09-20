@@ -2,8 +2,12 @@ export interface AgentToolsConfig {
   googleSearch?: boolean;
   codeExecution?: boolean;
   fetchUrlMarkdown?: boolean;
+  /** @deprecated Use batchReadFiles instead */
   vaultRead?: boolean;
+  /** @deprecated Use batchWriteFiles instead */
   vaultWrite?: boolean;
+  batchReadFiles?: boolean;
+  batchWriteFiles?: boolean;
   sqliteQueryBuilder?: boolean;
 }
 

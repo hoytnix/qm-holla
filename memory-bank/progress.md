@@ -3,6 +3,12 @@
 ## Current Progress Overview
 
 ### Completed & Functional
+- [x] Single-File Tool Deprecation & Batch File Tools Migration:
+  - Sunset single-file tools (`vault_read`, `vault_write`) by marking `vaultRead` and `vaultWrite` as `@deprecated` in `AgentToolsConfig` in favor of `batchReadFiles` and `batchWriteFiles`.
+  - In `buildGeminiTools()`, omitted single-file tool declarations from the model's active declarations and routed configurations to `batch_read_files` and `batch_write_files`, eliminating multi-turn back-and-forth loops and saving RPM rate limit consumption.
+  - Replaced single-file tool permissions with batch tools across all crew defaults in `DEFAULT_STRAW_HAT_AGENTS` and `DEFAULT_ROLE_SLOT_TOOLS`.
+  - Updated `loadAgentContext()` system prompts in `lib/crew/agent-memory.ts` instructing agents to use `batch_read_files` and `batch_write_files` for multi-file workspace operations.
+  - Updated `app/crew/page.tsx` UI: "Batch Read" and "Batch Write" form checkboxes in Agent Edit/Create modal, quick-toggle buttons (`B-Read`, `B-Write`) on crew cards, tool status badges, and inspection modal status display.
 - [x] Single-Shot Onboarding Runner & Batching Tools Layer:
   - Consolidates workspace onboarding into exactly 1 LLM request with structured JSON schema (`BOOTSTRAP_RESPONSE_SCHEMA` & `ProjectBootstrapPayload`) producing theme colors, core memory bank files, and initial Captain's Log / starter tasks.
   - Commits onboarding artifacts in a single atomic SQLite transaction (`BEGIN TRANSACTION ... COMMIT`) via `executeDbQuery` across `company_themes`, `vault_files`, and `captains_logs`, eliminating redundant IndexedDB file sync operations.

@@ -9,11 +9,13 @@ export interface AgentToolsConfig {
   googleSearch?: boolean;
   codeExecution?: boolean;
   fetchUrlMarkdown?: boolean;
+  /** @deprecated Use batchReadFiles instead */
   vaultRead?: boolean;
+  /** @deprecated Use batchWriteFiles instead */
   vaultWrite?: boolean;
-  sqliteQueryBuilder?: boolean;
   batchReadFiles?: boolean;
   batchWriteFiles?: boolean;
+  sqliteQueryBuilder?: boolean;
 }
 
 export interface BatchReadFilesInput {
@@ -242,11 +244,9 @@ export function buildGeminiTools(
   if (toolsConfig?.googleSearch) toolIds.push('googleSearch');
   if (toolsConfig?.codeExecution) toolIds.push('codeExecution');
   if (toolsConfig?.fetchUrlMarkdown) toolIds.push('fetch_url_as_markdown');
-  if (toolsConfig?.vaultRead) toolIds.push('vault_read');
-  if (toolsConfig?.vaultWrite) toolIds.push('vault_write');
+  if (toolsConfig?.batchReadFiles || toolsConfig?.vaultRead) toolIds.push('batch_read_files');
+  if (toolsConfig?.batchWriteFiles || toolsConfig?.vaultWrite) toolIds.push('batch_write_files');
   if (toolsConfig?.sqliteQueryBuilder) toolIds.push('sqlite_query_builder');
-  if (toolsConfig?.batchReadFiles) toolIds.push('batch_read_files');
-  if (toolsConfig?.batchWriteFiles) toolIds.push('batch_write_files');
 
   const tools = filterToolsForAgent(toolIds);
 

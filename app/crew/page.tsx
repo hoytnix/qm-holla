@@ -58,8 +58,8 @@ export default function CrewPage() {
     googleSearch: false,
     codeExecution: false,
     fetchUrlMarkdown: false,
-    vaultRead: false,
-    vaultWrite: false,
+    batchReadFiles: false,
+    batchWriteFiles: false,
     sqliteQueryBuilder: false,
   });
 
@@ -102,8 +102,8 @@ export default function CrewPage() {
       googleSearch: false,
       codeExecution: false,
       fetchUrlMarkdown: false,
-      vaultRead: false,
-      vaultWrite: false,
+      batchReadFiles: false,
+      batchWriteFiles: false,
       sqliteQueryBuilder: false,
     });
   };
@@ -120,8 +120,8 @@ export default function CrewPage() {
       googleSearch: false,
       codeExecution: false,
       fetchUrlMarkdown: false,
-      vaultRead: false,
-      vaultWrite: false,
+      batchReadFiles: false,
+      batchWriteFiles: false,
       sqliteQueryBuilder: false,
     });
   };
@@ -293,56 +293,56 @@ export default function CrewPage() {
                   <span>Enabled Tools & Autonomous Capabilities</span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* vault_read */}
+                  {/* batch_read_files */}
                   <label
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                      formTools.vaultRead
+                      formTools.batchReadFiles || formTools.vaultRead
                         ? 'border-blue-500/50 bg-blue-950/30'
                         : 'border-white/10 bg-slate-900/60 hover:border-white/20'
                     }`}
                   >
                     <input
                       type="checkbox"
-                      checked={!!formTools.vaultRead}
+                      checked={!!(formTools.batchReadFiles || formTools.vaultRead)}
                       onChange={(e) =>
-                        setFormTools((prev) => ({ ...prev, vaultRead: e.target.checked }))
+                        setFormTools((prev) => ({ ...prev, batchReadFiles: e.target.checked, vaultRead: undefined }))
                       }
                       className="mt-0.5 rounded border-white/20 bg-slate-900 text-blue-500 focus:ring-blue-500/30"
                     />
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
                         <FileText width={13} height={13} className="text-blue-400" />
-                        <span>Vault Read (vault_read)</span>
+                        <span>Batch Read (batch_read_files)</span>
                       </div>
                       <p className="text-[11px] text-slate-400 leading-normal">
-                        Reads markdown notes, project briefs, and memory banks from the local Vault by relative path.
+                        Reads multiple markdown notes, briefs, and memory bank files simultaneously in a single turn without separate requests.
                       </p>
                     </div>
                   </label>
 
-                  {/* vault_write */}
+                  {/* batch_write_files */}
                   <label
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                      formTools.vaultWrite
+                      formTools.batchWriteFiles || formTools.vaultWrite
                         ? 'border-amber-500/50 bg-amber-950/30'
                         : 'border-white/10 bg-slate-900/60 hover:border-white/20'
                     }`}
                   >
                     <input
                       type="checkbox"
-                      checked={!!formTools.vaultWrite}
+                      checked={!!(formTools.batchWriteFiles || formTools.vaultWrite)}
                       onChange={(e) =>
-                        setFormTools((prev) => ({ ...prev, vaultWrite: e.target.checked }))
+                        setFormTools((prev) => ({ ...prev, batchWriteFiles: e.target.checked, vaultWrite: undefined }))
                       }
                       className="mt-0.5 rounded border-white/20 bg-slate-900 text-amber-500 focus:ring-amber-500/30"
                     />
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
                         <Edit3 width={13} height={13} className="text-amber-400" />
-                        <span>Vault Write (vault_write)</span>
+                        <span>Batch Write (batch_write_files)</span>
                       </div>
                       <p className="text-[11px] text-slate-400 leading-normal">
-                        Commits living specs, plan updates, and artifacts directly to the Vault (overwrite or append).
+                        Writes or updates multiple living specs, plans, and artifacts simultaneously in one atomic turn.
                       </p>
                     </div>
                   </label>
@@ -571,17 +571,17 @@ export default function CrewPage() {
                           </span>
                         )}
 
-                        {agent.tools?.vaultRead && (
+                        {(agent.tools?.batchReadFiles || agent.tools?.vaultRead) && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-[10px] font-mono text-blue-300">
                             <FileText width={10} height={10} />
-                            <span>V-Read</span>
+                            <span>Batch Read</span>
                           </span>
                         )}
 
-                        {agent.tools?.vaultWrite && (
+                        {(agent.tools?.batchWriteFiles || agent.tools?.vaultWrite) && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[10px] font-mono text-amber-300">
                             <Edit3 width={10} height={10} />
-                            <span>V-Write</span>
+                            <span>Batch Write</span>
                           </span>
                         )}
 
@@ -650,8 +650,8 @@ export default function CrewPage() {
                           </span>
                           <span className="text-[9px] text-slate-500 font-mono">
                             {`${
-                              (agent.tools?.vaultRead ? 1 : 0) +
-                              (agent.tools?.vaultWrite ? 1 : 0) +
+                              ((agent.tools?.batchReadFiles || agent.tools?.vaultRead) ? 1 : 0) +
+                              ((agent.tools?.batchWriteFiles || agent.tools?.vaultWrite) ? 1 : 0) +
                               (agent.tools?.sqliteQueryBuilder ? 1 : 0) +
                               (agent.tools?.fetchUrlMarkdown ? 1 : 0) +
                               (agent.tools?.googleSearch ? 1 : 0) +
@@ -660,55 +660,55 @@ export default function CrewPage() {
                           </span>
                         </div>
                         <div className="grid grid-cols-3 gap-1.5">
-                          {/* vaultRead */}
+                          {/* batchReadFiles */}
                           <button
                             type="button"
-                            onClick={() => handleAgentToolToggle(agent, 'vaultRead')}
+                            onClick={() => handleAgentToolToggle(agent, 'batchReadFiles')}
                             className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-[10px] font-mono transition-all ${
-                              agent.tools?.vaultRead
+                              agent.tools?.batchReadFiles || agent.tools?.vaultRead
                                 ? 'bg-blue-500/15 border-blue-500/40 text-blue-300 shadow-sm'
                                 : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
                             }`}
-                            title="Toggle Vault Read (vault_read) for this agent"
+                            title="Toggle Batch Read (batch_read_files) for this agent"
                           >
                             <span className="flex items-center gap-1">
-                              <FileText width={11} height={11} className={agent.tools?.vaultRead ? 'text-blue-400' : 'text-slate-500'} />
-                              <span>V-Read</span>
+                              <FileText width={11} height={11} className={(agent.tools?.batchReadFiles || agent.tools?.vaultRead) ? 'text-blue-400' : 'text-slate-500'} />
+                              <span>B-Read</span>
                             </span>
                             <span
                               className={`text-[8px] mt-0.5 px-1 py-0.2 rounded font-bold uppercase tracking-wider ${
-                                agent.tools?.vaultRead
+                                agent.tools?.batchReadFiles || agent.tools?.vaultRead
                                   ? 'bg-blue-500/20 text-blue-300'
                                   : 'bg-white/5 text-slate-500'
                               }`}
                             >
-                              {agent.tools?.vaultRead ? 'ON' : 'OFF'}
+                              {(agent.tools?.batchReadFiles || agent.tools?.vaultRead) ? 'ON' : 'OFF'}
                             </span>
                           </button>
 
-                          {/* vaultWrite */}
+                          {/* batchWriteFiles */}
                           <button
                             type="button"
-                            onClick={() => handleAgentToolToggle(agent, 'vaultWrite')}
+                            onClick={() => handleAgentToolToggle(agent, 'batchWriteFiles')}
                             className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-[10px] font-mono transition-all ${
-                              agent.tools?.vaultWrite
+                              agent.tools?.batchWriteFiles || agent.tools?.vaultWrite
                                 ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-sm'
                                 : 'bg-slate-950/60 border-white/10 text-slate-400 hover:border-white/20'
                             }`}
-                            title="Toggle Vault Write (vault_write) for this agent"
+                            title="Toggle Batch Write (batch_write_files) for this agent"
                           >
                             <span className="flex items-center gap-1">
-                              <Edit3 width={11} height={11} className={agent.tools?.vaultWrite ? 'text-amber-400' : 'text-slate-500'} />
-                              <span>V-Write</span>
+                              <Edit3 width={11} height={11} className={(agent.tools?.batchWriteFiles || agent.tools?.vaultWrite) ? 'text-amber-400' : 'text-slate-500'} />
+                              <span>B-Write</span>
                             </span>
                             <span
                               className={`text-[8px] mt-0.5 px-1 py-0.2 rounded font-bold uppercase tracking-wider ${
-                                agent.tools?.vaultWrite
+                                agent.tools?.batchWriteFiles || agent.tools?.vaultWrite
                                   ? 'bg-amber-500/20 text-amber-300'
                                   : 'bg-white/5 text-slate-500'
                               }`}
                             >
-                              {agent.tools?.vaultWrite ? 'ON' : 'OFF'}
+                              {(agent.tools?.batchWriteFiles || agent.tools?.vaultWrite) ? 'ON' : 'OFF'}
                             </span>
                           </button>
 
@@ -955,23 +955,23 @@ export default function CrewPage() {
                       <span className="text-slate-300 font-medium">Tools & Autonomous Capabilities:</span>
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono ${
-                          inspectingInstructionsAgent.tools?.vaultRead
+                          inspectingInstructionsAgent.tools?.batchReadFiles || inspectingInstructionsAgent.tools?.vaultRead
                             ? 'bg-blue-500/15 border-blue-500/40 text-blue-300'
                             : 'bg-white/5 border-white/10 text-slate-500'
                         }`}
                       >
                         <FileText width={10} height={10} />
-                        <span>Vault Read: {inspectingInstructionsAgent.tools?.vaultRead ? 'Enabled' : 'Disabled'}</span>
+                        <span>Batch Read: {(inspectingInstructionsAgent.tools?.batchReadFiles || inspectingInstructionsAgent.tools?.vaultRead) ? 'Enabled' : 'Disabled'}</span>
                       </span>
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono ${
-                          inspectingInstructionsAgent.tools?.vaultWrite
+                          inspectingInstructionsAgent.tools?.batchWriteFiles || inspectingInstructionsAgent.tools?.vaultWrite
                             ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
                             : 'bg-white/5 border-white/10 text-slate-500'
                         }`}
                       >
                         <Edit3 width={10} height={10} />
-                        <span>Vault Write: {inspectingInstructionsAgent.tools?.vaultWrite ? 'Enabled' : 'Disabled'}</span>
+                        <span>Batch Write: {(inspectingInstructionsAgent.tools?.batchWriteFiles || inspectingInstructionsAgent.tools?.vaultWrite) ? 'Enabled' : 'Disabled'}</span>
                       </span>
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono ${

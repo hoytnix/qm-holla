@@ -1,6 +1,18 @@
 # Active Context: Quarkmeme
 
 ## Current Focus & Status
+- Implemented **Single-File Tool Deprecation & Batch File Tools Migration**:
+  - **Tool Sunset & Declarations Routing (`lib/ai/tools.ts`, `lib/db/adapter.ts`)**:
+    - Marked `vaultRead` and `vaultWrite` as `@deprecated` in `AgentToolsConfig` in favor of `batchReadFiles` and `batchWriteFiles`.
+    - In `buildGeminiTools()`, omitted single-file tool declarations (`vault_read`, `vault_write`) from the model's active declarations and routed configurations to `batch_read_files` and `batch_write_files` (`toolsConfig?.batchReadFiles || toolsConfig?.vaultRead`, `toolsConfig?.batchWriteFiles || toolsConfig?.vaultWrite`), preventing models from falling into iterative single-file loops and exhausting RPM rate limits.
+  - **Crew Configurations & System Prompts Updated (`lib/crew/default-crew.ts`, `lib/crew/theme-mapper.ts`, `lib/crew/agent-memory.ts`)**:
+    - Configured `batchReadFiles: true` and `batchWriteFiles: true` across all Straw Hat specialists in `DEFAULT_STRAW_HAT_AGENTS` and `DEFAULT_ROLE_SLOT_TOOLS`.
+    - Updated `loadAgentContext(agent)` prompt guidelines directing agents to ALWAYS read multiple workspace documents simultaneously via `batch_read_files` and commit updates in atomic batches via `batch_write_files`.
+  - **Crew Page UI Controls & Permission Toggles (`app/crew/page.tsx`)**:
+    - Updated Specialist Edit/Create modal with "Batch Read (`batch_read_files`)" and "Batch Write (`batch_write_files`)" checkboxes with explicit descriptions.
+    - Updated crew card badges with "Batch Read" and "Batch Write" tags.
+    - Upgraded quick-toggle button grid with `B-Read` and `B-Write` actions calling `handleAgentToolToggle(agent, 'batchReadFiles' | 'batchWriteFiles')`.
+    - Updated Role Instructions inspection modal to display live status for Batch Read and Batch Write.
 - Implemented **Single-Shot Onboarding Runner & Batching Tools Layer**:
   - **Single-Shot Structured Bootstrap (`lib/ai/orchestrator.ts`)**:
     - Defined `ProjectBootstrapPayload` interface and `BOOTSTRAP_RESPONSE_SCHEMA` generating visual theme colors, core Memory Bank files (`projectbrief.md`, `productContext.md`, `systemPatterns.md`, `techContext.md`, `activeContext.md`), and initial Captain's Log with starter tasks in a single LLM request.

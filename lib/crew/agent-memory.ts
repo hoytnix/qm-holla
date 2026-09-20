@@ -317,6 +317,8 @@ export function loadAgentContext(agent: {
   id: string;
   name?: string;
   tools?: {
+    batchReadFiles?: boolean;
+    batchWriteFiles?: boolean;
     vaultRead?: boolean;
     vaultWrite?: boolean;
     sqliteQueryBuilder?: boolean;
@@ -328,15 +330,15 @@ export function loadAgentContext(agent: {
   const tools = agent.tools || {};
   const toolGuidelines: string[] = [];
 
-  if (tools.vaultRead) {
+  if (tools.batchReadFiles || tools.vaultRead) {
     toolGuidelines.push(
-      `- 'vault_read': Call 'vault_read' with { "path": "..." } to inspect project briefs, memory banks (e.g. "memory-bank/projectbrief.md"), and existing notes in the local Vault before making assumptions.`
+      `- 'batch_read_files': ALWAYS call 'batch_read_files' with { "paths": ["..."] } containing all required file paths when surveying workspace context, inspecting project briefs, or reading agent memory banks (e.g. ["memory-bank/projectbrief.md", "memory-bank/activeContext.md"]). Reads multiple files atomically in a single turn without round-trip loops.`
     );
   }
 
-  if (tools.vaultWrite) {
+  if (tools.batchWriteFiles || tools.vaultWrite) {
     toolGuidelines.push(
-      `- 'vault_write': Call 'vault_write' with { "path": "...", "content": "...", "mode": "overwrite"|"append" } to commit living specs, plan updates, and research artifacts directly to the Vault rather than printing unpersisted Markdown in chat.`
+      `- 'batch_write_files': Call 'batch_write_files' with { "files": [{ "path": "...", "content": "..." }] } to atomically commit living specs, plan updates, and research artifacts directly to the Vault in a single transaction rather than printing unpersisted Markdown in chat.`
     );
   }
 
